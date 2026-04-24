@@ -7,9 +7,10 @@
   <title>お問い合わせ | HAL シネマ</title>
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/contact.css">
 </head>
 
-<body>
+<body class="contact-page">
   <div id="nav-root"></div>
 
   <div class="page page-enter">
@@ -20,12 +21,12 @@
         <div class="section-line"></div>
       </div>
 
-      <div id="sent-section" style="display:none;text-align:center;padding:80px 40px">
-        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--accent2);margin-bottom:20px">
+      <div id="sent-section" class="contact-sent">
+        <div class="contact-sent-label">
           SENT</div>
-        <div style="font-family:var(--serif);font-size:24px;color:#dde4f0;margin-bottom:12px">送信が完了しました</div>
-        <p style="color:var(--text2);font-size:14px;line-height:1.8">お問い合わせありがとうございます。<br>担当者より2〜3営業日以内にご連絡いたします。</p>
-        <a href="index.html" class="btn-primary" style="margin-top:32px;display:inline-block">トップに戻る</a>
+        <div class="contact-sent-title">送信が完了しました</div>
+        <p class="contact-sent-body">お問い合わせありがとうございます。<br>担当者より2〜3営業日以内にご連絡いたします。</p>
+        <a href="index.html" class="btn-primary contact-sent-link">トップに戻る</a>
       </div>
 
       <div id="form-section" class="contact-grid">
@@ -53,12 +54,11 @@
             <label class="form-label">お問い合わせ内容 *</label>
             <textarea class="form-textarea" name="message" required placeholder="お問い合わせ内容をご記入ください"></textarea>
           </div>
-          <button type="submit" class="btn-primary" style="width:100%;font-size:14px;padding:16px">送信する</button>
+          <button type="submit" class="btn-primary contact-submit">送信する</button>
         </form>
 
         <div class="contact-info">
-          <div
-            style="font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--accent2);margin-bottom:24px">
+          <div class="contact-info-title">
             CONTACT INFO</div>
           <div class="contact-info-item">
             <div class="contact-info-label">電話番号</div>

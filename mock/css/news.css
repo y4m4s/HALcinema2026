@@ -1,0 +1,7 @@
+.news-page .section {
+  padding-bottom: 96px;
+}
+
+.news-page .news-list {
+  border-top: 1px solid var(--border);
+}

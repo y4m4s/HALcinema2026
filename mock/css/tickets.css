@@ -1,0 +1,111 @@
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 40px;
+}
+
+.ticket-table th {
+  background: var(--bg3);
+  padding: 14px 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--text3);
+  text-align: left;
+  border-bottom: 2px solid var(--border2);
+}
+
+.ticket-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.ticket-table tr:hover td {
+  background: rgba(45, 106, 160, 0.05);
+}
+
+.ticket-price {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: #dde4f0;
+  letter-spacing: -0.01em;
+}
+
+.ticket-note {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+.tickets-note-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+  margin-bottom: 40px;
+}
+
+.tickets-note-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--accent2);
+  margin-bottom: 12px;
+}
+
+.tickets-note-list {
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tickets-note-item {
+  font-size: 13px;
+  color: var(--text2);
+  padding-left: 16px;
+  position: relative;
+}
+
+.tickets-note-marker {
+  position: absolute;
+  left: 0;
+  color: var(--text3);
+}
+
+.tickets-subsection-header {
+  margin-bottom: 24px;
+}
+
+.tickets-subsection-title {
+  font-size: 18px;
+}
+
+.tickets-promo-title {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .ticket-table thead {
+    display: none;
+  }
+
+  .ticket-table,
+  .ticket-table tbody,
+  .ticket-table tr,
+  .ticket-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .ticket-table tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ticket-table td {
+    padding: 12px 0;
+    border-bottom: none;
+  }
+}
