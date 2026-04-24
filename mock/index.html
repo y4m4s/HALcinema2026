@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HAL シネマ | ホラー・ミステリー・サスペンス専門映画館</title>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="nav-root"></div>
+
+  <div class="page page-enter">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-bg" id="hero-bg"></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-tag">Now Showing — Feature</div>
+        <h1 class="hero-title" id="hero-title"></h1>
+        <div class="hero-meta" id="hero-meta"></div>
+        <p class="hero-synopsis" id="hero-synopsis"></p>
+        <div class="hero-cta" id="hero-cta"></div>
+      </div>
+      <div class="hero-scroll">
+        <div class="hero-scroll-line"></div>
+        <span>Scroll</span>
+      </div>
+    </div>
+
+    <!-- TICKER -->
+    <div class="ticker">
+      <div class="ticker-inner" id="ticker-inner"></div>
+    </div>
+
+    <!-- NOW SHOWING -->
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">上映中</h2>
+        <span class="section-title-en">Now Showing</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="movies-grid" id="now-showing-grid"></div>
+    </div>
+
+    <!-- COMING SOON -->
+    <div class="section" style="padding-top:0">
+      <div class="section-header">
+        <h2 class="section-title">近日公開</h2>
+        <span class="section-title-en">Coming Soon</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="coming-grid" id="coming-grid"></div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="section" style="padding-top:0">
+      <div class="section-header">
+        <h2 class="section-title">HALシネマについて</h2>
+        <span class="section-title-en">About</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-num">— 01</div>
+          <div class="feature-title">専門特化のキュレーション</div>
+          <p class="feature-body">国内ホラー・ミステリー・サスペンスに特化した映画館。希少な旧作上映や監督特集なども定期開催。恐怖と謎解きを愛するすべての人のための空間です。</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-num">— 02</div>
+          <div class="feature-title">8スクリーン・1050席</div>
+          <p class="feature-body">大スクリーン3室(各200席)・中スクリーン2室(各120席)・小スクリーン3室(各70席)。最新ドルビーアトモス対応スクリーンを完備。</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-num">— 03</div>
+          <div class="feature-title">極上の没入体験</div>
+          <p class="feature-body">スクリーン7・8はリニューアルし最新の4Kレーザープロジェクター&amp;ドルビーアトモスを導入。恐怖をより深く、より鮮明に体感できます。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCESS -->
+    <div class="section" style="padding-top:0">
+      <div class="section-header">
+        <h2 class="section-title">アクセス</h2>
+        <span class="section-title-en">Access</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="access-grid">
+        <div class="access-info">
+          <div class="access-row">
+            <span class="access-label">住所</span>
+            <span class="access-value">東京都渋谷区神宮前1-2-3 HALビル</span>
+          </div>
+          <div class="access-row">
+            <span class="access-label">最寄り駅</span>
+            <span class="access-value">東京メトロ「表参道駅」A2出口 徒歩5分<br>JR「原宿駅」竹下口 徒歩8分</span>
+          </div>
+          <div class="access-row">
+            <span class="access-label">電話</span>
+            <span class="access-value">03-XXXX-XXXX（10:00〜22:00）</span>
+          </div>
+          <div class="access-row">
+            <span class="access-label">駐車場</span>
+            <span class="access-value">提携駐車場あり（映画鑑賞で3時間無料）</span>
+          </div>
+          <div class="access-row">
+            <span class="access-label">営業時間</span>
+            <span class="access-value">10:00 〜 翌0:00（年中無休）</span>
+          </div>
+        </div>
+        <div class="access-map">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect x="1" y="1" width="46" height="46" rx="1" stroke="#1a2535" stroke-width="1" />
+            <circle cx="24" cy="20" r="6" stroke="#2d6aa0" stroke-width="1.5" fill="none" />
+            <line x1="24" y1="26" x2="24" y2="38" stroke="#2d6aa0" stroke-width="1.5" />
+          </svg>
+          <span>Google Map</span>
+          <span
+            style="color:var(--accent2);font-size:9px;letter-spacing:.15em;cursor:pointer;margin-top:4px;border-bottom:1px solid var(--accent2)">地図を開く
+            →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="section" style="padding-top:0">
+      <div class="section-header">
+        <h2 class="section-title">お知らせ</h2>
+        <span class="section-title-en">News</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="news-list" id="home-news-list"></div>
+    </div>
+
+  </div>
+
+  <div id="footer-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/home.js"></script>
+</body>
+
+</html>

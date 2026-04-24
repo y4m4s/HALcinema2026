@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>劇場案内 | HAL シネマ</title>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="nav-root"></div>
+
+  <div class="page page-enter">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">劇場案内</h2>
+        <span class="section-title-en">Theater Guide</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="section-header" style="margin-bottom:24px;margin-top:0">
+        <span class="section-title" style="font-size:18px">スクリーン一覧</span>
+        <div class="section-line"></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);margin-bottom:24px">
+        TOTAL: 8スクリーン / 1,050席
+      </div>
+      <div class="theater-grid" id="screen-grid"></div>
+
+      <div style="height:48px"></div>
+
+      <div class="section-header" style="margin-bottom:24px">
+        <span class="section-title" style="font-size:18px">館内マップ</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="hall-map">
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+          <rect x="1" y="1" width="54" height="54" rx="1" stroke="#1a2535" stroke-width="1" />
+          <rect x="6" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="19" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="32" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="45" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="6" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="19" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="32" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="45" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
+          <rect x="6" y="34" width="10" height="10" rx="0.5" fill="none" stroke="#4a9fd4" stroke-width="1" />
+        </svg>
+        <span>館内フロアマップ</span>
+        <span style="font-size:9px;color:var(--text3)">準備中</span>
+      </div>
+
+      <div style="height:48px"></div>
+
+      <div class="section-header" style="margin-bottom:24px">
+        <span class="section-title" style="font-size:18px">設備・バリアフリー情報</span>
+        <div class="section-line"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">
+        <div class="feature-item">
+          <div class="feature-title" style="font-size:16px">音響設備</div>
+          <p class="feature-body">Dolby Atmos対応スクリーン6室、7.1chサラウンド対応スクリーン2室を完備。</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title" style="font-size:16px">映像設備</div>
+          <p class="feature-body">全スクリーン4Kプロジェクター対応。スクリーン3はIMAX互換の超大型スクリーン。</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title" style="font-size:16px">バリアフリー</div>
+          <p class="feature-body">スクリーン1・4・8は車椅子スペースあり。補聴援助システム貸出対応。</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-title" style="font-size:16px">駐車場</div>
+          <p class="feature-body">隣接提携駐車場（200台）。映画鑑賞で3時間無料。事前予約推奨。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/theater.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>上映スケジュール | HAL シネマ</title>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="nav-root"></div>
+
+  <div class="page page-enter">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">上映スケジュール</h2>
+        <span class="section-title-en">Schedule</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="search-bar">
+        <input id="schedule-search" class="search-input" placeholder="作品名・ジャンルで検索">
+      </div>
+
+      <div class="schedule-tabs" id="date-tabs"></div>
+
+      <div id="schedule-rows"></div>
+    </div>
+  </div>
+
+  <div id="footer-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/schedule.js"></script>
+</body>
+
+</html>

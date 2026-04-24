@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>料金案内 | HAL シネマ</title>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="nav-root"></div>
+
+  <div class="page page-enter">
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">料金案内</h2>
+        <span class="section-title-en">Ticket Prices</span>
+        <div class="section-line"></div>
+      </div>
+
+      <table class="ticket-table">
+        <thead>
+          <tr>
+            <th>区分</th>
+            <th>料金</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody id="price-tbody"></tbody>
+      </table>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);padding:28px 32px;margin-bottom:40px">
+        <div
+          style="font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--accent2);margin-bottom:12px">
+          NOTE — ご注意</div>
+        <ul style="padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px">
+          <li style="font-size:13px;color:var(--text2);padding-left:16px;position:relative"><span
+              style="position:absolute;left:0;color:var(--text3)">—</span>チケットのご購入は窓口・公式サイトにて承っています。</li>
+          <li style="font-size:13px;color:var(--text2);padding-left:16px;position:relative"><span
+              style="position:absolute;left:0;color:var(--text3)">—</span>障がい者割引は、窓口でのご購入のみ適用となります。</li>
+          <li style="font-size:13px;color:var(--text2);padding-left:16px;position:relative"><span
+              style="position:absolute;left:0;color:var(--text3)">—</span>R15+・R18+作品は年齢確認のため身分証の提示をお願いする場合があります。</li>
+          <li style="font-size:13px;color:var(--text2);padding-left:16px;position:relative"><span
+              style="position:absolute;left:0;color:var(--text3)">—</span>3D上映は対象作品のみです。3Dメガネは無料貸出。</li>
+          <li style="font-size:13px;color:var(--text2);padding-left:16px;position:relative"><span
+              style="position:absolute;left:0;color:var(--text3)">—</span>呪いのサービスデー（毎月13日）は、全作品・全年齢1,300円均一となります。</li>
+        </ul>
+      </div>
+
+      <div class="section-header" style="margin-bottom:24px">
+        <span class="section-title" style="font-size:18px">割引デー・特典</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="coming-grid">
+        <div class="coming-card">
+          <div class="coming-release">毎月13日</div>
+          <div class="coming-title" style="font-size:18px">呪いのサービスデー</div>
+          <p class="coming-synopsis">全作品・全年齢1,300円均一。13日がかかわる恐怖を、割引価格でどうぞ。</p>
+        </div>
+        <div class="coming-card">
+          <div class="coming-release">最終回上映</div>
+          <div class="coming-title" style="font-size:18px">レイトショー割引</div>
+          <p class="coming-synopsis">最終回の上映のみ100円引き。深夜の恐怖、さらにお得に。</p>
+        </div>
+        <div class="coming-card">
+          <div class="coming-release">4名以上</div>
+          <div class="coming-title" style="font-size:18px">グループ割引</div>
+          <p class="coming-synopsis">4名以上のグループご来場で、1名様につき200円引き。怖いときは一緒に。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-root"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/tickets.js"></script>
+</body>
+
+</html>
