@@ -128,8 +128,9 @@
 
 .movies-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
   gap: 24px;
+  justify-content: center;
 }
 
 .movie-card {
@@ -184,7 +185,7 @@
 
 .movie-card-rating {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   color: var(--red2);
   border: 1px solid var(--red);
@@ -352,6 +353,118 @@
   cursor: pointer;
   margin-top: 4px;
   border-bottom: 1px solid var(--accent2);
+}
+
+/* Scroll reveal — full (opacity + slide) */
+.js-reveal-full {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.js-reveal-full.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* feature-item has its own hover transitions — merge them */
+.feature-item.js-reveal-full {
+  transition: opacity 0.6s ease, transform 0.6s ease, background 0.25s, box-shadow 0.25s;
+}
+
+/* Scroll reveal — fade only (no transform, avoids hover conflict) */
+.js-reveal-fade {
+  opacity: 0;
+  transition: opacity 0.6s ease, border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+.js-reveal-fade.is-visible {
+  opacity: 1;
+}
+
+/* ---- style.css overrides (home page) ---- */
+.nav {
+  background: linear-gradient(180deg, rgba(4, 7, 14, 0.92) 0%, rgba(8, 13, 24, 0.76) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.section-title-en {
+  font-size: 11px;
+}
+
+.coming-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 400px));
+  gap: 24px;
+  background: transparent;
+  justify-content: center;
+}
+
+.coming-card {
+  background: rgba(8, 13, 24, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.2s, box-shadow 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.coming-card:hover {
+  background: rgba(12, 18, 32, 0.82);
+  border-left-color: var(--accent2);
+  box-shadow: 0 0 40px rgba(45, 106, 160, 0.1);
+}
+
+.news-item {
+  grid-template-columns: 120px auto 1fr;
+}
+
+.news-tag {
+  white-space: nowrap;
+}
+
+.news-tag[data-tag="お知らせ"] {
+  color: var(--accent2);
+  border-color: rgba(74, 159, 212, 0.45);
+}
+
+.news-tag[data-tag="イベント"] {
+  color: #a07fd4;
+  border-color: rgba(160, 127, 212, 0.45);
+}
+
+.news-tag[data-tag="キャンペーン"] {
+  color: #4aad7a;
+  border-color: rgba(74, 173, 122, 0.45);
+}
+
+.news-tag[data-tag="メンテナンス"] {
+  color: #c48b42;
+  border-color: rgba(196, 139, 66, 0.45);
+}
+
+.feature-item {
+  border-top: 2px solid var(--accent2);
+  transition: background 0.25s, box-shadow 0.25s;
+}
+
+.feature-item:hover {
+  background: var(--bg3);
+  box-shadow: inset 0 0 60px rgba(45, 106, 160, 0.07);
+}
+
+.feature-num {
+  font-size: 40px;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.feature-title {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.feature-body {
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {

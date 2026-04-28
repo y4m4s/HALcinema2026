@@ -65,8 +65,54 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('home-news-list').innerHTML = NEWS.map(n => `
     <div class="news-item">
       <span class="news-date">${n.date}</span>
-      <span class="news-tag">${n.tag}</span>
+      <span class="news-tag" data-tag="${n.tag}">${n.tag}</span>
       <span class="news-title">${n.title}</span>
     </div>
   `).join('');
 });
+
+// Parallax: hero background scrolls slower than page
+(function () {
+  var bg = document.getElementById('hero-bg');
+  if (!bg) return;
+  bg.style.transition = 'filter 0.3s';
+  window.addEventListener('scroll', function () {
+    bg.style.transform = 'translateY(' + Math.round(window.pageYOffset * 0.4) + 'px)';
+  }, { passive: true });
+}());
+
+// Scroll reveal: fade-in as elements enter viewport
+(function () {
+  var fullEls = document.querySelectorAll('.feature-item, .news-item, .coming-card');
+  var fadeEls = document.querySelectorAll('.movie-card');
+  fullEls.forEach(function (el) { el.classList.add('js-reveal-full'); });
+  fadeEls.forEach(function (el) { el.classList.add('js-reveal-fade'); });
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var siblings = Array.from(entry.target.parentNode.children);
+      var delay = (siblings.indexOf(entry.target) % 4) * 80;
+      setTimeout(function () { entry.target.classList.add('is-visible'); }, delay);
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
+
+  fullEls.forEach(function (el) { observer.observe(el); });
+  fadeEls.forEach(function (el) { observer.observe(el); });
+}());
+
+// 3D tilt: movie cards rotate toward cursor
+(function () {
+  document.querySelectorAll('.movie-card').forEach(function (card) {
+    card.addEventListener('mousemove', function (e) {
+      var r = card.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width - 0.5;
+      var y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = 'translateY(-4px) perspective(800px) rotateX(' + (-y * 8).toFixed(2) + 'deg) rotateY(' + (x * 8).toFixed(2) + 'deg)';
+    });
+    card.addEventListener('mouseleave', function () {
+      card.style.transform = '';
+    });
+  });
+}());
