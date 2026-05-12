@@ -414,6 +414,11 @@
   box-shadow: 0 0 40px rgba(45, 106, 160, 0.1);
 }
 
+.home-page #home-news-list {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
 .news-item {
   grid-template-columns: 120px auto 1fr;
 }
