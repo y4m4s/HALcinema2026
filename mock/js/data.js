@@ -13,6 +13,18 @@ var MOVIES = [
     status: "now",
     screens: [1, 3],
     schedules: [["10:00","12:48"],["13:30","15:18"],["17:00","18:48"],["20:30","22:18"]],
+    screenSchedules: [
+      { screen: 1, slots: [
+        { start: "10:00", end: "12:48", status: "soldout" },
+        { start: "17:00", end: "18:48", status: "ok" }
+      ]},
+      { screen: 3, slots: [
+        { start: "13:30", end: "15:18", status: "few" },
+        { start: "20:30", end: "22:18", status: "ok" }
+      ]}
+    ],
+    playingDays: [0,1,2,3,4,5,6],
+    note: "PG12 指定作品。上映前に年齢確認を行う場合があります。",
     releaseDate: "2025.03.22",
     isFeature: true,
   },
@@ -30,6 +42,17 @@ var MOVIES = [
     status: "now",
     screens: [2, 5],
     schedules: [["11:20","13:13"],["14:50","16:43"],["18:30","20:23"]],
+    screenSchedules: [
+      { screen: 2, slots: [
+        { start: "11:20", end: "13:13", status: "soldout" },
+        { start: "18:30", end: "20:23", status: "ok" }
+      ]},
+      { screen: 5, slots: [
+        { start: "14:50", end: "16:43", status: "few" }
+      ]}
+    ],
+    playingDays: [0,1,2,3,4,5],
+    note: "R15+ 指定作品。15歳未満のご入場はできません。",
     releaseDate: "2022.10.28",
     isFeature: false,
   },
@@ -47,7 +70,82 @@ var MOVIES = [
     status: "now",
     screens: [4, 6],
     schedules: [["12:00","13:33"],["16:20","17:53"],["20:00","21:33"]],
+    screenSchedules: [
+      { screen: 4, slots: [
+        { start: "12:00", end: "13:33", status: "ok" },
+        { start: "20:00", end: "21:33", status: "ok" }
+      ]},
+      { screen: 6, slots: [
+        { start: "16:20", end: "17:53", status: "soldout" }
+      ]}
+    ],
+    playingDays: [2,3,4,5,6],
+    note: "",
     releaseDate: "2024.06.21",
+    isFeature: false,
+  },
+  {
+    id: 6,
+    title: "霧の向こう",
+    titleEn: "BEYOND THE FOG",
+    genre: ["ホラー", "オカルト"],
+    rating: "R15+",
+    duration: 99,
+    director: "清水崇",
+    cast: ["松岡茉優", "岡田将生", "黒木華"],
+    synopsis: "山中の廃村に踏み込んだ4人の若者たち。霧が立ち込めるにつれ、村人の亡霊が次々と姿を現す。逃げようとするたびに同じ場所へ戻される、終わりなき恐怖の迷宮。",
+    image: null,
+    status: "now",
+    screens: [2, 7],
+    schedules: [],
+    screenSchedules: [
+      { screen: 2, slots: [
+        { start: "10:30", end: "12:09", status: "soldout" },
+        { start: "13:00", end: "14:39", status: "few" },
+        { start: "19:00", end: "20:39", status: "ok" }
+      ]},
+      { screen: 7, slots: [
+        { start: "11:00", end: "12:39", status: "ok" },
+        { start: "14:00", end: "15:39", status: "soldout" },
+        { start: "20:00", end: "21:39", status: "ok" }
+      ]}
+    ],
+    playingDays: [0,1,3,4,5],
+    note: "R15+ 指定作品。強度の恐怖・暗闇描写があります。",
+    releaseDate: "2026.04.18",
+    isFeature: false,
+  },
+  {
+    id: 7,
+    title: "地獄の回廊",
+    titleEn: "CORRIDOR OF HELL",
+    genre: ["スラッシャー", "アクション"],
+    rating: "R18+",
+    duration: 87,
+    director: "三池崇史",
+    cast: ["綾野剛", "浜辺美波", "柄本佑", "水川あさみ"],
+    synopsis: "廃病院を舞台にした生存ゲーム。参加者は12人——脱出できるのは果たして何人か。容赦ない罠と狂気の番人が待ち受ける、一夜限りの死闘。",
+    image: null,
+    status: "now",
+    screens: [3, 8],
+    schedules: [],
+    screenSchedules: [
+      { screen: 3, slots: [
+        { start: "09:50", end: "11:17", status: "ok" },
+        { start: "12:30", end: "13:57", status: "soldout" },
+        { start: "16:00", end: "17:27", status: "few" },
+        { start: "20:30", end: "21:57", status: "ok" }
+      ]},
+      { screen: 8, slots: [
+        { start: "10:20", end: "11:47", status: "few" },
+        { start: "13:00", end: "14:27", status: "ok" },
+        { start: "17:30", end: "18:57", status: "soldout" },
+        { start: "21:00", end: "22:27", status: "ok" }
+      ]}
+    ],
+    playingDays: [3,4,5,6],
+    note: "R18+ 指定作品。18歳未満は入場不可。グロテスクな描写を含みます。",
+    releaseDate: "2026.05.02",
     isFeature: false,
   },
   {
@@ -112,4 +210,4 @@ var PRICES = [
   { cat:"呪いのサービスデー（毎月13日）", price:"1,300円", note:"全席・全年齢均一" },
 ];
 
-var DATES = ["4/24(木)","4/25(金)","4/26(土)","4/27(日)","4/28(月)","4/29(火)","4/30(水)"];
+var DATES = ["5/12(火)","5/13(水)","5/14(木)","5/15(金)","5/16(土)","5/17(日)","5/18(月)"];
