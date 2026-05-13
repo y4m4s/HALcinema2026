@@ -1,0 +1,184 @@
+/* ===========================================================
+   上映中一覧化ページ（work.html）専用スタイル
+   - 配色・余白感・フォントは style.css / home.css と統一
+   - クラス名は now-showing-page / movie-card__ で名前空間化
+   =========================================================== */
+
+.now-showing-page {
+  width: 100%;
+  padding: calc(var(--nav-h) + 48px) 0 80px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+}
+
+/* ---------- ページタイトル（上映中一覧化） ---------- */
+.page-title-section {
+  width: min(92%, 1100px);
+  margin: 0 auto 40px;
+  text-align: left;
+}
+
+.page-title {
+  display: inline-block;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #dde4f0;
+  padding: 14px 96px 14px 32px;
+  background: linear-gradient(90deg,
+      var(--accent) 0%,
+      rgba(45, 106, 160, 0.55) 70%,
+      rgba(45, 106, 160, 0.0) 100%);
+  border-left: 3px solid var(--accent2);
+}
+
+/* ---------- 上映作品一覧エリア ---------- */
+.movie-list-section {
+  width: min(92%, 1100px);
+  margin: 0 auto;
+  padding: 40px 32px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+
+.now-showing-page .movie-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ---------- 作品カード ---------- */
+.now-showing-page .movie-card {
+  width: min(92%, 920px);
+  margin: 0 auto;
+  display: flex;
+  gap: 32px;
+  padding: 24px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.now-showing-page .movie-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 12px 40px rgba(45, 106, 160, 0.22);
+  transform: translateY(-2px);
+}
+
+/* ---------- 左：ポスター画像 ---------- */
+.movie-card__image {
+  flex: 0 0 200px;
+  aspect-ratio: 3 / 4;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.movie-card__image img,
+.movie-card__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.movie-card__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--text3);
+  background: var(--bg4);
+  text-transform: uppercase;
+}
+
+/* ---------- 右：作品情報 ---------- */
+.movie-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.movie-card__title {
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #dde4f0;
+  line-height: 1.45;
+}
+
+.movie-card__director,
+.movie-card__note {
+  text-align: center;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.movie-card__cast {
+  min-height: 96px;
+  padding: 18px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.85;
+  letter-spacing: 0.04em;
+  color: var(--text2);
+}
+
+/* ---------- レスポンシブ：スマホ ---------- */
+@media (max-width: 768px) {
+  .now-showing-page {
+    padding: calc(var(--nav-h) + 32px) 0 60px;
+  }
+
+  .page-title-section {
+    width: min(92%, 1100px);
+    margin-bottom: 28px;
+  }
+
+  .page-title {
+    font-size: 20px;
+    padding: 12px 48px 12px 20px;
+    letter-spacing: 0.08em;
+  }
+
+  .movie-list-section {
+    padding: 24px 16px;
+  }
+
+  .now-showing-page .movie-list {
+    gap: 24px;
+  }
+
+  .now-showing-page .movie-card {
+    width: 92%;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .movie-card__image {
+    width: 100%;
+    flex: none;
+    max-width: 260px;
+    margin: 0 auto;
+  }
+
+  .movie-card__title {
+    font-size: 17px;
+  }
+}
