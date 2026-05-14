@@ -1,10 +1,8 @@
 .access-grid {
   display: grid;
-  grid-template-columns: 660px 380px;
-  gap: 40px;
-  align-items: stretch;
-  margin: 0 auto;
-  width: fit-content;
+  grid-template-columns: 5fr 6fr;
+  gap: 56px;
+  align-items: start;
   opacity: 0;
   transform: translateY(16px);
   transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
@@ -16,175 +14,75 @@
 }
 
 /* 左カラム */
-.access-maps {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  height: 100%;
-}
-
-.access-map-block {
-  flex: 1;
+.access-left {
   display: flex;
   flex-direction: column;
 }
 
-.access-map-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--text3);
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-
-.access-map-block iframe {
-  flex: 1;
+.access-map {
   width: 100%;
-  min-height: 0;
+  aspect-ratio: 1 / 1;
   display: block;
   filter: grayscale(15%) brightness(0.88);
+}
+
+.access-address {
+  font-family: var(--mono);
+  font-size: 17px;
+  letter-spacing: 0.05em;
+  color: #96a6c0;
+  margin-top: 14px;
+  line-height: 1.6;
 }
 
 /* 右カラム */
 .access-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 380px;
+  gap: 32px;
 }
 
-.access-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  padding: 24px 28px;
-}
-
-.access-card-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--text3);
-  margin-bottom: 6px;
-}
-
-.access-card-title {
+.access-section-title {
   font-family: var(--serif);
-  font-size: 15px;
-  color: #dde4f0;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--accent2);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--accent2);
   margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
 }
 
-/* 営業時間 */
-.access-hours {
+.access-section-list {
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.access-hours-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.access-hours-day {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  color: var(--text3);
-}
-
-.access-hours-time {
-  font-size: 18px;
+.access-section-list li {
+  font-size: 13px;
   color: var(--text2);
+  line-height: 1.8;
+  padding-left: 16px;
+  position: relative;
 }
 
-.access-hours-note {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.15em;
+.access-section-list li::before {
+  content: '■';
+  position: absolute;
+  left: 0;
+  font-size: 8px;
   color: var(--accent2);
-  margin-top: 4px;
+  top: 4px;
 }
 
-/* 電車・バス */
-.access-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.access-list li {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.7;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.access-line {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border-radius: 2px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.access-line.jr {
-  background: #1a4f8a;
-  color: #b8d4f0;
-}
-
-.access-line.subway {
-  background: #1a3a6e;
-  color: #90bfe0;
-}
-
-.access-line.meitetsu {
-  background: #6b1a1a;
-  color: #f0b0b0;
-}
-
-/* お問い合わせ */
-.access-contact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.access-contact-item {
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.access-contact-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.access-contact-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.15em;
-  color: var(--text3);
-  margin-bottom: 4px;
-}
-
-.access-contact-value {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.6;
-}
-
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .access-grid {
     grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .access-map {
+    aspect-ratio: 1 / 1;
   }
 }
