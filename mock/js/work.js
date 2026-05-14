@@ -64,14 +64,17 @@ function renderMovies() {
 
       <div class="movie-card__content">
         <h2 class="movie-card__title">【 ${title} 】</h2>
-        <p class="movie-card__field"><span class="movie-card__label">監督</span><span class="movie-card__value">${director}</span></p>
-        <p class="movie-card__field movie-card__field--cast"><span class="movie-card__label">キャスト</span><span class="movie-card__value">${cast}</span></p>
-        <p class="movie-card__field"><span class="movie-card__label">レイティング</span><span class="movie-card__value">${rating}</span></p>
-        <p class="movie-card__field movie-card__field--note">
-          <span class="movie-card__label">備考</span>
-          <span class="movie-card__value">${note}</span>
-          <a class="movie-card__detail-btn" href="#">詳細</a>
-        </p>
+        <div class="movie-card__info">
+          <div class="movie-card__fields">
+            <p class="movie-card__field"><span class="movie-card__label">監督</span><span class="movie-card__value">${director}</span></p>
+            <p class="movie-card__field movie-card__field--cast"><span class="movie-card__label">キャスト</span><span class="movie-card__value">${cast}</span></p>
+            <p class="movie-card__field"><span class="movie-card__label">レイティング</span><span class="movie-card__value">${rating}</span></p>
+            <p class="movie-card__field"><span class="movie-card__label">備考</span><span class="movie-card__value">${note}</span></p>
+          </div>
+          <div class="movie-card__actions">
+            <a class="movie-card__detail-btn" href="#">詳細</a>
+          </div>
+        </div>
       </div>
     `;
 
