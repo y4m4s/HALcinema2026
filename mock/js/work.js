@@ -21,16 +21,15 @@ function buildMovieList() {
     .map((m) => {
       const castText = Array.isArray(m.cast) ? m.cast.join("、") : (m.cast || "");
       const noteParts = [];
-      if (m.rating) noteParts.push(m.rating);
       if (m.duration) noteParts.push("上映時間 " + m.duration + "分");
-      if (m.releaseDate) noteParts.push("公開 " + m.releaseDate);
+      if (m.releaseDate) noteParts.push("上映期間 " + m.releaseDate + "〜");
 
       return {
         id: m.id,
         title: m.title || "",
-        type: "本編",
         director: m.director || "",
         cast: castText,
+        rating: m.rating || "",
         note: noteParts.join(" / "),
         imageUrl: m.image || ""
       };
@@ -48,9 +47,9 @@ function renderMovies() {
     card.className = "movie-card";
 
     const title = escapeHtml(movie.title);
-    const type = escapeHtml(movie.type);
     const director = escapeHtml(movie.director);
     const cast = escapeHtml(movie.cast);
+    const rating = escapeHtml(movie.rating);
     const note = escapeHtml(movie.note);
     const imageUrl = movie.imageUrl ? escapeHtml(movie.imageUrl) : "";
 
@@ -64,10 +63,15 @@ function renderMovies() {
       </div>
 
       <div class="movie-card__content">
-        <h2 class="movie-card__title">【 ${title} 】（${type}）</h2>
-        <p class="movie-card__director">${director}</p>
-        <p class="movie-card__cast">${cast}</p>
-        <p class="movie-card__note">${note}</p>
+        <h2 class="movie-card__title">【 ${title} 】</h2>
+        <p class="movie-card__field"><span class="movie-card__label">監督</span><span class="movie-card__value">${director}</span></p>
+        <p class="movie-card__field movie-card__field--cast"><span class="movie-card__label">キャスト</span><span class="movie-card__value">${cast}</span></p>
+        <p class="movie-card__field"><span class="movie-card__label">レイティング</span><span class="movie-card__value">${rating}</span></p>
+        <p class="movie-card__field movie-card__field--note">
+          <span class="movie-card__label">備考</span>
+          <span class="movie-card__value">${note}</span>
+          <a class="movie-card__detail-btn" href="#">詳細</a>
+        </p>
       </div>
     `;
 

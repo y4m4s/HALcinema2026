@@ -108,7 +108,7 @@
 }
 
 .movie-card__title {
-  text-align: center;
+  text-align: left;
   font-family: var(--serif);
   font-size: 20px;
   font-weight: 600;
@@ -117,26 +117,82 @@
   line-height: 1.45;
 }
 
-.movie-card__director,
-.movie-card__note {
-  text-align: center;
-  padding: 10px 16px;
+.movie-card__field {
+  display: flex;
+  align-items: stretch;
+  text-align: left;
   background: var(--bg2);
   border: 1px solid var(--border);
   font-size: 14px;
   letter-spacing: 0.06em;
   color: var(--text);
+  overflow: hidden;
 }
 
-.movie-card__cast {
+.movie-card__label {
+  flex: 0 0 110px;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-right: 1px solid var(--border);
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+}
+
+.movie-card__value {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.movie-card__field--cast {
   min-height: 96px;
-  padding: 18px 20px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  font-size: 14px;
+}
+
+.movie-card__field--cast .movie-card__value {
+  color: var(--text2);
   line-height: 1.85;
   letter-spacing: 0.04em;
-  color: var(--text2);
+  align-items: flex-start;
+  padding: 14px 16px;
+}
+
+.movie-card__field--note {
+  align-items: center;
+}
+
+.movie-card__field--note .movie-card__value {
+  flex: 1;
+}
+
+.movie-card__detail-btn {
+  flex: 0 0 auto;
+  margin: 6px 10px 6px 0;
+  padding: 8px 22px;
+  background: var(--accent);
+  border: 1px solid var(--accent2);
+  color: #dde4f0;
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s, color 0.25s, transform 0.2s;
+}
+
+.movie-card__detail-btn:hover {
+  background: var(--accent2);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 /* ---------- レスポンシブ：スマホ ---------- */
@@ -180,5 +236,31 @@
 
   .movie-card__title {
     font-size: 17px;
+  }
+
+  .movie-card__field {
+    flex-direction: column;
+  }
+
+  .movie-card__label {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .movie-card__value {
+    padding: 10px 14px;
+  }
+
+  .movie-card__field--note {
+    align-items: stretch;
+  }
+
+  .movie-card__detail-btn {
+    margin: 0 12px 12px;
+    padding: 10px 18px;
+    align-self: flex-end;
   }
 }
