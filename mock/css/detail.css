@@ -1,6 +1,11 @@
+/* ── Hero (compact) ── */
+.detail-hero-wrap {
+  position: relative;
+}
+
 .detail-hero {
   position: relative;
-  height: 60vh;
+  height: 380px;
   overflow: hidden;
 }
 
@@ -9,74 +14,218 @@
   inset: 0;
   background-size: cover;
   background-position: center 20%;
-  filter: brightness(0.3) saturate(0.5);
+  filter: brightness(0.22) saturate(0.4);
 }
 
 .detail-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, rgba(4, 7, 14, 1) 0%, rgba(4, 7, 14, 0.4) 60%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(14, 30, 56, 0.97) 35%,
+    rgba(14, 30, 56, 0.55) 65%,
+    rgba(14, 30, 56, 0.15) 100%
+  );
 }
 
-.detail-hero-content {
+.detail-hero-inner {
   position: relative;
   z-index: 2;
   height: 100%;
   display: flex;
-  align-items: flex-end;
-  padding: 0 80px 48px;
-  gap: 40px;
-}
-
-.detail-poster {
-  width: 160px;
-  flex-shrink: 0;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border: 1px solid var(--border2);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.detail-poster-ph {
-  width: 160px;
-  flex-shrink: 0;
-  aspect-ratio: 2 / 3;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--text3);
-  font-family: var(--mono);
-  font-size: 10px;
+  padding: 0 80px;
 }
 
-.detail-info {
+/* ① ポスターはみ出し */
+.detail-hero-poster-wrap {
+  position: absolute;
+  right: 80px;
+  bottom: -72px;
+  z-index: 10;
+}
+
+.detail-hero-text {
   flex: 1;
+}
+
+.detail-status-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--accent2);
+  margin-bottom: 16px;
+  text-transform: uppercase;
 }
 
 .detail-title {
   font-family: var(--serif);
-  font-size: clamp(32px, 5vw, 60px);
+  font-size: clamp(28px, 4vw, 52px);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #f0f4ff;
-  line-height: 1.1;
-  margin-bottom: 16px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.detail-title-en {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 20px;
 }
 
 .detail-meta {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 0;
 }
 
-.detail-body {
+.detail-hero-poster {
+  width: 180px;
+  display: block;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border: 1px solid var(--border2);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(74, 159, 212, 0.12);
+}
+
+.detail-hero-poster-ph {
+  width: 180px;
+  display: block;
+  aspect-ratio: 2 / 3;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}
+
+/* ── Booking section ── */
+.detail-booking {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 48px 80px 64px;
+}
+
+.booking-section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--accent2);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+/* theaters-grid をスタンドアロンで使うためのラッパー */
+.detail-theaters-wrap {
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.detail-theaters-wrap .theaters-grid {
+  flex: unset;
+  display: flex;
+  overflow-x: auto;
+}
+
+.detail-booking .movie-card-note {
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+}
+
+.coming-soon-notice {
+  text-align: center;
+  padding: 40px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.coming-soon-date {
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: var(--accent2);
+  margin-bottom: 8px;
+}
+
+.coming-soon-text {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+/* ── Info section ── */
+
+/* ② あらすじ 装飾引用符 */
+.detail-synopsis-wrap {
+  position: relative;
+}
+
+.detail-synopsis-wrap::before {
+  content: '"';
+  position: absolute;
+  top: 24px;
+  left: -12px;
+  font-family: var(--serif);
+  font-size: 160px;
+  line-height: 1;
+  color: var(--accent2);
+  opacity: 0.07;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ③ TODAY バッジ */
+.today-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  background: var(--accent2);
+  color: #0a1628;
+  padding: 2px 5px;
+  margin-left: 5px;
+  vertical-align: middle;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+/* ⑤ 監督行の強調 */
+.detail-cast-item.director {
+  position: relative;
+  padding-left: 12px;
+}
+
+.detail-cast-item.director::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--accent2);
+}
+
+.detail-cast-item.director .cast-role {
+  color: var(--accent2);
+}
+
+.detail-cast-item.director .cast-name {
+  color: var(--text);
+}
+.detail-info-section {
+  padding: 104px 80px 48px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-synopsis-wrap {
+  margin-bottom: 48px;
+}
+
+.detail-sub-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 60px;
-  padding: 60px 80px;
 }
 
 .detail-section-title {
@@ -92,63 +241,114 @@
 
 .detail-synopsis {
   font-size: 15px;
-  line-height: 2;
+  line-height: 2.1;
   color: var(--text2);
-  margin-bottom: 40px;
 }
 
 .detail-cast-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .detail-cast-item {
   display: flex;
   justify-content: space-between;
-  padding-bottom: 12px;
+  align-items: baseline;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
-  color: var(--text2);
+  gap: 12px;
 }
 
-.detail-schedule {
-  background: var(--bg3);
-  padding: 24px;
-  margin-bottom: 24px;
-}
-
-.schedule-times {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.schedule-time {
+.cast-role {
   font-family: var(--mono);
-  font-size: 13px;
-  border: 1px solid var(--border2);
-  padding: 8px 16px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.cast-name {
   color: var(--text2);
-  cursor: pointer;
-  transition: all 0.2s;
+  text-align: right;
 }
 
-.schedule-time:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+.film-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  gap: 12px;
 }
 
+.film-info-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.film-info-value {
+  color: var(--text);
+  text-align: right;
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .detail-body {
-    grid-template-columns: 1fr;
-    padding: 40px 24px;
+  .detail-hero {
+    height: 300px;
   }
 
-  .detail-hero-content {
-    padding: 0 24px 32px;
-    flex-direction: column;
+  .detail-hero-inner {
+    padding: 0 24px;
+    align-items: flex-end;
+    padding-bottom: 28px;
+  }
+
+  /* モバイルはポスターをヒーロー下に通常フローで表示 */
+  .detail-hero-poster-wrap {
+    position: static;
+    display: flex;
+    justify-content: center;
+    padding: 20px 24px;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  }
+
+  .detail-hero-poster,
+  .detail-hero-poster-ph {
+    width: 120px;
+  }
+
+  .detail-info-section {
+    padding-top: 40px;
+  }
+
+  .detail-booking {
+    padding: 32px 24px;
+  }
+
+  .booking-slot {
+    min-width: 100%;
+  }
+
+  .screen-features {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .detail-booking {
+    padding: 32px 24px 48px;
+  }
+
+  .detail-info-section {
+    padding: 40px 24px 36px;
+  }
+
+  .detail-sub-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
   }
 }

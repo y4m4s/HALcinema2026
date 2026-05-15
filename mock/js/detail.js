@@ -6,79 +6,161 @@ document.addEventListener('DOMContentLoaded', function () {
   document.title = movie.title + ' | HAL シネマ';
 
   const main = document.getElementById('detail-main');
-  const statusLabel = movie.status === 'now' ? 'Now Showing' : 'Coming Soon';
+  const isNow = movie.status === 'now';
 
-  const schedulesHTML = (movie.schedules && movie.schedules.length > 0) ? `
-    <div class="detail-section-title">Today's Schedule — 本日の上映</div>
-    ${movie.screens.map(sc => {
-      const screen = SCREENS.find(s => s.num === sc);
-      return `
-        <div class="detail-schedule">
-          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--accent2);margin-bottom:4px">
-            SCREEN ${sc} — ${screen ? screen.type : ''}（${screen ? screen.seats : ''}席）
+  main.innerHTML = `
+    <a href="index.html" class="back-btn">← トップに戻る</a>
+    ${buildHero(movie, isNow)}
+    ${buildInfoSection(movie)}
+    ${buildBooking(movie, isNow)}
+  `;
+
+  const dateTabs = document.getElementById('detail-date-tabs');
+  if (dateTabs) {
+    dateTabs.addEventListener('click', function (e) {
+      const btn = e.target.closest('.sub-tab');
+      if (!btn || btn.classList.contains('no-play')) return;
+      dateTabs.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  }
+});
+
+function buildHero(movie, isNow) {
+  const posterHtml = movie.image
+    ? `<img src="${movie.image}" alt="${movie.title}" class="detail-hero-poster">`
+    : `<div class="detail-hero-poster-ph"></div>`;
+
+  return `
+    <div class="detail-hero-wrap">
+      <div class="detail-hero">
+        ${movie.image ? `<div class="detail-hero-bg" style="background-image:url('${movie.image}')"></div>` : ''}
+        <div class="detail-hero-overlay"></div>
+        <div class="detail-hero-inner">
+          <div class="detail-hero-text">
+            <div class="detail-status-label">${isNow ? 'NOW SHOWING' : 'COMING SOON'}</div>
+            <h1 class="detail-title">${movie.title}</h1>
+            ${movie.titleEn ? `<div class="detail-title-en">${movie.titleEn}</div>` : ''}
+            <div class="detail-meta">
+              ${badge(movie.rating, true)}
+              ${badge(movie.duration + '分')}
+              ${movie.genre.map(g => badge(g)).join('')}
+            </div>
           </div>
-          <div class="schedule-times">
-            ${movie.schedules.map(t => `
-              <div class="schedule-time">${t[0]} <span style="color:var(--text3);font-size:10px">終 ${t[1]}</span></div>
+        </div>
+      </div>
+      <div class="detail-hero-poster-wrap">${posterHtml}</div>
+    </div>
+  `;
+}
+
+function buildBooking(movie, isNow) {
+  if (!isNow) {
+    return `
+      <div class="detail-booking">
+        <div class="booking-section-label">Ticket — チケット予約</div>
+        <div class="coming-soon-notice">
+          <div class="coming-soon-date">${movie.releaseDate} 公開予定</div>
+          <div class="coming-soon-text">予約受付は公開日前日より開始予定です</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
+  const todayStr = '5/15(金)';
+  const defaultDate = (movie.playingDays && DATES.find(d => {
+    const m = d.match(/\((.)\)/);
+    return d === todayStr && m && movie.playingDays.includes(dayMap[m[1]]);
+  })) ? todayStr : DATES.find(d => {
+    const m = d.match(/\((.)\)/);
+    return m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
+  }) || DATES[0];
+
+  const todayLabel = '5/15(金)';
+  const dateTabs = DATES.map(d => {
+    const m = d.match(/\((.)\)/);
+    const isPlaying = m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
+    const todayBadge = d === todayLabel ? '<span class="today-badge">TODAY</span>' : '';
+    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${d}">${d}${todayBadge}</button>`;
+  }).join('');
+
+  return `
+    <div class="detail-booking">
+      <div class="booking-section-label">Ticket — チケット予約</div>
+      <div class="sub-tabs" id="detail-date-tabs">${dateTabs}</div>
+      <div class="detail-theaters-wrap">
+        <div class="theaters-grid">
+          ${buildTheaterCols(movie)}
+        </div>
+      </div>
+      ${movie.note ? `
+        <div class="movie-card-note">
+          <span class="note-label">補足事項</span>
+          <span class="note-text">${movie.note}</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function buildTheaterCols(movie) {
+  if (!movie.screenSchedules || !movie.screenSchedules.length) {
+    return '<div style="color:var(--text3);font-size:13px;padding:20px">本日の上映スケジュールはありません</div>';
+  }
+  return movie.screenSchedules.map(sc => {
+    const screen = SCREENS.find(s => s.num === sc.screen);
+    const slotsHtml = sc.slots.map(slot => {
+      const isSoldout = slot.status === 'soldout';
+      const statusClass = isSoldout ? 'soldout' : slot.status === 'few' ? 'few' : 'ok';
+      const statusText  = isSoldout ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
+      return `
+        <div class="time-slot${isSoldout ? ' soldout' : ''}" ${!isSoldout ? "onclick=\"alert('チケット予約システムへ移動します')\"" : ''}>
+          <div class="time-slot-time">${slot.start} 〜 ${slot.end}</div>
+          <div class="time-slot-status ${statusClass}">${statusText}</div>
+        </div>`;
+    }).join('');
+    const featureBadges = screen
+      ? screen.features.slice(0, 3).map(f => `<span class="feature-badge">${f}</span>`).join('')
+      : '';
+    return `
+      <div class="theater-col">
+        <div class="theater-col-header">
+          <div class="theater-col-left">
+            <span class="theater-col-num">スクリーン ${sc.screen}</span>
+            ${screen ? `<span class="theater-col-meta">${screen.type} · ${screen.seats}席</span>` : ''}
+          </div>
+          ${featureBadges ? `<div class="theater-col-features">${featureBadges}</div>` : ''}
+        </div>
+        <div class="slots-grid${sc.slots.length === 4 ? ' slots-grid--quad' : ''}">${slotsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+function buildInfoSection(movie) {
+  return `
+    <div class="detail-info-section">
+      <div class="detail-synopsis-wrap">
+        <div class="detail-section-title">Synopsis — あらすじ</div>
+        <p class="detail-synopsis">${movie.synopsis}</p>
+      </div>
+      <div class="detail-sub-grid">
+        <div>
+          <div class="detail-section-title">Staff &amp; Cast</div>
+          <div class="detail-cast-list">
+            <div class="detail-cast-item director">
+              <span class="cast-role">監督</span>
+              <span class="cast-name">${movie.director}</span>
+            </div>
+            ${movie.cast.map(c => `
+              <div class="detail-cast-item">
+                <span class="cast-role">出演</span>
+                <span class="cast-name">${c}</span>
+              </div>
             `).join('')}
           </div>
         </div>
-      `;
-    }).join('')}
-  ` : '';
-
-  const comingHTML = movie.status === 'coming' ? `
-    <div class="detail-schedule" style="text-align:center;padding:32px">
-      <div style="font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--accent2)">${movie.releaseDate} 公開予定</div>
-      <div style="margin-top:8px;color:var(--text2);font-size:13px">上映スケジュールは後日公開予定</div>
-    </div>
-  ` : '';
-
-  main.innerHTML = `
-    <div class="detail-hero">
-      ${movie.image ? `<div class="detail-hero-bg" style="background-image:url('${movie.image}')"></div>` : ''}
-      <div class="detail-hero-overlay"></div>
-      <div class="detail-hero-content">
-        ${movie.image
-          ? `<img src="${movie.image}" alt="${movie.title}" class="detail-poster">`
-          : `<div class="detail-poster-ph">poster</div>`}
-        <div class="detail-info">
-          <div style="font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">${statusLabel}</div>
-          <h1 class="detail-title">${movie.title}</h1>
-          <div class="detail-meta">
-            ${badge(movie.rating, true)}
-            ${badge(movie.duration + '分')}
-            ${movie.genre.map(g => badge(g)).join('')}
-            ${movie.releaseDate ? badge(movie.releaseDate + ' 公開') : ''}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <a href="index.html" class="back-btn">← トップに戻る</a>
-
-    <div class="detail-body">
-      <div>
-        <div class="detail-section-title">Synopsis — あらすじ</div>
-        <p class="detail-synopsis">${movie.synopsis}</p>
-        ${schedulesHTML}
-        ${comingHTML}
-      </div>
-      <div>
-        <div class="detail-section-title">Staff &amp; Cast</div>
-        <div class="detail-cast-list">
-          <div class="detail-cast-item">
-            <span style="color:var(--text3);font-size:11px;font-family:var(--mono)">監督</span>
-            <span>${movie.director}</span>
-          </div>
-          ${movie.cast.map(c => `
-            <div class="detail-cast-item">
-              <span style="color:var(--text3);font-size:11px;font-family:var(--mono)">出演</span>
-              <span>${c}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div style="margin-top:32px">
+        <div>
           <div class="detail-section-title">Film Info</div>
           ${[
             ['原題', movie.titleEn],
@@ -87,13 +169,13 @@ document.addEventListener('DOMContentLoaded', function () {
             ['公開日', movie.releaseDate],
             ['ジャンル', movie.genre.join('・')],
           ].map(([l, v]) => `
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
-              <span style="color:var(--text3);font-family:var(--mono);font-size:10px;letter-spacing:.08em">${l}</span>
-              <span style="color:var(--text);text-align:right">${v}</span>
+            <div class="film-info-row">
+              <span class="film-info-label">${l}</span>
+              <span class="film-info-value">${v}</span>
             </div>
           `).join('')}
         </div>
       </div>
     </div>
   `;
-});
+}

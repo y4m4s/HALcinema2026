@@ -413,17 +413,43 @@
 
 .theater-col-header {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
-.theater-col-num {
+.theater-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.theater-col-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.feature-badge {
   font-family: var(--mono);
   font-size: 9px;
-  letter-spacing: 0.15em;
-  color: var(--text2);
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.theater-col-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--text);
   text-transform: uppercase;
 }
 

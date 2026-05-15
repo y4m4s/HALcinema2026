@@ -159,11 +159,17 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>`;
       }).join('');
       const screenInfo = SCREENS.find(s => s.num === sc.screen);
+      const featureBadges = screenInfo
+        ? screenInfo.features.slice(0, 3).map(f => `<span class="feature-badge">${f}</span>`).join('')
+        : '';
       return `
         <div class="theater-col">
           <div class="theater-col-header">
-            <span class="theater-col-num">スクリーン ${sc.screen}</span>
-            ${screenInfo ? `<span class="theater-col-meta">${screenInfo.type} · ${screenInfo.seats}席</span>` : ''}
+            <div class="theater-col-left">
+              <span class="theater-col-num">スクリーン ${sc.screen}</span>
+              ${screenInfo ? `<span class="theater-col-meta">${screenInfo.type} · ${screenInfo.seats}席</span>` : ''}
+            </div>
+            ${featureBadges ? `<div class="theater-col-features">${featureBadges}</div>` : ''}
           </div>
           <div class="slots-grid${sc.slots.length === 4 ? ' slots-grid--quad' : ''}">${slotsHtml}</div>
         </div>`;
