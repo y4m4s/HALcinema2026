@@ -12,8 +12,8 @@
   background: var(--bg3);
   padding: 14px 20px;
   font-family: var(--mono);
-  /* font-size: 10px; */
-  font-size: 15px;
+  font-size: 10px;
+  /* font-size: 15px; */
   letter-spacing: 0.15em;
   /* color: var(--text3); */
   color: #fff;
@@ -25,9 +25,9 @@
 .ticket-table td {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  /* font-size: 14px; */
-  font-size: 18px; /* 区分 */
-  /* color: var(--text); */
+  font-size: 14px;
+  /* font-size: 18px; 区分 */
+  color: var(--text);
   color: #fff;
   text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
@@ -38,8 +38,8 @@
 
 .ticket-price {
   font-family: var(--mono);
-  /* font-size: 18px; */
-  font-size: 25px; /* 値段 */
+  font-size: 14px;
+  /* font-size: 25px; 値段 */
   /* color: #dde4f0; */
   color: #fff;
   letter-spacing: -0.01em;
@@ -47,8 +47,8 @@
 }
 
 .ticket-note {
-  /* font-size: 12px; */
-  font-size: 15px; /* 備考 */
+  font-size: 12px;
+  /* font-size: 15px; 備考 */
   /* color: var(--text3); */
   color: #fff;
   margin-top: 3px;
@@ -64,8 +64,8 @@
 
 .tickets-note-title {
   font-family: var(--mono);
-  /* font-size: 10px; */
-  font-size: 20px; /* NOTE */
+  font-size: 10px;
+  /* font-size: 20px; NOTE */
   letter-spacing: 0.15em;
   /* color: var(--accent2); */
   color: #fff;
@@ -82,8 +82,8 @@
 }
 
 .tickets-note-item {
-  /* font-size: 13px; */
-  font-size: 15px; /* NOTEの内容 */
+  font-size: 13px;
+  /* font-size: 15px; NOTEの内容 */
   /* color: var(--text2); */
   color: #fff;
   padding-left: 16px;
