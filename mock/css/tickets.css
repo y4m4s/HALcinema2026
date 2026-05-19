@@ -1,5 +1,5 @@
 .section {
-  padding: 80px 300px;
+  padding: 80px 20%;
 }
 
 .ticket-table {
@@ -133,7 +133,7 @@
   }
 
   .section {
-    padding: 80px 80px;
+    padding: 80px 10%;
   }
 
 }
