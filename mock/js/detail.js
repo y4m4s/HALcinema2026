@@ -1,72 +1,144 @@
 document.addEventListener('DOMContentLoaded', function () {
-  const id = parseInt(new URLSearchParams(location.search).get('id'));
+  const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
   const movie = MOVIES.find(m => m.id === id);
-  if (!movie) { location.href = 'index.html'; return; }
+  if (!movie) {
+    location.href = 'index.html';
+    return;
+  }
 
+  const isNow = movie.status === 'now';
   document.title = movie.title + ' | HAL シネマ';
 
-  const main = document.getElementById('detail-main');
-  const isNow = movie.status === 'now';
-
-  main.innerHTML = `
-    <a href="index.html" class="back-btn">← トップに戻る</a>
-    ${buildHero(movie, isNow)}
-    ${buildInfoSection(movie)}
-    ${buildBooking(movie, isNow)}
-  `;
-
-  const dateTabs = document.getElementById('detail-date-tabs');
-  if (dateTabs) {
-    dateTabs.addEventListener('click', function (e) {
-      const btn = e.target.closest('.sub-tab');
-      if (!btn || btn.classList.contains('no-play')) return;
-      dateTabs.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  }
+  renderDetail(movie, isNow);
+  bindDateTabs();
 });
 
-function buildHero(movie, isNow) {
-  const posterHtml = movie.image
-    ? `<img src="${movie.image}" alt="${movie.title}" class="detail-hero-poster">`
-    : `<div class="detail-hero-poster-ph"></div>`;
+function renderDetail(movie, isNow) {
+  setText('detail-breadcrumb-current', movie.title);
+  setText('detail-status', isNow ? 'NOW SHOWING' : 'COMING SOON');
+  setText('detail-title', movie.title);
+  setText('detail-title-en', movie.titleEn || '');
+  setText('detail-synopsis', movie.synopsis || 'あらすじは準備中です。');
 
-  return `
-    <div class="detail-hero-wrap">
-      <div class="detail-hero">
-        ${movie.image ? `<div class="detail-hero-bg" style="background-image:url('${movie.image}')"></div>` : ''}
-        <div class="detail-hero-overlay"></div>
-        <div class="detail-hero-inner">
-          <div class="detail-hero-text">
-            <div class="detail-status-label">${isNow ? 'NOW SHOWING' : 'COMING SOON'}</div>
-            <h1 class="detail-title">${movie.title}</h1>
-            ${movie.titleEn ? `<div class="detail-title-en">${movie.titleEn}</div>` : ''}
-            <div class="detail-meta">
-              ${badge(movie.rating, true)}
-              ${badge(movie.duration + '分')}
-              ${movie.genre.map(g => badge(g)).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="detail-hero-poster-wrap">${posterHtml}</div>
-    </div>
-  `;
+  setHidden('detail-title-en', !movie.titleEn);
+
+  renderPoster(movie);
+  renderMeta(movie);
+  renderStaffAndCast(movie);
+  renderFilmInfo(movie);
+  renderBooking(movie, isNow);
 }
 
-function buildBooking(movie, isNow) {
-  if (!isNow) {
-    return `
-      <div class="detail-booking">
-        <div class="booking-section-label">Ticket — チケット予約</div>
-        <div class="coming-soon-notice">
-          <div class="coming-soon-date">${movie.releaseDate} 公開予定</div>
-          <div class="coming-soon-text">予約受付は公開日前日より開始予定です</div>
-        </div>
-      </div>
-    `;
+function renderPoster(movie) {
+  const poster = document.getElementById('detail-poster');
+  if (!poster) return;
+
+  poster.replaceChildren();
+
+  if (!movie.image) {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'detail-hero-poster-ph';
+    poster.appendChild(placeholder);
+    return;
   }
 
+  const img = document.createElement('img');
+  img.src = movie.image;
+  img.alt = movie.title;
+  img.className = 'detail-hero-poster';
+  poster.appendChild(img);
+}
+
+function renderMeta(movie) {
+  const meta = document.getElementById('detail-meta');
+  if (!meta) return;
+
+  const values = [
+    [movie.rating, true],
+    [movie.releaseDate],
+    [movie.duration ? `${movie.duration}分` : '上映時間未定'],
+    ...(movie.genre || []).map(g => [g]),
+  ].filter(([value]) => value);
+
+  meta.innerHTML = values.map(([value, isRating]) => badge(value, isRating)).join('');
+}
+
+function renderStaffAndCast(movie) {
+  const castList = document.getElementById('detail-cast-list');
+  if (!castList) return;
+
+  castList.replaceChildren();
+  castList.appendChild(createLeadCredit('DIRECTOR', '監督', movie.director || '未定'));
+
+  const cast = movie.cast && movie.cast.length ? movie.cast : ['未定'];
+  const castLabel = document.createElement('div');
+  castLabel.className = 'detail-cast-group-label';
+  castLabel.textContent = 'CAST';
+  castList.appendChild(castLabel);
+
+  const castGrid = document.createElement('div');
+  castGrid.className = 'detail-cast-grid';
+
+  cast.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'detail-cast-person';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'detail-cast-name';
+    nameEl.textContent = name;
+
+    item.appendChild(nameEl);
+    castGrid.appendChild(item);
+  });
+
+  castList.appendChild(castGrid);
+}
+
+function renderFilmInfo(movie) {
+  const filmInfo = document.getElementById('detail-film-info');
+  if (!filmInfo) return;
+
+  const rows = [
+    ['タイトル', movie.titleEn || movie.title],
+    ['上映時間', movie.duration ? `${movie.duration}分` : '未定'],
+    ['レーティング', movie.rating || '未定'],
+    ['公開日', movie.releaseDate || '未定'],
+    ['ジャンル', movie.genre && movie.genre.length ? movie.genre.join('・') : '未定'],
+  ];
+
+  filmInfo.replaceChildren();
+  filmInfo.className = 'detail-film-info-list';
+  rows.forEach(([label, value]) => {
+    filmInfo.appendChild(createInfoRow(label, value, 'film-info-row', 'film-info-label', 'film-info-value'));
+  });
+}
+
+function renderBooking(movie, isNow) {
+  const comingNotice = document.getElementById('detail-coming-notice');
+  const comingDate = document.getElementById('detail-coming-date');
+  const nowBooking = document.getElementById('detail-now-booking');
+  const dateTabs = document.getElementById('detail-date-tabs');
+  const theatersGrid = document.getElementById('detail-theaters-grid');
+  const note = document.getElementById('detail-movie-note');
+  const noteText = document.getElementById('detail-movie-note-text');
+
+  if (comingNotice) comingNotice.hidden = isNow;
+  if (nowBooking) nowBooking.hidden = !isNow;
+
+  if (!isNow) {
+    if (comingDate) comingDate.textContent = `${movie.releaseDate || '公開日未定'} 公開予定`;
+    return;
+  }
+
+  if (dateTabs) dateTabs.innerHTML = buildDateTabs(movie);
+  if (theatersGrid) theatersGrid.innerHTML = buildTheaterCols(movie);
+  if (note && noteText) {
+    note.hidden = !movie.note;
+    noteText.textContent = movie.note || '';
+  }
+}
+
+function buildDateTabs(movie) {
   const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
   const todayStr = '5/15(金)';
   const defaultDate = (movie.playingDays && DATES.find(d => {
@@ -82,53 +154,50 @@ function buildBooking(movie, isNow) {
     const m = d.match(/\((.)\)/);
     const isPlaying = m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
     const todayBadge = d === todayLabel ? '<span class="today-badge">TODAY</span>' : '';
-    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${d}">${d}${todayBadge}</button>`;
+    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}">${escapeHtml(d)}${todayBadge}</button>`;
   }).join('');
 
-  return `
-    <div class="detail-booking">
-      <div class="booking-section-label">Ticket — チケット予約</div>
-      <div class="sub-tabs" id="detail-date-tabs">${dateTabs}</div>
-      <div class="detail-theaters-wrap">
-        <div class="theaters-grid">
-          ${buildTheaterCols(movie)}
-        </div>
-      </div>
-      ${movie.note ? `
-        <div class="movie-card-note">
-          <span class="note-label">補足事項</span>
-          <span class="note-text">${movie.note}</span>
-        </div>
-      ` : ''}
-    </div>
-  `;
+  return dateTabs;
+}
+
+function bindDateTabs() {
+  const dateTabs = document.getElementById('detail-date-tabs');
+  if (!dateTabs) return;
+
+  dateTabs.addEventListener('click', function (e) {
+    const btn = e.target.closest('.sub-tab');
+    if (!btn || btn.classList.contains('no-play')) return;
+    dateTabs.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  });
 }
 
 function buildTheaterCols(movie) {
   if (!movie.screenSchedules || !movie.screenSchedules.length) {
     return '<div style="color:var(--text3);font-size:13px;padding:20px">本日の上映スケジュールはありません</div>';
   }
+
   return movie.screenSchedules.map(sc => {
     const screen = SCREENS.find(s => s.num === sc.screen);
     const slotsHtml = sc.slots.map(slot => {
       const isSoldout = slot.status === 'soldout';
       const statusClass = isSoldout ? 'soldout' : slot.status === 'few' ? 'few' : 'ok';
-      const statusText  = isSoldout ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
+      const statusText = isSoldout ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
       return `
         <div class="time-slot${isSoldout ? ' soldout' : ''}" ${!isSoldout ? "onclick=\"alert('チケット予約システムへ移動します')\"" : ''}>
-          <div class="time-slot-time">${slot.start} 〜 ${slot.end}</div>
+          <div class="time-slot-time">${escapeHtml(slot.start)} 〜 ${escapeHtml(slot.end)}</div>
           <div class="time-slot-status ${statusClass}">${statusText}</div>
         </div>`;
     }).join('');
     const featureBadges = screen
-      ? screen.features.slice(0, 3).map(f => `<span class="feature-badge">${f}</span>`).join('')
+      ? screen.features.slice(0, 3).map(f => `<span class="feature-badge">${escapeHtml(f)}</span>`).join('')
       : '';
     return `
       <div class="theater-col">
         <div class="theater-col-header">
           <div class="theater-col-left">
-            <span class="theater-col-num">スクリーン ${sc.screen}</span>
-            ${screen ? `<span class="theater-col-meta">${screen.type} · ${screen.seats}席</span>` : ''}
+            <span class="theater-col-num">スクリーン ${escapeHtml(sc.screen)}</span>
+            ${screen ? `<span class="theater-col-meta">${escapeHtml(screen.type)} · ${escapeHtml(screen.seats)}席</span>` : ''}
           </div>
           ${featureBadges ? `<div class="theater-col-features">${featureBadges}</div>` : ''}
         </div>
@@ -137,45 +206,57 @@ function buildTheaterCols(movie) {
   }).join('');
 }
 
-function buildInfoSection(movie) {
-  return `
-    <div class="detail-info-section">
-      <div class="detail-synopsis-wrap">
-        <div class="detail-section-title">Synopsis — あらすじ</div>
-        <p class="detail-synopsis">${movie.synopsis}</p>
-      </div>
-      <div class="detail-sub-grid">
-        <div>
-          <div class="detail-section-title">Staff &amp; Cast</div>
-          <div class="detail-cast-list">
-            <div class="detail-cast-item director">
-              <span class="cast-role">監督</span>
-              <span class="cast-name">${movie.director}</span>
-            </div>
-            ${movie.cast.map(c => `
-              <div class="detail-cast-item">
-                <span class="cast-role">出演</span>
-                <span class="cast-name">${c}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div>
-          <div class="detail-section-title">Film Info</div>
-          ${[
-            ['原題', movie.titleEn],
-            ['上映時間', movie.duration + '分'],
-            ['レーティング', movie.rating],
-            ['公開日', movie.releaseDate],
-            ['ジャンル', movie.genre.join('・')],
-          ].map(([l, v]) => `
-            <div class="film-info-row">
-              <span class="film-info-label">${l}</span>
-              <span class="film-info-value">${v}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
+function createInfoRow(label, value, rowClass, labelClass, valueClass) {
+  const row = document.createElement('div');
+  row.className = rowClass;
+
+  const labelEl = document.createElement('span');
+  labelEl.className = labelClass;
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement('span');
+  valueEl.className = valueClass;
+  valueEl.textContent = value;
+
+  row.append(labelEl, valueEl);
+  return row;
+}
+
+function createLeadCredit(label, role, name) {
+  const block = document.createElement('div');
+  block.className = 'detail-credit-lead';
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'detail-credit-label';
+  labelEl.textContent = label;
+
+  const roleEl = document.createElement('span');
+  roleEl.className = 'detail-credit-role';
+  roleEl.textContent = role;
+
+  const nameEl = document.createElement('strong');
+  nameEl.className = 'detail-credit-name';
+  nameEl.textContent = name;
+
+  block.append(labelEl, roleEl, nameEl);
+  return block;
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function setHidden(id, hidden) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = hidden;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

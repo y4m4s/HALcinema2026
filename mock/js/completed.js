@@ -1,4 +1,12 @@
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
+window.scrollTo(0, 0);
+
 document.addEventListener('DOMContentLoaded', function () {
+  window.scrollTo(0, 0);
+
   const wrap = document.querySelector('.complete-wrap');
   const countEl = document.getElementById('count');
   if (!wrap || !countEl) return;
