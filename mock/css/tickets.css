@@ -141,14 +141,3 @@
 .coming-synopsis {
   color: #fff;
 }
-
-/* パンくずリスト */
-.breadcrumb {
-  display: flex; /* リストを横並びに */
-  flex-wrap: wrap; /* リストが折り返すように */
-  list-style: none; /* リストスタイルを無しに */
-}
-.breadcrumb__list:not(:last-of-type)::after {
-  content: ">"; /* 区切り文字 */
-  margin: 0 .6em; /* 区切り文字の左右の余白 */
-}

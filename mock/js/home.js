@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
+  const comingSynopsisLimit = 110;
+  const nowShowingPreviewLimit = 5;
   const featured = MOVIES.find(m => m.isFeature);
   const nowShowing = MOVIES.filter(m => m.status === 'now');
+  const nowShowingPreview = nowShowing.slice(0, nowShowingPreviewLimit);
   const coming = MOVIES.filter(m => m.status === 'coming');
 
   // Hero
@@ -12,10 +15,10 @@ document.addEventListener('DOMContentLoaded', function () {
     badge(featured.genre.join(' / ')) +
     badge('監督：' + featured.director);
   document.getElementById('hero-synopsis').textContent = featured.synopsis;
-  document.getElementById('hero-cta').innerHTML = `
-    <a href="detail.html?id=${featured.id}" class="btn-primary">作品詳細・上映時刻</a>
-    <a href="schedule.html" class="btn-ghost">スケジュール一覧</a>
-  `;
+  const heroDetailLink = document.getElementById('hero-detail-link');
+  if (heroDetailLink) {
+    heroDetailLink.href = `detail.html?id=${featured.id}`;
+  }
 
   // Ticker
   const tickerHTML = [...NEWS, ...NEWS].map(n =>
@@ -25,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
   inner.innerHTML = tickerHTML + tickerHTML;
 
   // Now Showing
-  document.getElementById('now-showing-grid').innerHTML = nowShowing.map(m => `
+  document.getElementById('now-showing-grid').innerHTML = nowShowingPreview.map(m => `
     <a href="detail.html?id=${m.id}" class="movie-card">
       ${m.image
         ? `<img src="${m.image}" alt="${m.title}" class="movie-card-poster">`
@@ -50,16 +53,31 @@ document.addEventListener('DOMContentLoaded', function () {
   // Coming Soon
   document.getElementById('coming-grid').innerHTML = coming.map(m => `
     <a href="detail.html?id=${m.id}" class="coming-card">
-      <div class="coming-release">${m.releaseDate} 公開予定</div>
-      <div class="coming-title">${m.title}</div>
-      <div class="coming-title-en">${m.titleEn}</div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        ${badge(m.rating, true)}
-        ${m.genre.map(g => badge(g)).join('')}
+      <div class="coming-poster-wrap">
+        ${m.image
+          ? `<img src="${m.image}" alt="${m.title}" class="coming-poster">`
+          : `<div class="coming-poster-placeholder">NO IMAGE</div>`}
       </div>
-      <p class="coming-synopsis">${m.synopsis}</p>
+      <div class="coming-body">
+        <div class="coming-release">${m.releaseDate} 公開予定</div>
+        <div class="coming-title">${m.title}</div>
+        <div class="coming-title-en">${m.titleEn}</div>
+        <div class="coming-badges">
+          ${badge(m.rating, true)}
+          ${m.genre.map(g => badge(g)).join('')}
+        </div>
+        <p class="coming-synopsis">${truncateText(m.synopsis, comingSynopsisLimit)}</p>
+      </div>
     </a>
   `).join('');
+
+  const nowShowingMoreLink = document.getElementById('now-showing-more-link');
+  const nowShowingMoreCount = document.getElementById('now-showing-more-count');
+  if (nowShowingMoreLink && nowShowingMoreCount) {
+    const hasMore = nowShowing.length > nowShowingPreviewLimit;
+    nowShowingMoreLink.hidden = !hasMore;
+    nowShowingMoreCount.textContent = hasMore ? `${nowShowing.length}作品すべて表示` : '';
+  }
 
   // News
   document.getElementById('home-news-list').innerHTML = NEWS.map(n => `
@@ -70,6 +88,13 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   `).join('');
 });
+
+function truncateText(text, maxLength) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  const chars = Array.from(normalized);
+  if (chars.length <= maxLength) return normalized;
+  return chars.slice(0, maxLength).join('').trimEnd() + '……';
+}
 
 // Parallax: hero background scrolls slower than page
 (function () {

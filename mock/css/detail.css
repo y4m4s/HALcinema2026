@@ -1,52 +1,53 @@
-/* ── Hero (compact) ── */
+/* ── Detail layout ── */
+.detail-breadcrumb-wrap {
+  padding: 2.5rem 80px 24px;
+}
+
+.detail-breadcrumb-wrap .breadcrumb-nav {
+  margin-bottom: 0;
+}
+
 .detail-hero-wrap {
-  position: relative;
+  padding: 40px 80px;
+  background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .detail-hero {
-  position: relative;
-  height: 380px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+  gap: clamp(40px, 6vw, 80px);
+  align-items: start;
+}
+
+.detail-hero-poster-wrap {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
   overflow: hidden;
 }
 
-.detail-hero-bg {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center 20%;
-  filter: brightness(0.22) saturate(0.4);
+.detail-hero-poster,
+.detail-hero-poster-ph {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  display: block;
 }
 
-.detail-hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(14, 30, 56, 0.97) 35%,
-    rgba(14, 30, 56, 0.55) 65%,
-    rgba(14, 30, 56, 0.15) 100%
-  );
+.detail-hero-poster {
+  object-fit: cover;
 }
 
-.detail-hero-inner {
-  position: relative;
-  z-index: 2;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 80px;
+.detail-hero-poster-ph {
+  background: var(--bg3);
 }
 
-/* ① ポスターはみ出し */
-.detail-hero-poster-wrap {
-  position: absolute;
-  right: 80px;
-  bottom: -72px;
-  z-index: 10;
-}
-
-.detail-hero-text {
-  flex: 1;
+.detail-hero-content {
+  min-width: 0;
+  padding-top: 8px;
 }
 
 .detail-status-label {
@@ -60,11 +61,11 @@
 
 .detail-title {
   font-family: var(--serif);
-  font-size: clamp(28px, 4vw, 52px);
+  font-size: clamp(34px, 5vw, 62px);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #f0f4ff;
-  line-height: 1.15;
+  line-height: 1.12;
   margin-bottom: 8px;
 }
 
@@ -74,30 +75,36 @@
   letter-spacing: 0.22em;
   color: var(--text3);
   text-transform: uppercase;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .detail-meta {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-bottom: 34px;
 }
 
-.detail-hero-poster {
-  width: 180px;
-  display: block;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border: 1px solid var(--border2);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(74, 159, 212, 0.12);
+.detail-hero-synopsis {
+  margin-bottom: 32px;
 }
 
-.detail-hero-poster-ph {
-  width: 180px;
-  display: block;
-  aspect-ratio: 2 / 3;
-  background: var(--bg3);
-  border: 1px solid var(--border);
+.detail-section-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--accent2);
+  text-transform: uppercase;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-synopsis {
+  max-width: 860px;
+  font-size: 15px;
+  line-height: 2.05;
+  color: var(--text2);
 }
 
 /* ── Booking section ── */
@@ -116,7 +123,6 @@
   margin-bottom: 24px;
 }
 
-/* theaters-grid をスタンドアロンで使うためのラッパー */
 .detail-theaters-wrap {
   border: 1px solid var(--border);
   overflow: hidden;
@@ -155,27 +161,134 @@
 }
 
 /* ── Info section ── */
+.detail-info-section {
+  padding: 56px 80px;
+  border-bottom: 1px solid var(--border);
+}
 
-/* ② あらすじ 装飾引用符 */
-.detail-synopsis-wrap {
+.detail-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.detail-cast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detail-credit-lead {
   position: relative;
+  min-height: 76px;
+  padding: 14px 0 16px 16px;
+  background: transparent;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  align-content: center;
+  gap: 6px;
 }
 
-.detail-synopsis-wrap::before {
-  content: '"';
+.detail-credit-lead::before {
+  content: '';
   position: absolute;
-  top: 24px;
-  left: -12px;
-  font-family: var(--serif);
-  font-size: 160px;
-  line-height: 1;
-  color: var(--accent2);
-  opacity: 0.07;
-  pointer-events: none;
-  user-select: none;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  background: var(--accent2);
 }
 
-/* ③ TODAY バッジ */
+.detail-credit-lead::after {
+  content: none;
+}
+
+.detail-credit-label,
+.detail-cast-group-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--accent2);
+}
+
+.detail-credit-role {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.detail-credit-name {
+  display: block;
+  color: var(--text);
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.detail-cast-group-label {
+  margin-top: 6px;
+}
+
+.detail-cast-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+}
+
+.detail-cast-person {
+  min-height: 52px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+}
+
+.detail-cast-person:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+
+.detail-cast-name {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.detail-film-info-list {
+  border-top: 1px solid var(--border);
+}
+
+.film-info-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  min-height: 52px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  gap: 18px;
+}
+
+.film-info-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+.film-info-value {
+  color: var(--text);
+  text-align: left;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
 .today-badge {
   display: inline-block;
   font-family: var(--mono);
@@ -190,153 +303,31 @@
   font-weight: 700;
 }
 
-/* ⑤ 監督行の強調 */
-.detail-cast-item.director {
-  position: relative;
-  padding-left: 12px;
-}
-
-.detail-cast-item.director::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 2px;
-  background: var(--accent2);
-}
-
-.detail-cast-item.director .cast-role {
-  color: var(--accent2);
-}
-
-.detail-cast-item.director .cast-name {
-  color: var(--text);
-}
-.detail-info-section {
-  padding: 104px 80px 48px;
-  border-bottom: 1px solid var(--border);
-}
-
-.detail-synopsis-wrap {
-  margin-bottom: 48px;
-}
-
-.detail-sub-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-}
-
-.detail-section-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--accent2);
-  text-transform: uppercase;
-  padding-bottom: 12px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.detail-synopsis {
-  font-size: 15px;
-  line-height: 2.1;
-  color: var(--text2);
-}
-
-.detail-cast-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-cast-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  gap: 12px;
-}
-
-.cast-role {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--text3);
-  flex-shrink: 0;
-}
-
-.cast-name {
-  color: var(--text2);
-  text-align: right;
-}
-
-.film-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  gap: 12px;
-}
-
-.film-info-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--text3);
-  flex-shrink: 0;
-}
-
-.film-info-value {
-  color: var(--text);
-  text-align: right;
-}
-
-/* ── Responsive ── */
 @media (max-width: 768px) {
+  .detail-breadcrumb-wrap {
+    padding: 2.5rem 24px 20px;
+  }
+
+  .detail-hero-wrap {
+    padding: 28px 24px 44px;
+  }
+
   .detail-hero {
-    height: 300px;
+    grid-template-columns: 1fr;
+    gap: 28px;
   }
 
-  .detail-hero-inner {
-    padding: 0 24px;
-    align-items: flex-end;
-    padding-bottom: 28px;
-  }
-
-  /* モバイルはポスターをヒーロー下に通常フローで表示 */
   .detail-hero-poster-wrap {
-    position: static;
-    display: flex;
-    justify-content: center;
-    padding: 20px 24px;
-    background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    width: min(220px, 72vw);
+    margin: 0 auto;
   }
 
-  .detail-hero-poster,
-  .detail-hero-poster-ph {
-    width: 120px;
+  .detail-hero-content {
+    padding-top: 0;
   }
 
-  .detail-info-section {
-    padding-top: 40px;
-  }
-
-  .detail-booking {
-    padding: 32px 24px;
-  }
-
-  .booking-slot {
-    min-width: 100%;
-  }
-
-  .screen-features {
-    margin-left: 0;
-    width: 100%;
+  .detail-meta {
+    margin-bottom: 26px;
   }
 
   .detail-booking {
@@ -350,5 +341,22 @@
   .detail-sub-grid {
     grid-template-columns: 1fr;
     gap: 40px;
+  }
+
+  .detail-credit-lead {
+    min-height: 72px;
+  }
+
+  .detail-cast-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-cast-person:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .film-info-row {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 14px;
   }
 }

@@ -1,11 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('contact-form');
-  const formSection = document.getElementById('form-section');
-  const sentSection = document.getElementById('sent-section');
+  if (!form) return;
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    formSection.style.display = 'none';
-    sentSection.style.display = 'block';
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+    window.location.href = 'completed.html';
   });
 });
