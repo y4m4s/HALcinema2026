@@ -1,3 +1,7 @@
+.section {
+  padding: 80px 300px;
+}
+
 .ticket-table {
   width: 100%;
   border-collapse: collapse;
@@ -8,18 +12,24 @@
   background: var(--bg3);
   padding: 14px 20px;
   font-family: var(--mono);
-  font-size: 10px;
+  /* font-size: 10px; */
+  font-size: 15px;
   letter-spacing: 0.15em;
-  color: var(--text3);
+  /* color: var(--text3); */
+  color: #fff;
   text-align: left;
   border-bottom: 2px solid var(--border2);
+  text-shadow: 0px 0px 3px rgba(0, 0, 0, 0.7);
 }
 
 .ticket-table td {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
-  color: var(--text);
+  /* font-size: 14px; */
+  font-size: 18px; /* 区分 */
+  /* color: var(--text); */
+  color: #fff;
+  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .ticket-table tr:hover td {
@@ -28,15 +38,21 @@
 
 .ticket-price {
   font-family: var(--mono);
-  font-size: 18px;
-  color: #dde4f0;
+  /* font-size: 18px; */
+  font-size: 25px; /* 値段 */
+  /* color: #dde4f0; */
+  color: #fff;
   letter-spacing: -0.01em;
+  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .ticket-note {
-  font-size: 12px;
-  color: var(--text3);
+  /* font-size: 12px; */
+  font-size: 15px; /* 備考 */
+  /* color: var(--text3); */
+  color: #fff;
   margin-top: 3px;
+  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
 }
 
 .tickets-note-box {
@@ -48,25 +64,32 @@
 
 .tickets-note-title {
   font-family: var(--mono);
-  font-size: 10px;
+  /* font-size: 10px; */
+  font-size: 20px; /* NOTE */
   letter-spacing: 0.15em;
-  color: var(--accent2);
+  /* color: var(--accent2); */
+  color: #fff;
   margin-bottom: 12px;
+  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .tickets-note-list {
-  padding-left: 0;
+  padding-left: 20px;
   list-style: none;
+  gap: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .tickets-note-item {
-  font-size: 13px;
-  color: var(--text2);
+  /* font-size: 13px; */
+  font-size: 15px; /* NOTEの内容 */
+  /* color: var(--text2); */
+  color: #fff;
   padding-left: 16px;
   position: relative;
+  align-items: center;
+  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .tickets-note-marker {
@@ -108,4 +131,24 @@
     padding: 12px 0;
     border-bottom: none;
   }
+
+  .section {
+    padding: 80px 80px;
+  }
+
+}
+
+.coming-synopsis {
+  color: #fff;
+}
+
+/* パンくずリスト */
+.breadcrumb {
+  display: flex; /* リストを横並びに */
+  flex-wrap: wrap; /* リストが折り返すように */
+  list-style: none; /* リストスタイルを無しに */
+}
+.breadcrumb__list:not(:last-of-type)::after {
+  content: ">"; /* 区切り文字 */
+  margin: 0 .6em; /* 区切り文字の左右の余白 */
 }
