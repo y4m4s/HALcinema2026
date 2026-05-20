@@ -129,8 +129,14 @@ a {
   margin-right: auto;
   display: flex;
   align-items: center;
-  gap: 14px;
   min-width: max-content;
+}
+
+.nav-logo-img {
+  display: block;
+  width: clamp(178px, 18vw, 236px);
+  height: auto;
+  max-height: 56px;
 }
 
 .nav-logo-mark {
@@ -541,6 +547,12 @@ body:not(.home-page) .page > .section:first-child {
   letter-spacing: 0.12em;
   color: #dde4f0;
   margin-bottom: 18px;
+}
+
+.footer-logo-img {
+  display: block;
+  width: min(420px, 100%);
+  height: auto;
 }
 
 .footer-logo span {
