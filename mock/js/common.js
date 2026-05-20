@@ -3,10 +3,9 @@ function getCurrentPage() {
   if (p.includes('works'))    return 'works';
   if (p.includes('schedule')) return 'schedule';
   if (p.includes('theater'))  return 'theater';
+  if (p.includes('access'))   return 'access';
   if (p.includes('tickets'))  return 'tickets';
-  if (p.includes('news'))     return 'news';
-  if (p.includes('contact'))  return 'contact';
-  if (p.includes('completed')) return 'contact';
+  if (p.includes('question')) return 'question';
   if (p.includes('detail'))   return 'works';
   return 'home';
 }
@@ -22,7 +21,6 @@ function getPageMeta() {
   if (p.includes('question')) return { label: 'よくある質問' };
   if (p.includes('contact')) return { label: 'お問い合わせ' };
   if (p.includes('completed')) return { label: 'お問い合わせ完了', parent: { label: 'お問い合わせ', href: 'contact.html' } };
-  if (p.includes('detail-news')) return { label: 'お知らせ詳細', parent: { label: 'お知らせ', href: 'news.html' } };
   if (p.includes('news')) return { label: 'お知らせ' };
   return null;
 }
@@ -32,9 +30,7 @@ function renderNav() {
   const root = document.getElementById('nav-root');
   if (!root) return;
 
-  if (!root.querySelector('.site-header')) {
-    root.innerHTML = buildNavHtml();
-  }
+  root.innerHTML = buildNavHtml();
 
   root.querySelectorAll('.nav-link').forEach(function (link) {
     const isActive = (link.dataset.nav || '') === active;
@@ -49,22 +45,18 @@ function renderNav() {
 
 function buildNavHtml() {
   const links = [
-    { id:'home',     label:'トップ',         href:'index.html' },
     { id:'works',    label:'上映作品一覧',   href:'works.html' },
     { id:'schedule', label:'上映スケジュール', href:'schedule.html' },
     { id:'theater',  label:'劇場案内',        href:'theater.html' },
+    { id:'access',   label:'交通案内',        href:'access.html' },
     { id:'tickets',  label:'料金案内',        href:'tickets.html' },
-    { id:'contact',  label:'お問い合わせ',    href:'contact.html' },
+    { id:'question', label:'よくある質問',    href:'question.html' },
   ];
   return `
     <header class="site-header">
       <nav class="nav" aria-label="グローバルナビゲーション">
-        <a class="nav-logo" href="index.html" aria-label="HAL シネマ トップへ">
-          <span class="nav-logo-mark">HAL</span>
-          <span class="nav-logo-body">
-            <span class="nav-logo-main">シネマ</span>
-            <span class="nav-logo-sub">HORROR / MYSTERY / SUSPENSE</span>
-          </span>
+        <a class="nav-logo" href="index.html" aria-label="HALシネマ 境界 トップへ">
+          <img class="nav-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
         </a>
         <div class="nav-links">
           ${links.map(l => `
@@ -80,27 +72,32 @@ function buildNavHtml() {
 
 function renderFooter() {
   const root = document.getElementById('footer-root');
-  if (!root || root.querySelector('.footer')) return;
+  if (!root) return;
+  root.innerHTML = buildFooterHtml();
+}
 
-  root.innerHTML = `
+function buildFooterHtml() {
+  return `
     <footer class="footer">
       <div class="footer-inner">
-        <div class="footer-watermark" aria-hidden="true">HAL CINEMA</div>
+        <div class="footer-watermark" aria-hidden="true">HAL CINEMA KYOKAI</div>
         <div class="footer-main">
           <div class="footer-brand">
             <div class="footer-kicker">Horror Theatre</div>
-            <div class="footer-logo"><span>HAL</span>シネマ</div>
+            <div class="footer-logo">
+              <img class="footer-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+            </div>
             <p class="footer-tagline">
               ホラー・ミステリー・サスペンスを中心に、深夜まで上映する都市型シアター。
             </p>
             <dl class="footer-meta">
               <div>
                 <dt>ADDRESS</dt>
-                <dd>〒150-0001 東京都渋谷区神宮前1-2-3 HALビル</dd>
+                <dd>〒450-0002　愛知県名古屋市中村区名駅4-4-38</dd>
               </div>
               <div>
                 <dt>OPEN</dt>
-                <dd>10:00 - 翌0:00</dd>
+                <dd>9:00 - 翌0:30</dd>
               </div>
             </dl>
           </div>
@@ -109,13 +106,12 @@ function renderFooter() {
               <div class="footer-col-title">上映情報</div>
               <a href="works.html" class="footer-link">上映作品一覧</a>
               <a href="schedule.html" class="footer-link">上映スケジュール</a>
-              <a href="index.html" class="footer-link">トップ</a>
             </div>
             <div class="footer-col">
               <div class="footer-col-title">劇場情報</div>
               <a href="theater.html" class="footer-link">劇場案内</a>
-              <a href="tickets.html" class="footer-link">料金案内</a>
               <a href="access.html" class="footer-link">交通案内</a>
+              <a href="tickets.html" class="footer-link">料金案内</a>
             </div>
             <div class="footer-col">
               <div class="footer-col-title">サポート</div>
@@ -126,7 +122,7 @@ function renderFooter() {
           </div>
         </div>
         <div class="footer-bottom">
-          <span>© 2026 HAL シネマ. All Rights Reserved.</span>
+          <span>© 2026 HALシネマ 境界. All Rights Reserved.</span>
           <span>HORROR · MYSTERY · SUSPENSE</span>
         </div>
       </div>

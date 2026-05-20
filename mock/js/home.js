@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
   const comingSynopsisLimit = 110;
-  const nowShowingPreviewLimit = 5;
   const featured = MOVIES.find(m => m.isFeature);
-  const nowShowing = MOVIES.filter(m => m.status === 'now');
-  const nowShowingPreview = nowShowing.slice(0, nowShowingPreviewLimit);
+  const nowShowingIds = [1, 3, 6, 7];
+  const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
+  const nowShowingPreview = nowShowing;
   const coming = MOVIES.filter(m => m.status === 'coming');
 
   // Hero
@@ -74,18 +74,17 @@ document.addEventListener('DOMContentLoaded', function () {
   const nowShowingMoreLink = document.getElementById('now-showing-more-link');
   const nowShowingMoreCount = document.getElementById('now-showing-more-count');
   if (nowShowingMoreLink && nowShowingMoreCount) {
-    const hasMore = nowShowing.length > nowShowingPreviewLimit;
-    nowShowingMoreLink.hidden = !hasMore;
-    nowShowingMoreCount.textContent = hasMore ? `${nowShowing.length}作品すべて表示` : '';
+    nowShowingMoreLink.hidden = true;
+    nowShowingMoreCount.textContent = '';
   }
 
   // News
   document.getElementById('home-news-list').innerHTML = NEWS.map(n => `
-    <div class="news-item">
+    <a href="news.html?id=${n.id}" class="news-item">
       <span class="news-date">${n.date}</span>
       <span class="news-tag" data-tag="${n.tag}">${n.tag}</span>
       <span class="news-title">${n.title}</span>
-    </div>
+    </a>
   `).join('');
 });
 

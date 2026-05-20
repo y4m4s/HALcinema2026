@@ -1,125 +1,74 @@
 document.addEventListener('DOMContentLoaded', function () {
-  const extraNews = [
-    {
-      id: 6,
-      date: '2025.03.15',
-      tag: '新作情報',
-      title: '「呪縛の家」2025年6月公開決定',
-      body: [
-        '「呪縛の家」の公開が2025年6月に決定しました。',
-        '予告映像や上映スケジュールは、決まり次第お知らせします。'
-      ]
-    },
-    {
-      id: 7,
-      date: '2025.03.01',
-      tag: '新作情報',
-      title: '「深淵より」2025年7月公開決定',
-      body: [
-        '深海を舞台にした新感覚ホラー「深淵より」が2025年7月に公開予定です。',
-        '詳細な上映情報は後日公開します。'
-      ]
-    },
-    {
-      id: 8,
-      date: '2025.02.20',
-      tag: 'イベント',
-      title: '「カラダ探し」特集上映を開催',
-      body: [
-        '「カラダ探し」の特集上映を開催します。',
-        '監督トークショー付きのスペシャル上映です。'
-      ]
-    },
-    {
-      id: 9,
-      date: '2025.02.01',
-      tag: 'お知らせ',
-      title: '公式スマートフォンアプリをリリース',
-      body: [
-        '公式スマートフォンアプリのリリースにより、オンライン予約機能がより便利になりました。',
-        'チケット購入や上映情報の確認にご利用ください。'
-      ]
-    }
-  ];
+  const newsItems = Array.isArray(NEWS) ? NEWS : [];
+  const list = document.getElementById('news-list');
+  if (!list || !newsItems.length) return;
 
-  const allNews = [
-    ...NEWS,
-    ...extraNews
-  ].map(news => ({
-    ...news,
-    body: Array.isArray(news.body) ? news.body : [
-      `${news.title}の詳細情報です。`
-    ]
-  }));
+  const params = new URLSearchParams(location.search);
+  const requestedId = Number(params.get('id'));
+  const initialNews = newsItems.find(news => news.id === requestedId) || newsItems[0];
 
-  const newsList = document.getElementById('news-list');
-  if (!newsList) return;
-
-  newsList.innerHTML = allNews.map(news => `
-    <div class="news-item" data-news-id="${news.id}">
+  list.innerHTML = newsItems.map(news => `
+    <a href="news.html?id=${news.id}" class="news-item" data-news-id="${news.id}">
       <div class="news-meta">
-        <span class="news-detail-date">${news.date}</span>
-        <span class="news-tag" data-tag="${news.tag}">${news.tag}</span>
+        <span class="news-detail-date">${escapeHtml(news.date)}</span>
+        <span class="news-tag" data-tag="${escapeHtml(news.tag)}">${escapeHtml(news.tag)}</span>
       </div>
-      <span class="news-title">${news.title}</span>
-    </div>
+      <span class="news-title">${escapeHtml(news.title)}</span>
+    </a>
   `).join('');
 
-  function renderNewsDetail(news) {
-    const titleEl = document.querySelector('.news-detail-title');
-    const dateEl = document.querySelector('.news-dated');
-    const tagEl = document.querySelector('.news-detail-tag');
-    const bodyEl = document.querySelector('.news-detail-body');
+  renderNewsDetail(initialNews, false);
 
-    if (!titleEl || !dateEl || !bodyEl) return;
+  list.addEventListener('click', function (event) {
+    const link = event.target.closest('.news-item');
+    if (!link) return;
 
-    titleEl.textContent = news.title;
-    dateEl.textContent = news.date;
-    bodyEl.innerHTML = news.body.map(text => `<p>${text}</p>`).join('');
+    const news = newsItems.find(item => item.id === Number(link.dataset.newsId));
+    if (!news) return;
 
-    if (tagEl) {
-      tagEl.textContent = news.tag;
-      tagEl.dataset.tag = news.tag;
-    }
+    event.preventDefault();
+    renderNewsDetail(news, true);
+  });
+});
+
+function renderNewsDetail(news, updateUrl) {
+  setText('news-detail-title', news.title);
+  setText('news-detail-date', news.date);
+
+  const tag = document.getElementById('news-detail-tag');
+  if (tag) {
+    tag.textContent = news.tag;
+    tag.dataset.tag = news.tag;
   }
-  function renderNewsDetail(news) {
-  const titleEl = document.querySelector('.news-detail-title');
-  const dateEl = document.querySelector('.news-dated');
-  const tagEl = document.querySelector('.news-detail-tag');
-  const bodyEl = document.querySelector('.news-detail-body');
 
-  if (!titleEl || !dateEl || !bodyEl) return;
+  const body = document.getElementById('news-detail-body');
+  if (body) {
+    const paragraphs = Array.isArray(news.body) && news.body.length
+      ? news.body
+      : [`${news.title}の詳細情報です。`];
+    body.innerHTML = paragraphs.map(text => `<p>${escapeHtml(text)}</p>`).join('');
+  }
 
-  titleEl.textContent = news.title;
-  dateEl.textContent = news.date;
-  bodyEl.innerHTML = news.body.map(text => `<p>${text}</p>`).join('');
+  document.querySelectorAll('.news-item').forEach(item => {
+    item.classList.toggle('active', Number(item.dataset.newsId) === news.id);
+  });
 
-  if (tagEl) {
-    tagEl.textContent = news.tag;
-    tagEl.dataset.tag = news.tag;
+  document.title = `${news.title} | HAL シネマ`;
+  if (updateUrl) {
+    history.pushState(null, '', `news.html?id=${news.id}`);
   }
 }
 
-  document.querySelectorAll('.news-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const newsId = Number(item.dataset.newsId);
-      const selectedNews = allNews.find(news => news.id === newsId);
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value || '';
+}
 
-      if (selectedNews) {
-        renderNewsDetail(selectedNews);
-      }
-    
-    
-    });
-  });
-  document.querySelectorAll('.news-item').forEach(item => {
-  item.addEventListener('click', () => {
-    const newsId = Number(item.dataset.newsId);
-    const selectedNews = allNews.find(news => news.id === newsId);
-
-    if (selectedNews) {
-      renderNewsDetail(selectedNews);
-    }
-  });
-});
-});
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
