@@ -1,5 +1,6 @@
-.section {
-  padding: 80px 20%;
+.tickets-page .section > * {
+  width: min(1180px, 100%);
+  margin-inline: auto;
 }
 
 .ticket-table {
@@ -16,10 +17,9 @@
   /* font-size: 15px; */
   letter-spacing: 0.15em;
   /* color: var(--text3); */
-  color: #fff;
+  color: var(--text2);
   text-align: left;
   border-bottom: 2px solid var(--border2);
-  text-shadow: 0px 0px 3px rgba(0, 0, 0, 0.7);
 }
 
 .ticket-table td {
@@ -28,8 +28,10 @@
   font-size: 14px;
   /* font-size: 18px; 区分 */
   color: var(--text);
-  color: #fff;
-  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
+}
+
+.ticket-table td:first-child {
+  color: #dde4f0;
 }
 
 .ticket-table tr:hover td {
@@ -41,21 +43,20 @@
   font-size: 14px;
   /* font-size: 25px; 値段 */
   /* color: #dde4f0; */
-  color: #fff;
-  letter-spacing: -0.01em;
-  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
+  color: var(--accent2);
+  letter-spacing: 0.02em;
 }
 
 .ticket-note {
   font-size: 12px;
   /* font-size: 15px; 備考 */
   /* color: var(--text3); */
-  color: #fff;
+  color: var(--text2);
   margin-top: 3px;
-  text-shadow: 0px 0px 5px rgba(0, 0, 0, 1);
 }
 
-.tickets-note-box {
+.tickets-page .tickets-note-box {
+  width: min(864px, 100%);
   background: var(--bg2);
   border: 1px solid var(--border);
   padding: 28px 32px;
@@ -68,9 +69,8 @@
   /* font-size: 20px; NOTE */
   letter-spacing: 0.15em;
   /* color: var(--accent2); */
-  color: #fff;
+  color: var(--accent2);
   margin-bottom: 12px;
-  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .tickets-note-list {
@@ -85,11 +85,10 @@
   font-size: 13px;
   /* font-size: 15px; NOTEの内容 */
   /* color: var(--text2); */
-  color: #fff;
+  color: var(--text2);
   padding-left: 16px;
   position: relative;
   align-items: center;
-  text-shadow: 0px 0px 9px rgba(0, 0, 0, 1);
 }
 
 .tickets-note-marker {
@@ -98,8 +97,13 @@
   color: var(--text3);
 }
 
-.tickets-subsection-header {
+.tickets-page .tickets-subsection-header {
+  width: min(864px, 100%);
   margin-bottom: 24px;
+}
+
+.tickets-page .coming-grid {
+  width: min(864px, 100%);
 }
 
 .tickets-subsection-title {
@@ -132,12 +136,8 @@
     border-bottom: none;
   }
 
-  .section {
-    padding: 80px 10%;
-  }
-
 }
 
 .coming-synopsis {
-  color: #fff;
+  color: var(--text2);
 }

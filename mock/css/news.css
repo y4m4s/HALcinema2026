@@ -97,6 +97,7 @@
   align-items: flex-start;
   gap: 24px;
   padding: 20px 16px;
+  border-left: 2px solid transparent;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -108,7 +109,7 @@
 }
 
 .news-page .news-item.active {
-  border-left: 2px solid var(--accent2);
+  border-left-color: var(--accent2);
 }
 
 .news-meta {

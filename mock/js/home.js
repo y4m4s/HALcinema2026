@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
   const comingSynopsisLimit = 110;
+  const homeNewsLimit = 5;
   const featured = MOVIES.find(m => m.isFeature);
   const nowShowingIds = [1, 3, 6, 7];
   const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // News
-  document.getElementById('home-news-list').innerHTML = NEWS.map(n => `
+  document.getElementById('home-news-list').innerHTML = NEWS.slice(0, homeNewsLimit).map(n => `
     <a href="news.html?id=${n.id}" class="news-item">
       <span class="news-date">${n.date}</span>
       <span class="news-tag" data-tag="${n.tag}">${n.tag}</span>
