@@ -12,9 +12,9 @@
   --accent2: #4a9fd4;
   --red: #8b1c1c;
   --red2: #c0392b;
-  --serif: 'Noto Serif JP', serif;
-  --sans: 'Noto Sans JP', sans-serif;
-  --mono: 'DM Mono', monospace;
+  --serif: 'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+  --sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', Meiryo, sans-serif;
+  --mono: 'DM Mono', Consolas, monospace;
   --nav-h: 72px;
 }
 
@@ -28,6 +28,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {

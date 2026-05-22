@@ -51,9 +51,13 @@ document.addEventListener('DOMContentLoaded', function () {
   function open(sourceCard) {
     populate(sourceCard);
     modal.hidden = false;
+    card.scrollTop = 0;
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    requestAnimationFrame(function () { positionOnCard(sourceCard); });
+    requestAnimationFrame(function () {
+      card.scrollTop = 0;
+      positionOnCard(sourceCard);
+    });
   }
 
   function close() {

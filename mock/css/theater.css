@@ -137,14 +137,14 @@
 }
 .card-details-section-title {
   font-family: var(--mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text3);
-  font-weight: 500;
-  margin: 0 0 0.4rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid var(--border);
+  color: var(--accent2);
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--border2);
 }
 .card-details-section .card-details-list {
   display: flex;
@@ -905,6 +905,12 @@ body.modal-open {
   color: var(--text);
   text-align: right;
   font-size: 0.88rem;
+}
+.theater-room-seat-count {
+  display: inline-block;
+  width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .info-card-lead {
   font-size: 0.85rem;

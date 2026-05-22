@@ -29,17 +29,6 @@ function getStatusLabel(status) {
   return status === "now" ? "上映中" : "近日公開";
 }
 
-function renderSummary(movies) {
-  const summary = document.getElementById("works-summary");
-  if (!summary) return;
-
-  const counts = getMovieCounts(movies);
-  Object.keys(counts).forEach((key) => {
-    const el = summary.querySelector(`[data-summary-value="${key}"]`);
-    if (el) el.textContent = counts[key];
-  });
-}
-
 function renderFilters(movies, activeFilter) {
   const filters = document.getElementById("works-filters");
   if (!filters) return;
@@ -59,7 +48,6 @@ function renderFilters(movies, activeFilter) {
 function getMovieCounts(movies) {
   return {
     all: movies.length,
-    total: movies.length,
     now: movies.filter((movie) => movie.status === "now").length,
     coming: movies.filter((movie) => movie.status === "coming").length
   };
@@ -122,7 +110,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const movies = getSortedMovies();
   let activeFilter = "all";
 
-  renderSummary(movies);
   renderFilters(movies, activeFilter);
   renderMovies(movies, activeFilter);
 
