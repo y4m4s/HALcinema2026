@@ -8,81 +8,1192 @@
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theater.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body class="theater-page">
-  <div id="nav-root"></div>
+  <div id="nav-root">
+    <header class="site-header">
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a class="nav-logo" href="index.html" aria-label="HALシネマ 境界 トップへ">
+          <img class="nav-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+        </a>
+        <div class="nav-links">
+          <a href="works.html" class="nav-link" data-nav="works"><span>上映作品一覧</span></a>
+          <a href="schedule.html" class="nav-link" data-nav="schedule"><span>上映スケジュール</span></a>
+          <a href="theater.html" class="nav-link" data-nav="theater"><span>劇場案内</span></a>
+          <a href="access.html" class="nav-link" data-nav="access"><span>交通案内</span></a>
+          <a href="tickets.html" class="nav-link" data-nav="tickets"><span>料金案内</span></a>
+          <a href="question.html" class="nav-link" data-nav="question"><span>よくある質問</span></a>
+        </div>
+      </nav>
+    </header>
+  </div>
 
   <div class="page page-enter">
-    <div class="section">
+
+    <!-- スクリーン一覧 -->
+    <div class="section screens-section">
+      <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+        <ol class="breadcrumb">
+          <li class="breadcrumb__list"><a href="index.html">トップページ</a></li>
+          <li class="breadcrumb__list" aria-current="page">劇場案内</li>
+        </ol>
+      </nav>
       <div class="section-header">
-        <h2 class="section-title">劇場案内</h2>
-        <span class="section-title-en">Theater Guide</span>
+        <h1 class="section-title">スクリーン</h1>
+        <span class="section-title-en">Screens</span>
         <div class="section-line"></div>
       </div>
 
-      <div class="section-header theater-subsection-header">
-        <span class="section-title theater-subsection-title">スクリーン一覧</span>
+      <div class="screen-grid">
+
+        <!-- SCREEN 01 IMAX -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-6.jpg" alt="">
+            <div class="card-number">SCREEN 01</div>
+            <div class="card-badges">
+              <span class="badge badge-imax">IMAX®</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">グランドシアター</div>
+            <div class="card-name-en">Grand Theatre</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">200</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">Atmos</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Screen</div>
+                <div class="spec-value">26m</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">HAL シネマ最大の26mスクリーン。12ch Dolby Atmos による精密な空間定位が闇の奥まで音を配置し、ホラー作品の「闇」と「囁き」をこの場所でしか体験できない解像度で刻み込む。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>「真の黒」を再現する暗部表現</li>
+                  <li>12ch Dolby Atmos で耳元の囁きまで定位</li>
+                  <li>シンクロ・ホラー・ラボ完全対応</li>
+                  <li>IMAX®認定作品の常設上映あり</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K DCI （4096×2160）</dd></div>
+                  <div class="card-details-row"><dt>輝度</dt><dd>最大 30,000 lm</dd></div>
+                  <div class="card-details-row"><dt>コントラスト</dt><dd>2,000,000:1</dd></div>
+                  <div class="card-details-row"><dt>HDR規格</dt><dd>Dolby Vision / HDR10</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Laser × 2 デュアル</dd></div>
+                  <div class="card-details-row"><dt>規格互換</dt><dd>IMAX®</dd></div>
+                  <div class="card-details-row"><dt>3D方式</dt><dd>RealD</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>三次元音響</dt><dd>Dolby Atmos</dd></div>
+                  <div class="card-details-row"><dt>構成</dt><dd>12.1ch / スピーカー 64基</dd></div>
+                  <div class="card-details-row"><dt>暗騒音レベル</dt><dd>NC-15 以下</dd></div>
+                  <div class="card-details-row"><dt>サブウーファー</dt><dd>JBL ASB6128 × 2</dd></div>
+                  <div class="card-details-row"><dt>補聴援助</dt><dd>T-coil 対応</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>200席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>26m</dd></div>
+                  <div class="card-details-row"><dt>スクリーン高</dt><dd>14m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,200mm</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 02 Dolby -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-2.jpg" alt="">
+            <div class="card-number">SCREEN 02</div>
+            <div class="card-badges">
+              <span class="badge badge-dolby">DOLBY CINEMA</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">ドルビーシアター</div>
+            <div class="card-name-en">Dolby Cinema</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">200</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Vision</div>
+                <div class="spec-value">HDR</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">Atmos</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">Dolby Cinema 正式認定シアター。HDR映像と立体音響の融合が漆黒の階調を極限まで描き出し、作品が持つ恐怖の密度を一欠片も損なわずに届ける。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>Dolby Vision の HDR で漆黒の階調を表現</li>
+                  <li>Atmos と組み合わせた立体的な恐怖体験</li>
+                  <li>RealD 3D 対応</li>
+                  <li>心拍センサー全席搭載</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>規格</dt><dd>Dolby Cinema 認定</dd></div>
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K Dual Laser</dd></div>
+                  <div class="card-details-row"><dt>コントラスト</dt><dd>500,000:1</dd></div>
+                  <div class="card-details-row"><dt>HDR規格</dt><dd>Dolby Vision / HDR10</dd></div>
+                  <div class="card-details-row"><dt>3D方式</dt><dd>RealD</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>三次元音響</dt><dd>Dolby Atmos</dd></div>
+                  <div class="card-details-row"><dt>構成</dt><dd>7.1.4ch</dd></div>
+                  <div class="card-details-row"><dt>暗騒音レベル</dt><dd>NC-15 以下</dd></div>
+                  <div class="card-details-row"><dt>補聴援助</dt><dd>T-coil 対応</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>200席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>18m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,100mm</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 03 4DX -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-7.jpg" alt="">
+            <div class="card-number">SCREEN 03</div>
+            <div class="card-badges">
+              <span class="badge badge-4dx">4DX</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">4DXシアター</div>
+            <div class="card-name-en">4DX Theatre</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">120</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Effects</div>
+                <div class="spec-value">11</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Extra</div>
+                <div class="spec-value">+¥1,200</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">11種のモーションエフェクトと環境演出で映画の中に身体ごと入り込む 4DX 体験。ホラー作品との相性は抜群で、恐怖の体感が倍増する。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>シートが動くことで物語の世界に没入</li>
+                  <li>ホラー作品では恐怖の体感が倍増</li>
+                  <li>期間限定の 4DX ホラー特別上映あり</li>
+                  <li>水・風・香りなど五感に訴える演出</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Laser</dd></div>
+                  <div class="card-details-row"><dt>3D方式</dt><dd>RealD</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>構成</dt><dd>7.1ch Surround</dd></div>
+                  <div class="card-details-row"><dt>サブウーファー</dt><dd>JBL ASB6128</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席 / 演出</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
+                  <div class="card-details-row"><dt>モーション</dt><dd>11種 （前後左右上下傾斜）</dd></div>
+                  <div class="card-details-row"><dt>環境演出</dt><dd>風 / 水 / 香り / 煙 / ストロボ</dd></div>
+                  <div class="card-details-row"><dt>追加料金</dt><dd>+¥1,200</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 04 Premium -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-4.jpg" alt="">
+            <div class="card-number">SCREEN 04</div>
+            <div class="card-badges">
+              <span class="badge badge-premium">PREMIUM</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">プレミアムシアター</div>
+            <div class="card-name-en">Premium Lounge</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">70</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Type</div>
+                <div class="spec-value">Flat</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Extra</div>
+                <div class="spec-value">+¥2,000</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">70席限定、本革電動リクライニングと専用ラウンジが迎えるプレミアム空間。上映前の静かな昂揚感から幕が下りた後の余韻まで、恐怖を美学として味わう大人のための上映環境。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>本革電動リクライニングの極上の座り心地</li>
+                  <li>専用ラウンジで上映前の特別なひととき</li>
+                  <li>70席限定でゆったり鑑賞</li>
+                  <li>大人のホラー鑑賞におすすめ</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K Laser</dd></div>
+                  <div class="card-details-row"><dt>HDR規格</dt><dd>Dolby Vision</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>三次元音響</dt><dd>Dolby Atmos</dd></div>
+                  <div class="card-details-row"><dt>構成</dt><dd>7.1.2ch</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>70席</dd></div>
+                  <div class="card-details-row"><dt>シート</dt><dd>本革電動リクライニング</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,200mm</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">付帯サービス</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>専用ラウンジ</dt><dd>上映1時間前から利用可</dd></div>
+                  <div class="card-details-row"><dt>ドリンク</dt><dd>ウェルカム1杯無料</dd></div>
+                  <div class="card-details-row"><dt>追加料金</dt><dd>+¥2,000</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 05 Standard -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-5.jpg" alt="">
+            <div class="card-number">SCREEN 05</div>
+            <div class="card-badges">
+              <span class="badge badge-standard">STANDARD</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">シアター 5</div>
+            <div class="card-name-en">Standard Hall A</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">200</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">7.1ch</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Screen</div>
+                <div class="spec-value">14m</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">7.1ch サラウンドのスタンダードホール。心拍センサー搭載でシンクロ・ホラー・ラボに対応し、標準料金で本格的な体験を提供。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>標準料金で本格的なサラウンド体験</li>
+                  <li>心拍センサー対応でシンクロ・ホラー・ラボ可</li>
+                  <li>200席の大型ホール</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>構成</dt><dd>7.1ch Surround</dd></div>
+                  <div class="card-details-row"><dt>暗騒音レベル</dt><dd>NC-25 以下</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>200席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>14m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
+                  <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 06 Standard -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-1.jpg" alt="">
+            <div class="card-number">SCREEN 06</div>
+            <div class="card-badges">
+              <span class="badge badge-standard">STANDARD</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">シアター 6</div>
+            <div class="card-name-en">Standard Hall B</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">120</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">7.1ch</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Screen</div>
+                <div class="spec-value">12m</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">スクリーンと客席の距離感が研ぎ澄まされた中規模ホール。どの座席からもスクリーンとの対話が成立する、静かな没入空間。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>中規模で見やすい配置</li>
+                  <li>7.1ch サラウンド搭載</li>
+                  <li>心拍センサー対応</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>構成</dt><dd>7.1ch Surround</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>12m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
+                  <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 07 Standard -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-3.jpg" alt="">
+            <div class="card-number">SCREEN 07</div>
+            <div class="card-badges">
+              <span class="badge badge-standard">STANDARD</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">シアター 7</div>
+            <div class="card-name-en">Standard Hall C</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">70</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">5.1ch</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Screen</div>
+                <div class="spec-value">10m</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">深夜上映の常設ホール。5.1ch サラウンドが閉じた空間に低く響き、人が少なくなるほど研ぎ澄まされていく恐怖がある。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>コンパクトながら本格音響</li>
+                  <li>通路側座席が多く出入りしやすい</li>
+                  <li>深夜上映にもおすすめ</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>構成</dt><dd>5.1ch Surround</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>70席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>10m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
+                  <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN 08 Standard -->
+        <div class="screen-card">
+          <div class="card-image">
+            <img src="assets/images/screen-8.jpg" alt="">
+            <div class="card-number">SCREEN 08</div>
+            <div class="card-badges">
+              <span class="badge badge-standard">STANDARD</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">シアター 8</div>
+            <div class="card-name-en">Standard Hall D</div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <div class="spec-label">Seats</div>
+                <div class="spec-value">70</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Sound</div>
+                <div class="spec-value">5.1ch</div>
+              </div>
+              <div class="spec-item">
+                <div class="spec-label">Screen</div>
+                <div class="spec-value">10m</div>
+              </div>
+            </div>
+            <button type="button" class="card-cta" aria-expanded="false">
+              SPEC
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="card-details" hidden>
+              <p class="card-details-lead">35mm フィルム上映に対応した隠れ家的アーカイブシアター。時代を経てもなお息づくホラーの原点を、フィルム特有の粒子と揺らぎのまま体験できる。</p>
+              <div class="card-details-section">
+                <div class="card-details-section-title">特徴</div>
+                <ul class="card-highlights">
+                  <li>35mm フィルム上映に対応</li>
+                  <li>隠れ家的なミニシアター規模</li>
+                  <li>アーカイブ作品の企画上映に活用</li>
+                </ul>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">映像</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                  <div class="card-details-row"><dt>特殊上映</dt><dd>35mm フィルム対応 （企画上映時）</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">音響</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>構成</dt><dd>5.1ch Surround</dd></div>
+                </dl>
+              </div>
+              <div class="card-details-section">
+                <div class="card-details-section-title">座席</div>
+                <dl class="card-details-list">
+                  <div class="card-details-row"><dt>総席数</dt><dd>70席</dd></div>
+                  <div class="card-details-row"><dt>スクリーン幅</dt><dd>10m</dd></div>
+                  <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
+                  <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
+                  <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+</div>
+
+    <!-- 映画館紹介 -->
+    <div class="section about-section">
+<div class="section-header">
+        <h2 class="section-title">劇場について</h2>
+        <span class="section-title-en">About the Cinema</span>
         <div class="section-line"></div>
       </div>
-      <div class="theater-summary">
-        TOTAL: 8スクリーン / 1,050席
+      <div class="about-grid">
+        <div class="about-text">
+          <!-- <div class="section-eyebrow">About the Cinema</div> -->
+          <h2>「日常を、恐怖が侵食する。」<br>J-ホラー シアター <span class="accent">”境界„</span></h2>
+          <p class="lead">
+            そこは、単に映画を鑑賞する場所ではない。現実と虚構、生者と死者の「境界」が曖昧になる場所。世界を震撼させたJホラー特有の「静寂」「湿り気」「視線の気配」を五感すべてに憑依させ、観客の意識を日常の境界の外へと連れ去る、日本初の没入型ホラー専門シアター。
+          </p>
+          <p class="desc">
+            IMAX®、Dolby Cinema、4DXといった最先端フォーマットから35mmアーカイブ上映まで——「あらゆる恐怖を、最高の状態で観られる場所」を目指して、8つのスクリーンそれぞれに固有の役割を持たせました。ここでしか体験できない恐怖が、静かにあなたを待っている。
+          </p>
+          <div class="about-stats">
+            <div class="about-stat">
+              <div class="about-stat-num">1988<span class="unit">年</span></div>
+              <div class="about-stat-label">Founded</div>
+            </div>
+            <div class="about-stat">
+              <div class="about-stat-num">1,050<span class="unit">席</span></div>
+              <div class="about-stat-label">Total Seats</div>
+            </div>
+            <div class="about-stat">
+              <div class="about-stat-num">8<span class="unit">F</span></div>
+              <div class="about-stat-label">Floors</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-visual">
+          <div class="about-img main">
+            <img src="assets/images/screen.jpg" alt="">
+            <span class="about-img-label">THEATER</span>
+          </div>
+          <div class="about-img">
+            <img src="assets/images/lobby.jpg" alt="">
+            <span class="about-img-label">LOBBY</span>
+          </div>
+          <div class="about-img">
+            <img src="assets/images/hal.webp" alt="">
+            <span class="about-img-label">EXTERIOR</span>
+          </div>
+        </div>
       </div>
-      <div class="theater-grid" id="screen-grid"></div>
+    </div>
 
-      <div class="theater-spacer"></div>
-
-      <div class="section-header theater-subsection-header">
-        <span class="section-title theater-subsection-title">館内マップ</span>
+    <!-- シンクロ・ホラー・ラボ -->
+    <div class="section lab-section">
+<div class="section-header">
+        <h2 class="section-title">シンクロ・ホラー・ラボ</h2>
+        <span class="section-title-en">Sync Horror Lab</span>
         <div class="section-line"></div>
       </div>
-      <div class="hall-map">
-        <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-          <rect x="1" y="1" width="54" height="54" rx="1" stroke="#1a2535" stroke-width="1" />
-          <rect x="6" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="19" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="32" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="45" y="6" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="6" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="19" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="32" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="45" y="19" width="10" height="10" rx="0.5" fill="none" stroke="#2d6aa0" stroke-width="1" />
-          <rect x="6" y="34" width="10" height="10" rx="0.5" fill="none" stroke="#4a9fd4" stroke-width="1" />
-        </svg>
-        <span>館内フロアマップ</span>
-        <span class="theater-map-status">準備中</span>
+      <div class="lab-feature">
+        <div class="lab-visual">
+          <img src="assets/images/horror-lab.jpg" alt="シンクロ・ホラー・ラボ">
+          <span class="lab-tag">SYNC HORROR LAB</span>
+        </div>
+        <div class="lab-text">
+          <div class="lab-eyebrow">Featured Experience</div>
+          <h3 class="lab-headline">あなたの心臓は、<br>物語と共鳴する。</h3>
+          <p class="lab-lead">
+            全座席に高精度心拍センサーを標準装備し、観客の生理反応をリアルタイムで解析する次世代型鑑賞システム。物理的な恐怖を、観客自身のデータで再構築する。
+          </p>
+          <div class="lab-items">
+            <div class="lab-item">
+              <div class="lab-item-num">01</div>
+              <h4 class="lab-item-title">バイオ・フィードバック演出</h4>
+              <p class="lab-item-desc">観客全体の平均心拍数が急上昇すると、場内の湿度・冷気・照明・突発音響が連動して自動増幅。「恐怖ピーク」の瞬間、その回だけのオリジナル恐怖体験を生成します。</p>
+            </div>
+            <div class="lab-item">
+              <div class="lab-item-num">02</div>
+              <h4 class="lab-item-title">環境演出シンクロ</h4>
+              <p class="lab-item-desc">湿度40〜85%RH・温度16〜24℃を可変制御。微細ミスト（ノズル×12）と冷気が、雨・井戸・浴室の映像シーンに同期して噴射し、肌から恐怖を侵食します。</p>
+            </div>
+            <div class="lab-item">
+              <div class="lab-item-num">03</div>
+              <h4 class="lab-item-title">ビジュアライズ・フィアー</h4>
+              <p class="lab-item-desc">スクリーン隅に観客全体の「共鳴グラフ（ビビり度）」を控えめに表示。一体感と「来るぞ……」という予兆を視覚化する共有体験。</p>
+            </div>
+            <div class="lab-item">
+              <div class="lab-item-num">04</div>
+              <h4 class="lab-item-title">リザルト・レポート</h4>
+              <p class="lab-item-desc">終演後、座席番号に基づく個別診断シートを発行。最も恐怖した瞬間や心拍から見る霊感耐性を数値化し、SNSでシェアできるオリジナルコンテンツに。</p>
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
 
-      <div class="theater-spacer"></div>
-
-      <div class="section-header theater-subsection-header">
-        <span class="section-title theater-subsection-title">設備・バリアフリー情報</span>
+    <!-- 上映技術 -->
+    <div class="section equipment-section">
+<div class="section-header">
+        <h2 class="section-title">上映技術</h2>
+        <span class="section-title-en">Projection</span>
         <div class="section-line"></div>
       </div>
-      <div class="theater-features-grid">
-        <div class="feature-item">
-          <div class="feature-title theater-feature-title">音響設備</div>
-          <p class="feature-body">Dolby Atmos対応スクリーン6室、7.1chサラウンド対応スクリーン2室を完備。</p>
+
+
+      <div class="equipment-grid">
+
+        <article class="equipment-card">
+          <div class="equipment-image">
+            <img src="assets/images/projector.jpg" alt="4Kレーザープロジェクター">
+            <span class="equipment-image-tag">PROJECTION</span>
+          </div>
+          <div class="equipment-body">
+            <div class="equipment-num">— 01</div>
+            <h3 class="equipment-name">最新の映像美</h3>
+            <p class="equipment-lead">業務用4Kレーザープロジェクター8基。100万:1超のコントラスト比で「真の黒」を再現し、ホラー作品の最も繊細な暗部までを侵食的に描き出す。</p>
+            <dl class="equipment-spec-list">
+              <div class="spec-row"><dt>解像度</dt><dd>4K DCI （4096×2160）</dd></div>
+              <div class="spec-row"><dt>輝度</dt><dd>最大 30,000 lm</dd></div>
+              <div class="spec-row"><dt>コントラスト</dt><dd>2,000,000:1</dd></div>
+              <div class="spec-row"><dt>HDR規格</dt><dd>Dolby Vision / HDR10</dd></div>
+              <div class="spec-row"><dt>最大スクリーン</dt><dd>幅 26m （SCREEN 01）</dd></div>
+              <div class="spec-row"><dt>互換規格</dt><dd>IMAX® / Dolby Cinema</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="equipment-card">
+          <div class="equipment-image">
+            <img src="assets/images/speaker.jpg" alt="静寂音響システム">
+            <span class="equipment-image-tag">SILENT ACOUSTICS</span>
+          </div>
+          <div class="equipment-body">
+            <div class="equipment-num">— 02</div>
+            <h3 class="equipment-name">静寂音響</h3>
+            <p class="equipment-lead">爆音と対極の「無音を聴かせる」設計思想。耳元で囁かれているような定位音響が、観客自身の心拍音すら演出の一部に変える。</p>
+            <dl class="equipment-spec-list">
+              <div class="spec-row"><dt>定位精度</dt><dd>Whisper Surround</dd></div>
+              <div class="spec-row"><dt>三次元音響</dt><dd>Dolby Atmos × 4</dd></div>
+              <div class="spec-row"><dt>スピーカー</dt><dd>最大 64ch 構成</dd></div>
+              <div class="spec-row"><dt>暗騒音レベル</dt><dd>NC-15 以下</dd></div>
+              <div class="spec-row"><dt>ダイナミックレンジ</dt><dd>96 dB</dd></div>
+              <div class="spec-row"><dt>補聴援助</dt><dd>全スクリーン対応</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="equipment-card">
+          <div class="equipment-image">
+            <img src="assets/images/sheat.jpg" alt="シアター座席">
+            <span class="equipment-image-tag">SEATING</span>
+          </div>
+          <div class="equipment-body">
+            <div class="equipment-num">— 03</div>
+            <h3 class="equipment-name">多機能座席</h3>
+            <p class="equipment-lead">プレミアム席は本革電動リクライニング。全1,050席にカップホルダーと心拍センサーを標準装備し、シンクロ・ホラー・ラボの入力デバイスを兼ねる。</p>
+            <dl class="equipment-spec-list">
+              <div class="spec-row"><dt>総席数</dt><dd>1,050席 / 8スクリーン</dd></div>
+              <div class="spec-row"><dt>プレミアム席</dt><dd>本革電動リクライニング</dd></div>
+              <div class="spec-row"><dt>心拍センサー</dt><dd>全席標準 （オプトアウト可）</dd></div>
+              <div class="spec-row"><dt>4DXシート</dt><dd>11種モーション</dd></div>
+              <div class="spec-row"><dt>シートピッチ</dt><dd>1,050〜1,200mm</dd></div>
+              <div class="spec-row"><dt>車椅子席</dt><dd>SCREEN 01・04・08</dd></div>
+            </dl>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+
+    <!-- 館内設備 -->
+    <div class="section facilities-section">
+<div class="section-header">
+        <h2 class="section-title">館内設備</h2>
+        <span class="section-title-en">Facilities &amp; Services</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="facilities-head">
+        <div class="facilities-head-left">
+          <!-- <div class="section-eyebrow">Facilities &amp; Services</div> -->
+          <h2>映画の前後も、心地よく。</h2>
         </div>
-        <div class="feature-item">
-          <div class="feature-title theater-feature-title">映像設備</div>
-          <p class="feature-body">全スクリーン4Kプロジェクター対応。スクリーン3はIMAX互換の超大型スクリーン。</p>
+        <p class="lead">
+          チケット購入から上映後の余韻まで、HAL シネマの館内設備とサービスをご案内します。バリアフリー対応をはじめ、どなたでも快適にお過ごしいただける環境を整えています。
+        </p>
+      </div>
+
+      <div class="facilities-grid">
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-credit-card"></i>
+          </div>
+          <div class="facility-name">自動券売機</div>
+          <div class="facility-name-en">Ticket Vending</div>
+          <p class="facility-desc">
+            QRコード対応の自動券売機を12台設置。ネット予約のチケット発券も数秒で完了します。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 1F ロビー / 24時間</div>
         </div>
-        <div class="feature-item">
-          <div class="feature-title theater-feature-title">バリアフリー</div>
-          <p class="feature-body">スクリーン1・4・8は車椅子スペースあり。補聴援助システム貸出対応。</p>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-mug-hot"></i>
+          </div>
+          <div class="facility-name">カフェ「境界」</div>
+          <div class="facility-name-en">Café Boundary</div>
+          <p class="facility-desc">
+            観たホラー映画について語り合えるスポット。「呪いのカルピス」「井戸の底プリン」など作品コラボの限定メニューも。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 8F / 11:00 - 24:00</div>
         </div>
-        <div class="feature-item">
-          <div class="feature-title theater-feature-title">駐車場</div>
-          <p class="feature-body">隣接提携駐車場（200台）。映画鑑賞で3時間無料。事前予約推奨。</p>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="facility-name">プレミアムラウンジ</div>
+          <div class="facility-name-en">Premium Lounge</div>
+          <p class="facility-desc">
+            プレミアムシアターご利用の方専用。ウェルカムドリンクとソファ席で開演までゆっくりと。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 7F / 上映1時間前〜</div>
         </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-universal-access"></i>
+          </div>
+          <div class="facility-name">バリアフリー</div>
+          <div class="facility-name-en">Accessibility</div>
+          <p class="facility-desc">
+            全スクリーンに車椅子席を完備。エレベーター、多目的トイレ、音声ガイド対応も。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 全フロア対応</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-glass-water"></i>
+          </div>
+          <div class="facility-name">コンセッション</div>
+          <div class="facility-name-en">Concession</div>
+          <p class="facility-desc">
+            キャラメル / 塩バターなど7種のポップコーン、クラフトビール、季節限定ドリンクをご用意。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 2F / 9:00 - 24:00</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <div class="facility-name">コインロッカー</div>
+          <div class="facility-name-en">Coin Locker</div>
+          <p class="facility-desc">
+            小型180個・中型60個・大型20個。スーツケースも預けられ、ICカードでの利用も可能です。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> B1F / 1F</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-wifi"></i>
+          </div>
+          <div class="facility-name">無料Wi-Fi</div>
+          <div class="facility-name-en">Free Wi-Fi</div>
+          <p class="facility-desc">
+            館内全域で高速Wi-Fiが無料でご利用いただけます。会員登録不要、ワンタップで接続。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 全フロア</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-square-parking"></i>
+          </div>
+          <div class="facility-name">提携駐車場</div>
+          <div class="facility-name-en">Parking</div>
+          <p class="facility-desc">
+            隣接ビルの駐車場と提携。鑑賞券提示で3時間無料、以降は30分300円でご利用いただけます。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 徒歩1分 / 200台</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-camera-retro"></i>
+          </div>
+          <div class="facility-name">フォトスポット</div>
+          <div class="facility-name-en">Photo Spot</div>
+          <p class="facility-desc">
+            観客自身が「被害者」あるいは「怪異」の一部として写り込む、ライティングにこだわった撮影エリア。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> 2F / 終日</div>
+        </div>
+
+        <div class="facility-card">
+          <div class="facility-icon">
+            <i class="fa-solid fa-bag-shopping"></i>
+          </div>
+          <div class="facility-name">呪物庫</div>
+          <div class="facility-name-en">Museum &amp; Shop</div>
+          <p class="facility-desc">
+            劇場限定の盛り塩セット・呪いのビデオ風モバイルバッテリーなど。プロップ精密レプリカや新人作家の呪物アート展示も。
+          </p>
+          <div class="facility-floor"><span class="pin">●</span> B1F / 10:00 - 23:00</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ご案内 -->
+    <div class="section info-section">
+<div class="section-header">
+        <h2 class="section-title">ご案内</h2>
+        <span class="section-title-en">Guide</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="info-grid">
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-regular fa-clock"></i>
+            劇場 営業・上映時間
+          </h3>
+          <dl class="info-rows">
+            <div class="info-row">
+              <dt>劇場営業</dt>
+              <dd>9:00 〜 翌0:30</dd>
+            </div>
+            <div class="info-row">
+              <dt>初回上映</dt>
+              <dd>9:30</dd>
+            </div>
+            <div class="info-row">
+              <dt>最終上映</dt>
+              <dd>23:30</dd>
+            </div>
+            <div class="info-row">
+              <dt>チケット販売</dt>
+              <dd>9:00 〜 23:30</dd>
+            </div>
+            <div class="info-row">
+              <dt>当日券窓口</dt>
+              <dd>各上映回開始の60分前〜</dd>
+            </div>
+            <div class="info-row">
+              <dt>定休日</dt>
+              <dd>なし（年中無休）</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-solid fa-store"></i>
+            館内施設の営業時間
+          </h3>
+          <dl class="info-rows">
+            <div class="info-row">
+              <dt>コンセッション</dt>
+              <dd>9:00 〜 24:00</dd>
+            </div>
+            <div class="info-row">
+              <dt>カフェ「境界」</dt>
+              <dd>11:00 〜 24:00（L.O. 23:30）</dd>
+            </div>
+            <div class="info-row">
+              <dt>呪物庫 Museum &amp; Shop</dt>
+              <dd>10:00 〜 23:00</dd>
+            </div>
+            <div class="info-row">
+              <dt>フォトスポット</dt>
+              <dd>終日（館内営業時間内）</dd>
+            </div>
+            <div class="info-row">
+              <dt>プレミアムラウンジ</dt>
+              <dd>上映1時間前〜上映後30分</dd>
+            </div>
+            <div class="info-row">
+              <dt>コインロッカー</dt>
+              <dd>24時間ご利用可</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-solid fa-display"></i>
+            シアタールーム
+          </h3>
+          <dl class="info-rows">
+            <div class="info-row">
+              <dt>大スクリーン</dt>
+              <dd>3シアター × <span class="theater-room-seat-count">200</span>席</dd>
+            </div>
+            <div class="info-row">
+              <dt>中スクリーン</dt>
+              <dd>2シアター × <span class="theater-room-seat-count">120</span>席</dd>
+            </div>
+            <div class="info-row">
+              <dt>小スクリーン</dt>
+              <dd>3シアター × <span class="theater-room-seat-count">70</span>席</dd>
+            </div>
+            <div class="info-row">
+              <dt>合計</dt>
+              <dd>1,050席 / 8スクリーン</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-solid fa-yen-sign"></i>
+            料金
+          </h3>
+          <dl class="info-rows">
+            <div class="info-row">
+              <dt>一般</dt>
+              <dd>¥1,800</dd>
+            </div>
+            <div class="info-row">
+              <dt>大学生</dt>
+              <dd>¥1,600</dd>
+            </div>
+            <div class="info-row">
+              <dt>中学・高校生</dt>
+              <dd>¥1,400</dd>
+            </div>
+            <div class="info-row">
+              <dt>小学生・幼児</dt>
+              <dd>¥1,000</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-solid fa-building"></i>
+            フロアマップ
+          </h3>
+          <p class="info-card-lead">HAL シネマは地上8階・地下1階の大型シネマコンプレックス。各フロアの主な施設をご案内します。</p>
+          <div class="floor-map">
+            <div class="floor-row">
+              <span class="floor-label">8F</span>
+              <span class="floor-content">カフェ「境界」 / ルーフトップテラス</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">7F</span>
+              <span class="floor-content">プレミアムラウンジ / SCREEN 04（プレミアム）</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">6F</span>
+              <span class="floor-content">SCREEN 02（Dolby Cinema） / SCREEN 03（4DX）</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">5F</span>
+              <span class="floor-content">SCREEN 01（IMAX®） / 車椅子席エントランス</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">4F</span>
+              <span class="floor-content">SCREEN 05 / SCREEN 06</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">3F</span>
+              <span class="floor-content">SCREEN 07 / SCREEN 08</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">2F</span>
+              <span class="floor-content">コンセッション / フォトスポット / 多目的トイレ</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">1F</span>
+              <span class="floor-content">エントランスロビー / 自動券売機 / 当日券窓口 / 案内カウンター</span>
+            </div>
+            <div class="floor-row">
+              <span class="floor-label">B1F</span>
+              <span class="floor-content">呪物庫 Museum &amp; Shop / コインロッカー / 提携駐車場入口</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-card-title">
+            <i class="fa-solid fa-circle-info"></i>
+            ご来場時のご注意
+          </h3>
+          <ul class="info-notes">
+            <li>場内での撮影・録音・録画は固くお断りいたします。発覚した場合は直ちにご退場いただきます。</li>
+            <li>上映中の携帯電話・スマートフォンの使用、ならびに発光・通話はお控えください。</li>
+            <li>R-15・R-18指定作品では年齢確認のため、身分証のご提示をお願いいたします。</li>
+            <li>外部からの飲食物の持ち込みはご遠慮ください。8階のカフェ「境界」をご利用くださいませ。</li>
+            <li>未就学児の鑑賞には保護者の同伴が必要です（一部作品は同伴不可）。</li>
+            <li>上映開始の10分前までにご入場ください。開始後の入場制限を行う場合があります。</li>
+            <li>満席時の立ち見・補助席のご用意はございません。事前のチケット購入を推奨します。</li>
+            <li>ペット・盲導犬以外の補助動物の同伴は、館内規定によりお断りしております。</li>
+            <li>全座席に心拍センサーを搭載し、シンクロ・ホラー・ラボの解析データを匿名で取得します（個人特定なし / オプトアウト可）。</li>
+            <li>持病・心臓疾患・妊娠中の方は、環境演出（冷気・ミスト）とバイオフィードバック演出の影響にご注意ください。</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div id="footer-root">
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-watermark" aria-hidden="true">HAL CINEMA KYOKAI</div>
+        <div class="footer-main">
+          <div class="footer-brand">
+            <div class="footer-kicker">Horror Theatre</div>
+            <div class="footer-logo">
+              <img class="footer-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+            </div>
+            <p class="footer-tagline">
+              ホラー・ミステリー・サスペンスを中心に、深夜まで上映する都市型シアター。
+            </p>
+            <dl class="footer-meta">
+              <div>
+                <dt>ADDRESS</dt>
+                <dd>〒450-0002　愛知県名古屋市中村区名駅4-4-38</dd>
+              </div>
+              <div>
+                <dt>OPEN</dt>
+                <dd>9:00 - 翌0:30</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="footer-directory">
+            <div class="footer-col">
+              <div class="footer-col-title">上映情報</div>
+              <a href="works.html" class="footer-link">上映作品一覧</a>
+              <a href="schedule.html" class="footer-link">上映スケジュール</a>
+              <a href="index.html" class="footer-link">トップ</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">劇場情報</div>
+              <a href="theater.html" class="footer-link">劇場案内</a>
+              <a href="tickets.html" class="footer-link">料金案内</a>
+              <a href="access.html" class="footer-link">交通案内</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">サポート</div>
+              <a href="contact.html" class="footer-link">お問い合わせ</a>
+              <a href="question.html" class="footer-link">よくある質問</a>
+              <a href="news.html" class="footer-link">お知らせ</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 HALシネマ 境界. All Rights Reserved.</span>
+          <span>HORROR · MYSTERY · SUSPENSE</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- スクリーン詳細モーダル -->
+  <div class="screen-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="screen-modal-name">
+    <div class="screen-modal-backdrop" data-modal-close></div>
+    <div class="screen-modal-card">
+      <div class="screen-modal-image">
+        <img src="" alt="">
+        <div class="card-number" id="screen-modal-number"></div>
+        <div class="card-badges" id="screen-modal-badges"></div>
+      </div>
+      <div class="screen-modal-body">
+        <div class="card-name" id="screen-modal-name"></div>
+        <div class="card-name-en" id="screen-modal-name-en"></div>
+        <div class="card-details-content" id="screen-modal-content"></div>
       </div>
     </div>
   </div>
 
-  <div id="footer-root"></div>
-
-  <script src="js/data.js"></script>
   <script src="js/common.js"></script>
   <script src="js/theater.js"></script>
 </body>

@@ -11,12 +11,35 @@
 </head>
 
 <body class="tickets-page">
-  <div id="nav-root"></div>
+  <div id="nav-root">
+    <header class="site-header">
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a class="nav-logo" href="index.html" aria-label="HALシネマ 境界 トップへ">
+          <img class="nav-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+        </a>
+        <div class="nav-links">
+          <a href="works.html" class="nav-link" data-nav="works"><span>上映作品一覧</span></a>
+          <a href="schedule.html" class="nav-link" data-nav="schedule"><span>上映スケジュール</span></a>
+          <a href="theater.html" class="nav-link" data-nav="theater"><span>劇場案内</span></a>
+          <a href="access.html" class="nav-link" data-nav="access"><span>交通案内</span></a>
+          <a href="tickets.html" class="nav-link" data-nav="tickets"><span>料金案内</span></a>
+          <a href="question.html" class="nav-link" data-nav="question"><span>よくある質問</span></a>
+        </div>
+      </nav>
+    </header>
+  </div>
 
   <div class="page page-enter">
     <div class="section">
+
+      <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+        <ol class="breadcrumb">
+          <li class="breadcrumb__list"><a href="index.html">トップページ</a></li>
+          <li class="breadcrumb__list" aria-current="page">料金案内</li>
+        </ol>
+      </nav>
       <div class="section-header">
-        <h2 class="section-title">料金案内</h2>
+        <h1 class="section-title">料金案内</h1>
         <span class="section-title-en">Ticket Prices</span>
         <div class="section-line"></div>
       </div>
@@ -29,7 +52,48 @@
             <th>備考</th>
           </tr>
         </thead>
-        <tbody id="price-tbody"></tbody>
+        <tbody>
+          <tr>
+            <td>一般</td>
+            <td><div class="ticket-price">1,800円</div></td>
+            <td><div class="ticket-note">—</div></td>
+          </tr>
+          <tr>
+            <td>大学生・専門学生</td>
+            <td><div class="ticket-price">1,600円</div></td>
+            <td><div class="ticket-note">学生証提示</div></td>
+          </tr>
+          <tr>
+            <td>中学・高校生</td>
+            <td><div class="ticket-price">1,400円</div></td>
+            <td><div class="ticket-note">学生証提示</div></td>
+          </tr>
+          <tr>
+            <td>小学生・幼児</td>
+            <td><div class="ticket-price">1,000円</div></td>
+            <td><div class="ticket-note">—</div></td>
+          </tr>
+          <tr>
+            <td>シニア（60歳以上）</td>
+            <td><div class="ticket-price">1,200円</div></td>
+            <td><div class="ticket-note">身分証提示</div></td>
+          </tr>
+          <tr>
+            <td>障がい者</td>
+            <td><div class="ticket-price">1,000円</div></td>
+            <td><div class="ticket-note">手帳提示、同伴者1名も同額</div></td>
+          </tr>
+          <tr>
+            <td>3D 追加料金</td>
+            <td><div class="ticket-price">+400円</div></td>
+            <td><div class="ticket-note">対象作品のみ</div></td>
+          </tr>
+          <tr>
+            <td>呪いのサービスデー（毎月13日）</td>
+            <td><div class="ticket-price">1,300円</div></td>
+            <td><div class="ticket-note">全席・全年齢均一</div></td>
+          </tr>
+        </tbody>
       </table>
 
       <div class="tickets-note-box">
@@ -64,15 +128,69 @@
           <div class="coming-title tickets-promo-title">グループ割引</div>
           <p class="coming-synopsis">4名以上のグループご来場で、1名様につき200円引き。怖いときは一緒に。</p>
         </div>
+        <!-- <div class="coming-card">
+          <div class="coming-release">仮装来場</div>
+          <div class="coming-title tickets-promo-title">ホラーコス割</div>
+          <p class="coming-synopsis">ホラー系の仮装でご来場のお客様は200円引き。恐怖の世界へ、その姿のままで。</p>
+        </div> -->
       </div>
     </div>
   </div>
 
-  <div id="footer-root"></div>
+  <div id="footer-root">
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-watermark" aria-hidden="true">HAL CINEMA KYOKAI</div>
+        <div class="footer-main">
+          <div class="footer-brand">
+            <div class="footer-kicker">Horror Theatre</div>
+            <div class="footer-logo">
+              <img class="footer-logo-img" src="assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+            </div>
+            <p class="footer-tagline">
+              ホラー・ミステリー・サスペンスを中心に、深夜まで上映する都市型シアター。
+            </p>
+            <dl class="footer-meta">
+              <div>
+                <dt>ADDRESS</dt>
+                <dd>〒450-0002　愛知県名古屋市中村区名駅4-4-38</dd>
+              </div>
+              <div>
+                <dt>OPEN</dt>
+                <dd>9:00 - 翌0:30</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="footer-directory">
+            <div class="footer-col">
+              <div class="footer-col-title">上映情報</div>
+              <a href="works.html" class="footer-link">上映作品一覧</a>
+              <a href="schedule.html" class="footer-link">上映スケジュール</a>
+              <a href="index.html" class="footer-link">トップ</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">劇場情報</div>
+              <a href="theater.html" class="footer-link">劇場案内</a>
+              <a href="tickets.html" class="footer-link">料金案内</a>
+              <a href="access.html" class="footer-link">交通案内</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">サポート</div>
+              <a href="contact.html" class="footer-link">お問い合わせ</a>
+              <a href="question.html" class="footer-link">よくある質問</a>
+              <a href="news.html" class="footer-link">お知らせ</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 HALシネマ 境界. All Rights Reserved.</span>
+          <span>HORROR · MYSTERY · SUSPENSE</span>
+        </div>
+      </div>
+    </footer>
+  </div>
 
-  <script src="js/data.js"></script>
   <script src="js/common.js"></script>
-  <script src="js/tickets.js"></script>
 </body>
 
 </html>

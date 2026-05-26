@@ -4,13 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>上映スケジュール | HAL シネマ</title>
+  <title>お問い合わせ完了 | HAL シネマ</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/schedule.css">
+  <link rel="stylesheet" href="css/completed.css">
 </head>
 
-<body class="schedule-page">
+<body class="completed-page">
   <div id="nav-root">
     <header class="site-header">
       <nav class="nav" aria-label="グローバルナビゲーション">
@@ -34,23 +35,22 @@
       <nav class="breadcrumb-nav" aria-label="パンくずリスト">
         <ol class="breadcrumb">
           <li class="breadcrumb__list"><a href="index.html">トップページ</a></li>
-          <li class="breadcrumb__list" aria-current="page">上映スケジュール</li>
+          <li class="breadcrumb__list"><a href="contact.html">お問い合わせ</a></li>
+          <li class="breadcrumb__list" aria-current="page">お問い合わせ完了</li>
         </ol>
       </nav>
-      <div class="section-header">
-        <h1 class="section-title">上映スケジュール</h1>
-        <span class="section-title-en">Schedule</span>
-        <div class="section-line"></div>
+      <div class="complete-wrap">
+        <span class="material-icons complete-check">check_circle</span>
+        <div class="complete-label">COMPLETE</div>
+        <h1 class="complete-title">お問い合わせを<br>受け付けました</h1>
+        <div class="complete-divider"></div>
+        <p class="complete-body">
+          お問い合わせいただきありがとうございます。<br>
+          担当者より2〜3営業日以内にご連絡いたします。
+        </p>
+        <p class="complete-count"><span id="count">5</span>秒後にトップページへ移動します</p>
+        <a href="index.html" class="btn-primary complete-back">トップページに戻る</a>
       </div>
-
-      <div class="view-tabs" id="view-tabs">
-        <button class="view-tab active" data-mode="date">上映日程毎</button>
-        <button class="view-tab" data-mode="movie">上映作品毎</button>
-      </div>
-
-      <div id="sub-tabs"></div>
-      <div id="schedule-heading"></div>
-      <div id="schedule-rows"></div>
     </div>
   </div>
 
@@ -107,9 +107,8 @@
     </footer>
   </div>
 
-  <script src="js/data.js"></script>
   <script src="js/common.js"></script>
-  <script src="js/schedule.js"></script>
+  <script src="js/completed.js"></script>
 </body>
 
 </html>
