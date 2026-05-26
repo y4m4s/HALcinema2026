@@ -1,0 +1,39 @@
+:root {
+  --bg: #071018;
+  --panel: rgba(15, 29, 43, 0.78);
+  --text: #eef4f8;
+  --text-muted: #a5b4c2;
+  --accent: #5fb4df;
+  --border: rgba(116, 170, 208, 0.24);
+  --sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', Meiryo, sans-serif;
+  --serif: 'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+  --mono: 'DM Mono', Consolas, monospace;
+
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100svh;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 16, 24, 0.92), rgba(7, 16, 24, 1)),
+    radial-gradient(circle at 80% 0%, rgba(95, 180, 223, 0.18), transparent 34%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
