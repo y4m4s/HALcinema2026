@@ -1,0 +1,1027 @@
+/* ========== スクリーンセクション ========== */
+.screens-section {
+  background: var(--bg);
+  padding: 2.5rem 80px 4rem;
+}
+
+.screen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 1rem;
+}
+
+.screen-card {
+  background: var(--bg2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 0;
+}
+.card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  width: 100%;
+}
+.card-cta i {
+  font-size: 0.85rem;
+  transition: transform 0.2s;
+}
+.card-cta:hover {
+  background: var(--accent2);
+  color: var(--bg);
+  border-color: var(--accent2);
+}
+/* インライン .card-details は非表示 (モーダルがデータソースとして利用) */
+.card-details {
+  display: none;
+}
+
+/* ========== スクリーン詳細モーダル ========== */
+.screen-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.screen-modal[hidden] {
+  display: none;
+}
+.screen-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  animation: th-fade-in 0.18s ease;
+}
+.screen-modal-card {
+  position: absolute;
+  z-index: 2;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  width: 360px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: th-popover-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.screen-modal-image {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+}
+.screen-modal-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) contrast(1.05);
+}
+.screen-modal-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(14, 30, 56, 0.7) 100%);
+  pointer-events: none;
+}
+/* ---- モーダル内 タイポトークン (色2階層 / サイズ3階層) ----
+ * 強調 : var(--text)   ← 見出し・データ値・本文
+ * 弱   : var(--text3)  ← ラベル類 (dt / section-title / name-en)
+ * サイズ: 1.15rem / 0.8rem / 0.65rem
+ */
+
+.screen-modal-body {
+  padding: 0.9rem 1.2rem 1.1rem;
+}
+.screen-modal-body .card-name {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.15rem;
+}
+.screen-modal-body .card-name-en {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+.card-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.card-details-content .card-details-lead {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+}
+.card-details-section-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--border2);
+}
+.card-details-section .card-details-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.screen-modal .card-details-row {
+  padding: 0.32rem 0;
+}
+.screen-modal .card-details-row dt {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.screen-modal .card-details-row dd {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text);
+  text-align: right;
+}
+.card-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.card-highlights li {
+  position: relative;
+  padding: 0.32rem 0 0.32rem 0.95rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.card-highlights li:last-child {
+  border-bottom: none;
+}
+.card-highlights li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.78rem;
+  width: 4px;
+  height: 4px;
+  background: var(--text3);
+  border-radius: 50%;
+}
+
+@keyframes th-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes th-popover-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.card-details-lead {
+  font-size: 0.82rem;
+  line-height: 1.75;
+  color: var(--text2);
+  margin: 0 0 1rem;
+}
+.card-details-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.card-details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.card-details-row:last-child {
+  border-bottom: none;
+}
+.card-details-row dt {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.card-details-row dd {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text);
+  text-align: right;
+  margin: 0;
+}
+
+.screen-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border2);
+  box-shadow: 0 8px 40px rgba(45, 106, 160, 0.2), 0 0 0 1px rgba(45, 106, 160, 0.1);
+}
+
+.card-image {
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg, var(--bg3) 0%, var(--bg4) 100%);
+  position: relative;
+  overflow: hidden;
+}
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+  filter: brightness(0.85) contrast(1.05);
+}
+.screen-card:hover .card-image img {
+  transform: scale(1.08);
+  filter: brightness(1) contrast(1.05);
+}
+.card-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(14, 30, 56, 0.7) 100%);
+  pointer-events: none;
+}
+
+.card-number {
+  position: absolute;
+  top: 0.8rem;
+  left: 0.8rem;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  font-family: var(--mono);
+  letter-spacing: 0.15em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 2;
+}
+.card-badges {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-end;
+  z-index: 2;
+}
+.card-badges .badge {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.28rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.12em;
+  backdrop-filter: blur(6px);
+}
+.badge-imax {
+  background: var(--accent2);
+  color: var(--bg);
+  box-shadow: 0 0 15px rgba(74, 159, 212, 0.4);
+}
+.badge-dolby {
+  background: var(--text);
+  color: var(--bg);
+}
+.badge-4dx {
+  background: var(--red2);
+  color: var(--text);
+  box-shadow: 0 0 15px rgba(192, 57, 43, 0.4);
+}
+.badge-premium {
+  background: var(--accent);
+  color: var(--text);
+}
+.badge-standard {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.card-body {
+  padding: 1.1rem 1.2rem 1.2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.card-name {
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.card-name-en {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text2);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.9rem;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.card-specs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.card-specs .spec-item {
+  flex: 1;
+  text-align: left;
+  background: none;
+  padding: 0;
+}
+.card-specs .spec-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text3);
+  letter-spacing: 0.18em;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.card-specs .spec-value {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ========== 映画館紹介セクション ========== */
+.about-section {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.about-section::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139, 28, 28, 0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+.about-section > * { position: relative; z-index: 1; }
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+/* .section-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--accent2);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.section-eyebrow::before {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: var(--accent2);
+} */
+.about-text h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.02em;
+}
+.about-text h2 .accent { color: var(--accent2); }
+.about-text .lead {
+  font-size: 1rem;
+  color: var(--text2);
+  line-height: 1.9;
+  margin-bottom: 1.2rem;
+}
+.about-text .desc {
+  font-size: 0.92rem;
+  color: var(--text2);
+  line-height: 1.9;
+  margin-bottom: 2rem;
+}
+.about-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.about-stat { padding-right: 1rem; }
+.about-stat-num {
+  font-family: var(--mono);
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+.about-stat-num .unit {
+  font-size: 0.9rem;
+  color: var(--text2);
+  margin-left: 0.2rem;
+}
+.about-stat-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.about-visual {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.8rem;
+}
+.about-img {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  position: relative;
+}
+.about-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) contrast(1.05);
+  transition: transform 0.6s ease;
+}
+.about-img:hover img {
+  transform: scale(1.05);
+  filter: brightness(1) contrast(1.05);
+}
+.about-img.main { grid-row: 1 / 3; }
+.about-img-label {
+  position: absolute;
+  bottom: 0.8rem;
+  left: 0.8rem;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.15em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ========== 設備セクション ========== */
+.facilities-section {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.facilities-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.facilities-head h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 0.8rem;
+}
+.facilities-head .lead {
+  color: var(--text2);
+  font-size: 0.92rem;
+  max-width: 420px;
+  line-height: 1.7;
+}
+.facilities-head-left { flex: 1; min-width: 280px; }
+
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.facility-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.facility-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+/* .facility-card:hover {
+  border-color: var(--border2);
+  background: var(--bg3);
+} */
+/* .facility-card:hover::before { opacity: 1; } */
+
+.facility-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent2);
+  margin-bottom: 1.2rem;
+  transition: all 0.3s ease;
+}
+.facility-card:hover .facility-icon {
+  background: rgba(74, 159, 212, 0.12);
+  border-color: var(--accent2);
+}
+.facility-name {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.facility-name-en {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text3);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 400;
+  margin-bottom: 0.9rem;
+}
+.facility-desc {
+  font-size: 0.82rem;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+.facility-floor {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+.facility-floor .pin { color: var(--accent2); }
+
+/* ========== 設備詳細セクション ========== */
+.equipment-section {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.equipment-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+.equipment-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-3px);
+}
+/* ========== シンクロ・ホラー・ラボ セクション ========== */
+.lab-section {
+  border-top: 1px solid var(--border);
+}
+.lab-feature {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 3rem;
+  align-items: start;
+  margin-top: 2rem;
+}
+.lab-visual {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.lab-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.75) contrast(1.1);
+  transition: transform 0.8s ease;
+}
+.lab-visual:hover img {
+  transform: scale(1.04);
+  filter: brightness(0.9) contrast(1.1);
+}
+.lab-tag {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.lab-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.lab-eyebrow::before {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: var(--accent2);
+}
+.lab-headline {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 2.8vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.02em;
+}
+.lab-lead {
+  font-size: 0.98rem;
+  line-height: 1.9;
+  color: var(--text2);
+  margin-bottom: 2rem;
+}
+.lab-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.lab-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 1.2rem 1.3rem;
+}
+.lab-item-num {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--accent2);
+  margin-bottom: 0.5rem;
+}
+.lab-item-title {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.55rem;
+  letter-spacing: 0.03em;
+}
+.lab-item-desc {
+  font-size: 0.8rem;
+  line-height: 1.75;
+  color: var(--text2);
+}
+.equipment-image {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) contrast(1.05);
+  transition: transform 0.6s ease;
+}
+.equipment-card:hover .equipment-image img {
+  transform: scale(1.05);
+  filter: brightness(1) contrast(1.05);
+}
+.equipment-image-tag {
+  position: absolute;
+  bottom: 0.8rem;
+  left: 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.equipment-body {
+  padding: 1.5rem 1.5rem 1.8rem;
+}
+.equipment-num {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--accent2);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+.equipment-name {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.7rem;
+  letter-spacing: 0.04em;
+}
+.equipment-lead {
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--text2);
+  margin-bottom: 1.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.equipment-spec-list {
+  display: flex;
+  flex-direction: column;
+}
+.equipment-spec-list .spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.equipment-spec-list .spec-row:last-child {
+  border-bottom: none;
+}
+.equipment-spec-list dt {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.equipment-spec-list dd {
+  color: var(--text);
+  text-align: right;
+  font-size: 0.85rem;
+}
+
+/* ========== 館内案内セクション ========== */
+.info-section {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+.info-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 1.8rem 2rem;
+}
+.info-card-title {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.info-card-title i {
+  color: var(--accent2);
+  font-size: 0.95rem;
+}
+.info-rows {
+  display: flex;
+  flex-direction: column;
+}
+.info-rows .info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.info-rows .info-row:last-child {
+  border-bottom: none;
+}
+.info-rows dt {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.info-rows dd {
+  color: var(--text);
+  text-align: right;
+  font-size: 0.88rem;
+}
+.theater-room-seat-count {
+  display: inline-block;
+  width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.info-card-lead {
+  font-size: 0.85rem;
+  color: var(--text2);
+  line-height: 1.8;
+  margin-bottom: 1.3rem;
+}
+
+.info-rows .info-row.total {
+  margin-top: 0.3rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border2);
+  border-bottom: none;
+}
+
+.floor-map {
+  display: flex;
+  flex-direction: column;
+}
+.floor-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.floor-row:last-child {
+  border-bottom: none;
+}
+.floor-label {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent2);
+  letter-spacing: 0.08em;
+  min-width: 52px;
+  flex-shrink: 0;
+}
+.floor-content {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.info-card .info-card-title i::before{
+  font-size: 1.2rem;
+}
+.info-notes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.info-notes li {
+  padding: 0.7rem 0 0.7rem 1.7rem;
+  position: relative;
+  font-size: 0.88rem;
+  color: var(--text2);
+  line-height: 1.8;
+  border-bottom: 1px solid var(--border);
+}
+.info-notes li:last-child {
+  border-bottom: none;
+}
+.info-notes li::before {
+  content: '!';
+  position: absolute;
+  left: 0;
+  top: 0.95rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  background: var(--accent2);
+  color: var(--bg);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ========== レスポンシブ ========== */
+@media (max-width: 968px) {
+  .about-grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  .about-visual { aspect-ratio: 4 / 3; }
+  .equipment-grid { grid-template-columns: repeat(2, 1fr); }
+  .lab-feature { grid-template-columns: 1fr; gap: 2rem; }
+  .lab-visual { aspect-ratio: 16 / 9; }
+}
+@media (max-width: 768px) {
+  .theater-hero { padding: 1.5rem 1rem 0; }
+  .theater-title-row { flex-direction: column; align-items: flex-start; gap: 1.2rem; }
+  .theater-hero-status { width: 100%; justify-content: space-between; gap: 1rem; }
+  .hs-item { text-align: left; flex: 1; }
+  .hs-value.live { justify-content: flex-start; }
+  .screen-grid { grid-template-columns: 1fr; gap: 0.8rem; }
+  .screens-section { padding: 2.5rem 1rem 3rem; }
+  .about-section,
+  .lab-section,
+  .equipment-section,
+  .facilities-section,
+  .info-section { padding: 3rem 1rem; }
+  .lab-feature { grid-template-columns: 1fr; gap: 2rem; }
+  .lab-visual { aspect-ratio: 16 / 9; }
+  .lab-items { grid-template-columns: 1fr; }
+  .about-stats { grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+  .about-stat-num { font-size: 1.4rem; }
+  .facilities-grid { grid-template-columns: 1fr; }
+  .equipment-grid { grid-template-columns: 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+}

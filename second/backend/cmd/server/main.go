@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,14 +24,17 @@ type movieSummary struct {
 	ReleaseYear int    `json:"releaseYear"`
 }
 
+type pageSummary struct {
+	Path  string `json:"path"`
+	Title string `json:"title"`
+}
+
 func main() {
 	router := gin.Default()
+	frontendDist := getEnv("FRONTEND_DIST", filepath.Join("..", "frontend", "dist"))
 
 	router.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"service": "halcinema-second-api",
-			"message": "Gin backend is running",
-		})
+		serveFrontend(c, frontendDist)
 	})
 
 	api := router.Group("/api")
@@ -50,11 +55,49 @@ func main() {
 				{ID: 3, Title: "沈黙のスクリーン", Genre: "Suspense", ReleaseYear: 2026},
 			})
 		})
+
+		api.GET("/pages", func(c *gin.Context) {
+			c.JSON(http.StatusOK, []pageSummary{
+				{Path: "/", Title: "トップ"},
+				{Path: "/works", Title: "上映作品一覧"},
+				{Path: "/schedule", Title: "上映スケジュール"},
+				{Path: "/theater", Title: "劇場案内"},
+				{Path: "/access", Title: "交通案内"},
+				{Path: "/tickets", Title: "料金案内"},
+				{Path: "/question", Title: "よくある質問"},
+				{Path: "/contact", Title: "お問い合わせ"},
+				{Path: "/news", Title: "お知らせ"},
+			})
+		})
 	}
+
+	router.Static("/assets", filepath.Join(frontendDist, "assets"))
+	router.Static("/css", filepath.Join(frontendDist, "css"))
+
+	router.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "api route not found"})
+			return
+		}
+		serveFrontend(c, frontendDist)
+	})
 
 	if err := router.Run(":" + getEnv("PORT", "8080")); err != nil {
 		panic(err)
 	}
+}
+
+func serveFrontend(c *gin.Context, frontendDist string) {
+	indexPath := filepath.Join(frontendDist, "index.html")
+	if _, err := os.Stat(indexPath); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"service": "halcinema-second-api",
+			"message": "Gin backend is running. Build frontend to serve React from this process.",
+		})
+		return
+	}
+
+	c.File(indexPath)
 }
 
 func getEnv(key string, fallback string) string {

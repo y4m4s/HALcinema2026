@@ -1,0 +1,586 @@
+/* ── ① 販売終了：時刻に打ち消し線 ──────── */
+.time-slot.soldout .time-slot-time {
+  text-decoration: line-through;
+  color: var(--text2);
+}
+
+/* ── ② カード入場アニメーション ─────────── */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── View mode tabs ──────────────────────── */
+.view-tabs {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  margin-bottom: 24px;
+}
+
+.view-tab {
+  flex: 1;
+  padding: 14px 0;
+  text-align: center;
+  background: var(--bg2);
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.view-tab:hover:not(.active) {
+  background: var(--bg3);
+}
+
+/* ── Movie selector cards ────────────────── */
+.movie-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 28px;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.movie-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.movie-tab-card {
+  flex-shrink: 0;
+  width: 110px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+/* ④ アクティブタブのポスターカラーオーバーレイ */
+.movie-tab-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  background: var(--accent2);
+  opacity: 0;
+  transition: opacity 0.25s;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.movie-tab-card.active::before {
+  opacity: 0.18;
+}
+
+.movie-tab-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent2);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+  z-index: 2;
+}
+
+.movie-tab-card.active::after {
+  transform: scaleX(1);
+}
+
+.movie-tab-card.active {
+  border-color: var(--accent2);
+  background: var(--bg3);
+}
+
+.movie-tab-card:hover:not(.active) {
+  border-color: var(--border2);
+  background: var(--bg3);
+}
+
+.movie-tab-poster {
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+
+.movie-tab-card:hover .movie-tab-poster {
+  transform: scale(1.04);
+}
+
+.movie-tab-poster-ph {
+  width: 100%;
+  height: 72px;
+  background: var(--bg4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+}
+
+.movie-tab-body {
+  padding: 7px 8px 8px;
+}
+
+.movie-tab-title {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s;
+}
+
+.movie-tab-card.active .movie-tab-title {
+  color: var(--text);
+}
+
+.movie-tab-meta {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Sub tabs (date / movie) ─────────────── */
+.sub-tabs {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  margin-bottom: 28px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.sub-tab {
+  flex: 1;
+  min-width: 72px;
+  padding: 12px 16px;
+  text-align: center;
+  background: var(--bg2);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sub-tab.active {
+  background: var(--bg4);
+  color: var(--text);
+}
+
+.sub-tab:hover:not(.active):not(.no-play) {
+  background: var(--bg3);
+}
+
+.sub-tab.no-play {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.movie-date-tabs {
+  margin-top: 12px;
+}
+
+/* ── Rows fade transition ────────────────── */
+#schedule-rows {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#schedule-rows.rows-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+/* ── Schedule section heading ────────────── */
+.schedule-heading {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+}
+
+
+/* ── Movie card ──────────────────────────── */
+.movie-card {
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  overflow: hidden;
+  animation: card-enter 0.4s ease both;
+  animation-delay: var(--card-delay, 0s);
+}
+
+.movie-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+
+.movie-card-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.movie-card-title {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.movie-card-title:hover {
+  color: var(--accent2);
+}
+
+.movie-card-duration {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.movie-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Movie card body ─────────────────────── */
+.movie-card-body {
+  display: flex;
+  min-height: 120px;
+}
+
+.movie-thumb {
+  width: 90px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+
+.movie-thumb-link {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ③ サムネイル下端グラデーション */
+.movie-thumb-link::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--bg2));
+  z-index: 1;
+  pointer-events: none;
+}
+
+.movie-thumb-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(74, 159, 212, 0.25);
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.movie-thumb-link:hover::after {
+  opacity: 1;
+}
+
+.movie-thumb img {
+  width: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.movie-thumb-link:hover img {
+  transform: scale(1.06);
+}
+
+.movie-thumb-placeholder {
+  width: 100%;
+  background: var(--bg4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  transition: background 0.2s;
+}
+
+.movie-thumb-link:hover .movie-thumb-placeholder {
+  background: var(--bg3);
+  color: var(--text2);
+}
+
+.theaters-grid {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.theater-col {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.slots-grid--quad {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  justify-content: center;
+  gap: 8px;
+}
+
+.theater-col:last-child {
+  border-right: none;
+}
+
+.theater-col-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.theater-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.theater-col-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.feature-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.theater-col-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.theater-col-meta {
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.02em;
+}
+
+/* ── Time slot card ──────────────────────── */
+.time-slot {
+  border: 1px solid var(--border2);
+  background: var(--bg);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.time-slot:hover:not(.soldout) {
+  border-color: var(--accent2);
+  background: rgba(45, 106, 160, 0.08);
+}
+
+.time-slot.soldout {
+  cursor: default;
+}
+
+.time-slot-time {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.time-slot-status {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.time-slot-status.soldout { color: var(--red2); }
+.time-slot-status.few     { color: #d4a800; }
+.time-slot-status.ok      { color: #3aad72; }
+
+/* ── Movie card note ─────────────────────── */
+.movie-card-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+}
+
+.note-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.note-text {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+/* ── 詳細ボタン (カード内) ───────────────── */
+.movie-card-header-right .btn-ghost {
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.movie-card-header-right .btn-ghost:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── ⑤ Empty state ───────────────────────── */
+.schedule-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 72px 0;
+}
+
+.schedule-empty-icon {
+  color: var(--text3);
+  opacity: 0.5;
+}
+
+.schedule-empty-text {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text3);
+  letter-spacing: 0.04em;
+}
+
+.schedule-empty-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  opacity: 0.55;
+  letter-spacing: 0.12em;
+}
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 600px) {
+  .movie-thumb {
+    width: 70px;
+  }
+
+  .theater-col {
+    min-width: 100px;
+    padding: 10px 10px;
+  }
+
+  .time-slot-start {
+    font-size: 17px;
+  }
+}

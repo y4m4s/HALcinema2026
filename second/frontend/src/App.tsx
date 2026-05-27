@@ -1,94 +1,118 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { runCommon } from './page-scripts/common'
+import { pageRunners } from './page-scripts/registry'
+import { pages } from './pages/registry'
 import './App.css'
 
-type HealthResponse = {
-  service: string
-  status: string
-  version: string
+type RouteState = {
+  key: string
+  search: string
 }
 
-type MovieSummary = {
-  id: number
-  title: string
-  genre: string
-  releaseYear: number
+function routeKeyFromPath(pathname: string) {
+  const cleaned = pathname.replace(/^\/+/, '').replace(/\/+$/, '').replace(/\.html$/, '')
+  if (!cleaned || cleaned === 'index') return 'index'
+  return cleaned
+}
+
+function getRouteState(): RouteState {
+  return {
+    key: routeKeyFromPath(window.location.pathname),
+    search: window.location.search,
+  }
+}
+
+function routeForHref(href: string) {
+  if (!href || href.startsWith('#')) return href
+  if (/^(https?:|mailto:|tel:|data:|blob:|\/assets\/|\/css\/)/i.test(href)) return href
+  if (href.startsWith('assets/')) return `/${href}`
+  if (href.startsWith('css/') || href.startsWith('js/')) return `/${href}`
+
+  const match = href.match(/^([^?#]+)\.html([?#].*)?$/)
+  if (!match) return href
+
+  const page = match[1] === 'index' ? '' : match[1]
+  return `/${page}${match[2] || ''}`
+}
+
+function rewriteDom(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>('[src]').forEach((el) => {
+    const value = el.getAttribute('src')
+    if (value) el.setAttribute('src', routeForHref(value))
+  })
+
+  root.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((anchor) => {
+    const value = anchor.getAttribute('href')
+    if (value) anchor.setAttribute('href', routeForHref(value))
+  })
+}
+
+function installStyles(styles: string[]) {
+  document.querySelectorAll('link[data-page-style="true"]').forEach((node) => node.remove())
+
+  styles
+    .filter((href) => !href.endsWith('/fonts.css') && !href.endsWith('/style.css'))
+    .forEach((href) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = href
+      link.dataset.pageStyle = 'true'
+      document.head.appendChild(link)
+    })
 }
 
 function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [movies, setMovies] = useState<MovieSummary[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const [route, setRoute] = useState<RouteState>(() => getRouteState())
+  const page = pages[route.key] ?? pages.index
 
   useEffect(() => {
-    async function loadApiStatus() {
-      try {
-        const [healthResponse, moviesResponse] = await Promise.all([
-          fetch('/api/health'),
-          fetch('/api/movies'),
-        ])
-
-        if (!healthResponse.ok || !moviesResponse.ok) {
-          throw new Error('API request failed')
-        }
-
-        setHealth(await healthResponse.json())
-        setMovies(await moviesResponse.json())
-      } catch {
-        setError('Gin APIに接続できませんでした')
-      }
-    }
-
-    loadApiStatus()
+    const onPopState = () => setRoute(getRouteState())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  return (
-    <main className="app-shell">
-      <section className="hero">
-        <p className="eyebrow">HAL CINEMA 2026</p>
-        <h1>React + Vite / Gin starter</h1>
-        <p className="lead">
-          mockディレクトリのHTML/CSS/JSを移植していくための、フロントエンドとAPIサーバーの最小構成です。
-        </p>
-      </section>
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return undefined
 
-      <section className="status-grid" aria-label="開発環境ステータス">
-        <article className="status-panel">
-          <span className="status-label">Frontend</span>
-          <strong>React + Vite</strong>
-          <p>Vite dev serverからGin APIへ /api をプロキシします。</p>
-        </article>
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as Element | null
+      const anchor = target?.closest('a[href]') as HTMLAnchorElement | null
+      if (!anchor || anchor.target || anchor.hasAttribute('download')) return
 
-        <article className="status-panel">
-          <span className="status-label">Backend</span>
-          <strong>{health ? health.service : 'Gin API'}</strong>
-          <p>
-            {error
-              ? error
-              : health
-                ? `${health.status} / ${health.version}`
-                : 'APIステータスを確認しています'}
-          </p>
-        </article>
-      </section>
+      const nextUrl = new URL(anchor.href, window.location.href)
+      if (nextUrl.origin !== window.location.origin) return
 
-      <section className="movie-list" aria-label="APIレスポンス例">
-        <div className="section-heading">
-          <span className="status-label">Sample API</span>
-          <h2>Movies endpoint</h2>
-        </div>
+      event.preventDefault()
+      window.history.pushState({}, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`)
+      setRoute(getRouteState())
+      window.scrollTo(0, 0)
+    }
 
-        <div className="movie-grid">
-          {movies.map((movie) => (
-            <article className="movie-card" key={movie.id}>
-              <span>{movie.genre}</span>
-              <h3>{movie.title}</h3>
-              <p>{movie.releaseYear}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
-  )
+    root.addEventListener('click', onClick)
+    return () => root.removeEventListener('click', onClick)
+  }, [])
+
+  useLayoutEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    document.title = page.title
+    document.body.className = page.bodyClass
+    installStyles(page.styles)
+
+    root.innerHTML = page.html
+
+    rewriteDom(root)
+    runCommon()
+    rewriteDom(root)
+    pageRunners[route.key]?.()
+    rewriteDom(root)
+  }, [page, route.key, route.search])
+
+  return <div className="app-root" ref={rootRef} />
 }
 
 export default App
+

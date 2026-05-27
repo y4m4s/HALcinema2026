@@ -1,0 +1,102 @@
+.complete-wrap {
+  max-width: 600px;
+  margin: 80px auto;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.complete-check {
+  font-size: 58px;
+  color: var(--accent2);
+  display: block;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.complete-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--accent2);
+  margin-bottom: 28px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s;
+}
+
+.complete-title {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: #dde4f0;
+  line-height: 1.7;
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
+}
+
+.complete-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--border2);
+  margin: 0 auto 32px;
+  opacity: 0;
+  transition: opacity 0.6s ease 0.35s;
+}
+
+.complete-body {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 2;
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease 0.45s, transform 0.6s ease 0.45s;
+}
+
+.complete-count {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  margin-bottom: 24px;
+  opacity: 0;
+  transition: opacity 0.6s ease 0.55s;
+}
+
+.complete-count #count {
+  color: var(--accent2);
+  font-size: 14px;
+}
+
+.complete-back {
+  display: inline-block;
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease 0.65s, transform 0.6s ease 0.65s;
+}
+
+.complete-wrap.visible .complete-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.complete-wrap.visible .complete-label,
+.complete-wrap.visible .complete-title,
+.complete-wrap.visible .complete-divider,
+.complete-wrap.visible .complete-body,
+.complete-wrap.visible .complete-count,
+.complete-wrap.visible .complete-back {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .complete-title {
+    font-size: 22px;
+  }
+}

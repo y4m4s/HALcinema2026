@@ -1,0 +1,164 @@
+﻿/* eslint-disable no-irregular-whitespace */
+import type { PageDefinition } from '../types'
+
+export const questionPage: PageDefinition = {
+  title: "よくある質問 | HAL シネマ",
+  bodyClass: "question-page",
+  styles: [
+  "/css/fonts.css",
+  "/css/style.css",
+  "/css/question.css"
+],
+  html: String.raw`<div id="nav-root">
+    <header class="site-header">
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a class="nav-logo" href="/" aria-label="HALシネマ 境界 トップへ">
+          <img class="nav-logo-img" src="/assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+        </a>
+        <div class="nav-links">
+          <a href="/works" class="nav-link" data-nav="works"><span>上映作品一覧</span></a>
+          <a href="/schedule" class="nav-link" data-nav="schedule"><span>上映スケジュール</span></a>
+          <a href="/theater" class="nav-link" data-nav="theater"><span>劇場案内</span></a>
+          <a href="/access" class="nav-link" data-nav="access"><span>交通案内</span></a>
+          <a href="/tickets" class="nav-link" data-nav="tickets"><span>料金案内</span></a>
+          <a href="/question" class="nav-link" data-nav="question"><span>よくある質問</span></a>
+        </div>
+      </nav>
+    </header>
+  </div>
+
+  <div class="page page-enter">
+    <div class="section">
+      <nav class="breadcrumb-nav" aria-label="パンくずリスト">
+        <ol class="breadcrumb">
+          <li class="breadcrumb__list"><a href="/">トップページ</a></li>
+          <li class="breadcrumb__list" aria-current="page">よくある質問</li>
+        </ol>
+      </nav>
+      <div class="section-header">
+        <h1 class="section-title">よくある質問</h1>
+        <span class="section-title-en">FAQ</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span class="faq-q-label">Q</span>
+            <span class="faq-q-text">チケットはどのように予約できますか？</span>
+            <span class="faq-icon"></span>
+          </button>
+          <div class="faq-answer">
+            <span class="faq-a-label">A</span>
+            <span class="faq-a-text">当サイトのチケット購入ページからオンラインでご予約いただけます。また、劇場窓口でも当日券をお買い求めいただけます。</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span class="faq-q-label">Q</span>
+            <span class="faq-q-text">上映中にトイレへ行っても問題ありませんか？</span>
+            <span class="faq-icon"></span>
+          </button>
+          <div class="faq-answer">
+            <span class="faq-a-label">A</span>
+            <span class="faq-a-text">もちろん途中退席いただけます。ただし、再入場の際はお手元のチケットをスタッフにご提示ください。</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span class="faq-q-label">Q</span>
+            <span class="faq-q-text">飲食物の持ち込みは可能ですか？</span>
+            <span class="faq-icon"></span>
+          </button>
+          <div class="faq-answer">
+            <span class="faq-a-label">A</span>
+            <span class="faq-a-text">外部からの飲食物の持ち込みはご遠慮いただいております。劇場内のコンセッションスタンドにてドリンク・スナック類をお取り扱いしております。</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span class="faq-q-label">Q</span>
+            <span class="faq-q-text">障がい者割引はありますか？</span>
+            <span class="faq-icon"></span>
+          </button>
+          <div class="faq-answer">
+            <span class="faq-a-label">A</span>
+            <span class="faq-a-text">はい、障害者手帳をご提示いただくと、本人および介護者1名様を一般料金より割引いたします。詳細は窓口スタッフにお尋ねください。</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            <span class="faq-q-label">Q</span>
+            <span class="faq-q-text">駐車場はありますか？</span>
+            <span class="faq-icon"></span>
+          </button>
+          <div class="faq-answer">
+            <span class="faq-a-label">A</span>
+            <span class="faq-a-text">劇場専用の駐車場はございません。周辺の提携駐車場は、鑑賞券提示で3時間無料でご利用いただけます。公共交通機関でのご来場もお勧めしております。</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-root">
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-watermark" aria-hidden="true">HAL CINEMA KYOKAI</div>
+        <div class="footer-main">
+          <div class="footer-brand">
+            <div class="footer-kicker">Horror Theatre</div>
+            <div class="footer-logo">
+              <img class="footer-logo-img" src="/assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
+            </div>
+            <p class="footer-tagline">
+              ホラー・ミステリー・サスペンスを中心に、深夜まで上映する都市型シアター。
+            </p>
+            <dl class="footer-meta">
+              <div>
+                <dt>ADDRESS</dt>
+                <dd>〒450-0002　愛知県名古屋市中村区名駅4-4-38</dd>
+              </div>
+              <div>
+                <dt>OPEN</dt>
+                <dd>9:00 - 翌0:30</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="footer-directory">
+            <div class="footer-col">
+              <div class="footer-col-title">上映情報</div>
+              <a href="/works" class="footer-link">上映作品一覧</a>
+              <a href="/schedule" class="footer-link">上映スケジュール</a>
+              <a href="/" class="footer-link">トップ</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">劇場情報</div>
+              <a href="/theater" class="footer-link">劇場案内</a>
+              <a href="/tickets" class="footer-link">料金案内</a>
+              <a href="/access" class="footer-link">交通案内</a>
+            </div>
+            <div class="footer-col">
+              <div class="footer-col-title">サポート</div>
+              <a href="/contact" class="footer-link">お問い合わせ</a>
+              <a href="/question" class="footer-link">よくある質問</a>
+              <a href="/news" class="footer-link">お知らせ</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 HALシネマ 境界. All Rights Reserved.</span>
+          <span>HORROR · MYSTERY · SUSPENSE</span>
+        </div>
+      </div>
+    </footer>
+  </div>`,
+}
+
+

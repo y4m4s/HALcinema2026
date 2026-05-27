@@ -1,36 +1,58 @@
 # HAL Cinema Second
 
-React/Vite frontend and Gin backend scaffold for migrating the static mock in `../mock`.
+`../mock` にある静的モックを React/Vite のフロントエンドと Go/Gin のバックエンドへ移行するためのプロジェクトです。
 
-## Structure
+## 構成
 
-- `frontend/` - React + TypeScript + Vite
-- `backend/` - Go + Gin API server
+- `frontend/` - React + TypeScript + Vite のフロントエンド
+- `frontend/src/pages/` - `../mock/*.html` から移行した TSX ページ定義
+- `frontend/src/page-scripts/` - `../mock/js/*.js` から移行した TypeScript のページ処理
+- `frontend/public/css/` - `../mock/css` から移行したスタイルシート
+- `frontend/public/assets/` - `../mock/assets` から移行した画像・フォントなどの静的ファイル
+- `backend/` - Go + Gin の API サーバー
 
-## Development
+## 開発
 
-Run the backend:
+バックエンドは `second/backend` から起動します。
 
 ```powershell
-cd backend
+cd second/backend
 go run ./cmd/server
 ```
 
-Run the frontend in another terminal:
+別のターミナルで、フロントエンドを `second/frontend` から起動します。
 
 ```powershell
-cd frontend
+cd second/frontend
 npm.cmd run dev
 ```
 
-The frontend runs on `http://localhost:5173` and proxies `/api` requests to the Gin server on `http://localhost:8080`.
+フロントエンドは `http://localhost:5173` で起動します。`/api` へのリクエストは `http://localhost:8080` の Gin サーバーへプロキシされます。
 
-## Verification
+主なページは、React のルートとして次の URL から確認できます。
+
+- `http://localhost:5173/`
+- `http://localhost:5173/works`
+- `http://localhost:5173/schedule`
+- `http://localhost:5173/theater`
+- `http://localhost:5173/detail?id=1`
+
+`npm.cmd run build` 後は、Gin からビルド済みの React アプリを配信できます。
 
 ```powershell
-cd backend
+cd second/backend
+go run ./cmd/server
+```
+
+その後、`http://localhost:8080` を開いて確認します。
+
+## 動作確認
+
+```powershell
+cd second/backend
 go test ./...
 
 cd ../frontend
+npm.cmd run lint
 npm.cmd run build
 ```
