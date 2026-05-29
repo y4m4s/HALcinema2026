@@ -1,4 +1,5 @@
 import { runAccess } from './access'
+import { runBooking } from './booking'
 import { runCompleted } from './completed'
 import { runContact } from './contact'
 import { runDetail } from './detail'
@@ -13,6 +14,7 @@ export type PageRunner = () => void
 
 export const pageRunners: Record<string, PageRunner | undefined> = {
   "access": runAccess,
+  "booking": runBooking,
   "completed": runCompleted,
   "contact": runContact,
   "detail": runDetail,

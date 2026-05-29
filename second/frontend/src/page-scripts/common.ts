@@ -4,6 +4,7 @@ function getCurrentPage() {
   const path = location.pathname
   if (path.includes('works')) return 'works'
   if (path.includes('schedule')) return 'schedule'
+  if (path.includes('booking')) return 'schedule'
   if (path.includes('theater')) return 'theater'
   if (path.includes('access')) return 'access'
   if (path.includes('tickets')) return 'tickets'
@@ -17,6 +18,9 @@ function getPageMeta() {
   if (path === '/' || path.includes('index')) return null
   if (path.includes('works')) return { label: '上映作品一覧' }
   if (path.includes('schedule')) return { label: '上映スケジュール' }
+  if (path.includes('booking')) {
+    return { label: '座席予約', parent: { label: '上映スケジュール', href: '/schedule' } }
+  }
   if (path.includes('theater')) return { label: '劇場案内' }
   if (path.includes('tickets')) return { label: '料金案内' }
   if (path.includes('access')) return { label: '交通案内' }

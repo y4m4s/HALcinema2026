@@ -125,7 +125,7 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
         el.innerHTML = emptyHtml('上映中の作品がありません', 'NO MOVIES SCHEDULED');
         return;
       }
-      el.innerHTML = movies.map((m, i) => renderMovieCard(m, i)).join('');
+      el.innerHTML = movies.map((m, i) => renderMovieCard(m, i, DATES[dateIdx])).join('');
     } else {
       const m = nowShowing[movieIdx];
       const isPlaying = !m.playingDays || m.playingDays.includes(movieDateIdx);
@@ -133,7 +133,7 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
         el.innerHTML = emptyHtml('この日は上映がありません', 'NO SCREENINGS ON THIS DATE');
         return;
       }
-      el.innerHTML = renderMovieCard(m, 0);
+      el.innerHTML = renderMovieCard(m, 0, DATES[movieDateIdx]);
     }
   }
 
@@ -145,7 +145,7 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
     }));
   }
 
-  function renderMovieCard(m, idx) {
+  function renderMovieCard(m, idx, dateLabel) {
     const delay = (idx * 0.07).toFixed(2);
     const imgInner = m.image
       ? `<img src="${m.image}" alt="${m.title}">`
@@ -156,11 +156,13 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
       const slotsHtml = sc.slots.map(function (slot) {
         const statusClass = slot.status === 'soldout' ? 'soldout' : slot.status === 'few' ? 'few' : 'ok';
         const statusText  = slot.status === 'soldout' ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
-        return `
-          <div class="time-slot${statusClass === 'soldout' ? ' soldout' : ''}">
+        const slotInner = `
             <div class="time-slot-time">${slot.start} 〜 ${slot.end}</div>
-            <div class="time-slot-status ${statusClass}">${statusText}</div>
-          </div>`;
+            <div class="time-slot-status ${statusClass}">${statusText}</div>`;
+        if (statusClass === 'soldout') {
+          return `<div class="time-slot soldout">${slotInner}</div>`;
+        }
+        return `<a class="time-slot" href="${buildBookingHref(m, sc.screen, slot, dateLabel)}">${slotInner}</a>`;
       }).join('');
       const screenInfo = SCREENS.find(s => s.num === sc.screen);
       const featureBadges = screenInfo
@@ -201,6 +203,17 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
           <span class="note-text">${noteText}</span>
         </div>
       </div>`;
+  }
+
+  function buildBookingHref(movie, screen, slot, dateLabel) {
+    const params = new URLSearchParams({
+      movie: String(movie.id),
+      date: dateLabel,
+      screen: String(screen),
+      start: slot.start,
+      end: slot.end,
+    });
+    return `/booking?${params.toString()}`;
   }
 
   render();

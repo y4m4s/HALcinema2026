@@ -15,7 +15,7 @@ const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
   document.title = movie.title + ' | HAL シネマ';
 
   renderDetail(movie, isNow);
-  bindDateTabs();
+  bindDateTabs(movie);
 
 function renderDetail(movie, isNow) {
   setText('detail-breadcrumb-current', movie.title);
@@ -144,14 +144,7 @@ function renderBooking(movie, isNow) {
 
 function buildDateTabs(movie) {
   const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
-  const todayStr = '5/15(金)';
-  const defaultDate = (movie.playingDays && DATES.find(d => {
-    const m = d.match(/\((.)\)/);
-    return d === todayStr && m && movie.playingDays.includes(dayMap[m[1]]);
-  })) ? todayStr : DATES.find(d => {
-    const m = d.match(/\((.)\)/);
-    return m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
-  }) || DATES[0];
+  const defaultDate = getDefaultBookingDate(movie);
 
   const todayLabel = '5/15(金)';
   const dateTabs = DATES.map(d => {
@@ -164,7 +157,7 @@ function buildDateTabs(movie) {
   return dateTabs;
 }
 
-function bindDateTabs() {
+function bindDateTabs(movie) {
   const dateTabs = document.getElementById('detail-date-tabs');
   if (!dateTabs) return;
 
@@ -173,6 +166,7 @@ function bindDateTabs() {
     if (!btn || btn.classList.contains('no-play')) return;
     dateTabs.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
+    refreshBookingLinks(movie, btn.dataset.date);
   });
 }
 
@@ -187,11 +181,17 @@ function buildTheaterCols(movie) {
       const isSoldout = slot.status === 'soldout';
       const statusClass = isSoldout ? 'soldout' : slot.status === 'few' ? 'few' : 'ok';
       const statusText = isSoldout ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
-      return `
-        <div class="time-slot${isSoldout ? ' soldout' : ''}" ${!isSoldout ? "onclick=\"alert('チケット予約システムへ移動します')\"" : ''}>
+      const date = getDefaultBookingDate(movie);
+      const slotInner = `
           <div class="time-slot-time">${escapeHtml(slot.start)} 〜 ${escapeHtml(slot.end)}</div>
-          <div class="time-slot-status ${statusClass}">${statusText}</div>
-        </div>`;
+          <div class="time-slot-status ${statusClass}">${statusText}</div>`;
+      if (isSoldout) {
+        return `<div class="time-slot soldout">${slotInner}</div>`;
+      }
+      return `
+        <a class="time-slot" href="${escapeHtml(buildBookingHref(movie, sc.screen, slot, date))}" data-booking-link data-screen="${escapeHtml(sc.screen)}" data-start="${escapeHtml(slot.start)}" data-end="${escapeHtml(slot.end)}">
+          ${slotInner}
+        </a>`;
     }).join('');
     const featureBadges = screen
       ? screen.features.slice(0, 3).map(f => `<span class="feature-badge">${escapeHtml(f)}</span>`).join('')
@@ -208,6 +208,40 @@ function buildTheaterCols(movie) {
         <div class="slots-grid${sc.slots.length === 4 ? ' slots-grid--quad' : ''}">${slotsHtml}</div>
       </div>`;
   }).join('');
+}
+
+function getDefaultBookingDate(movie) {
+  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
+  const todayLabel = '5/15(金)';
+  const todayIsPlaying = movie.playingDays && DATES.find(d => {
+    const m = d.match(/\((.)\)/);
+    return d === todayLabel && m && movie.playingDays.includes(dayMap[m[1]]);
+  });
+
+  if (todayIsPlaying) return todayLabel;
+
+  return DATES.find(d => {
+    const m = d.match(/\((.)\)/);
+    return !movie.playingDays || (m && movie.playingDays.includes(dayMap[m[1]]));
+  }) || DATES[0];
+}
+
+function refreshBookingLinks(movie, date) {
+  document.querySelectorAll('[data-booking-link]').forEach(link => {
+    const slot = { start: link.dataset.start, end: link.dataset.end };
+    link.setAttribute('href', buildBookingHref(movie, link.dataset.screen, slot, date || getDefaultBookingDate(movie)));
+  });
+}
+
+function buildBookingHref(movie, screen, slot, date) {
+  const params = new URLSearchParams({
+    movie: String(movie.id),
+    date: date,
+    screen: String(screen),
+    start: slot.start,
+    end: slot.end,
+  });
+  return `/booking?${params.toString()}`;
 }
 
 function createInfoRow(label, value, rowClass, labelClass, valueClass) {

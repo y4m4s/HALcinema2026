@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES } from './data'
+import { MOVIES, DATES } from './data'
 
 export function runWorks() {
 function escapeHtml(str) {
@@ -71,20 +71,27 @@ function renderMovieCard(movie) {
     ? `<img src="${escapeHtml(movie.image)}" alt="${title}のポスター" class="work-card-poster">`
     : `<div class="work-card-poster-placeholder">NO IMAGE</div>`;
   const genres = Array.isArray(movie.genre) ? movie.genre : [];
+  const detailHref = `detail.html?id=${movie.id}`;
+  const bookingHref = buildBookingHref(movie);
+  const bookingAction = movie.status === "now" && bookingHref
+    ? `<a href="${escapeHtml(bookingHref)}" class="work-card-action primary">予約する</a>`
+    : `<a href="${detailHref}" class="work-card-action">詳細を見る</a>`;
 
   return `
-    <a href="detail.html?id=${movie.id}" class="work-card">
-      <div class="work-card-media">
-        ${poster}
-        <span class="work-card-status ${statusClass}">${statusLabel}</span>
-      </div>
+    <article class="work-card">
+      <a href="${detailHref}" class="work-card-media-link">
+        <div class="work-card-media">
+          ${poster}
+          <span class="work-card-status ${statusClass}">${statusLabel}</span>
+        </div>
+      </a>
       <div class="work-card-body">
         <div class="work-card-meta">
           ${rating ? `<span>${rating}</span>` : ""}
           <span>${duration}</span>
           ${releaseDate ? `<span>${releaseDate}</span>` : ""}
         </div>
-        <h2 class="work-card-title">${title}</h2>
+        <h2 class="work-card-title"><a href="${detailHref}" class="work-card-title-link">${title}</a></h2>
         <div class="work-card-genres">
           ${genres.map((genre) => `<span>${escapeHtml(genre)}</span>`).join("")}
         </div>
@@ -95,9 +102,50 @@ function renderMovieCard(movie) {
             <strong>${director}</strong>
           </div>
         </div>
+        <div class="work-card-actions">
+          <a href="${detailHref}" class="work-card-action">詳細</a>
+          ${bookingAction}
+        </div>
       </div>
-    </a>
+    </article>
   `;
+}
+
+function buildBookingHref(movie) {
+  const item = getFirstBookableSlot(movie);
+  if (!item) return "";
+
+  const params = new URLSearchParams({
+    movie: String(movie.id),
+    date: getDefaultDate(movie),
+    screen: String(item.screen),
+    start: item.slot.start,
+    end: item.slot.end,
+  });
+  return `/booking?${params.toString()}`;
+}
+
+function getFirstBookableSlot(movie) {
+  if (!Array.isArray(movie.screenSchedules)) return null;
+  for (const schedule of movie.screenSchedules) {
+    const slot = schedule.slots.find((item) => item.status !== "soldout");
+    if (slot) return { screen: schedule.screen, slot };
+  }
+  return null;
+}
+
+function getDefaultDate(movie) {
+  const dayMap = { "日": 0, "月": 1, "火": 2, "水": 3, "木": 4, "金": 5, "土": 6 };
+  const todayLabel = "5/15(金)";
+  const todayIsPlaying = movie.playingDays && DATES.find((date) => {
+    const match = date.match(/\((.)\)/);
+    return date === todayLabel && match && movie.playingDays.includes(dayMap[match[1]]);
+  });
+  if (todayIsPlaying) return todayLabel;
+  return DATES.find((date) => {
+    const match = date.match(/\((.)\)/);
+    return !movie.playingDays || (match && movie.playingDays.includes(dayMap[match[1]]));
+  }) || DATES[0];
 }
 
 function renderMovies(movies, filter) {

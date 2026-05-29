@@ -1,4 +1,5 @@
 import { accessPage } from './access'
+import { bookingPage } from './booking'
 import { completedPage } from './completed'
 import { contactPage } from './contact'
 import { detailPage } from './detail'
@@ -13,6 +14,7 @@ import type { PageDefinition } from '../types'
 
 export const pages: Record<string, PageDefinition> = {
   "access": accessPage,
+  "booking": bookingPage,
   "completed": completedPage,
   "contact": contactPage,
   "detail": detailPage,
