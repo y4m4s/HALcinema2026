@@ -10,7 +10,7 @@ import { ReviewStep } from '../components/bokking/ReviewStep'
 import { SeatStep } from '../components/bokking/SeatStep'
 import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
-import { escapeAttr, escapeHtml } from '../components/bokking/utils'
+import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
 import { MOVIES, SCREENS, DATES } from './data'
 
 const FLOW_STEPS = [
@@ -25,15 +25,18 @@ const FLOW_STEPS = [
 ]
 
 const TICKET_TYPES = [
-  { id: 'pair', label: 'ペアチケット', note: '2名分', price: 3200, seats: 2 },
-  { id: 'adult', label: '一般', note: '大人', price: 1800, seats: 1 },
-  { id: 'university', label: '大学生・専門学生', note: '学生証提示', price: 1600, seats: 1 },
-  { id: 'student', label: '中学・高校生', note: '学生証提示', price: 1400, seats: 1 },
-  { id: 'child', label: '小学生・幼児', note: '3歳以上', price: 1000, seats: 1 },
-  { id: 'senior', label: 'シニア', note: '60歳以上', price: 1200, seats: 1 },
+  { id: 'pair', label: 'ペアチケット', note: '2名分', price: 3200, seats: 2, serviceDayEligible: true },
+  { id: 'adult', label: '一般', note: '大人', price: 1800, seats: 1, serviceDayEligible: true },
+  { id: 'university', label: '大学生・専門学生', note: '学生証提示', price: 1600, seats: 1, serviceDayEligible: true },
+  { id: 'student', label: '中学・高校生', note: '学生証提示', price: 1400, seats: 1, serviceDayEligible: true },
+  { id: 'child', label: '小学生・幼児', note: '3歳以上', price: 1000, seats: 1, serviceDayEligible: false },
+  { id: 'senior', label: 'シニア', note: '60歳以上', price: 1200, seats: 1, serviceDayEligible: true },
+  { id: 'disability', label: '障がい者', note: '手帳提示 / 窓口のみ', price: 1000, seats: 1, onlineAvailable: false },
 ]
 
 const MAX_SEATS_PER_ORDER = 6
+const SERVICE_DAY_PRICE = 1300
+const THREE_D_EXTRA_FEE = 400
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
@@ -51,12 +54,6 @@ const PAYMENT_METHODS = [
 ]
 
 const COUPONS = {
-  NOROI13: {
-    label: '呪いのサービスデー',
-    description: '合計金額から500円引き',
-    isAvailable: () => true,
-    discount: () => 500,
-  },
   LATE100: {
     label: 'レイトショー割引',
     description: '20:00以降の回で1席100円引き',
@@ -346,14 +343,20 @@ export function runBooking() {
       return
     }
 
-    if (id === 'terms') stepRoot.innerHTML = TermsStep(shared)
+    if (id === 'terms') {
+      stepRoot.innerHTML = TermsStep({
+        ...shared,
+        totals: getTotals(),
+      })
+    }
     if (id === 'account') stepRoot.innerHTML = AccountStep(shared)
     if (id === 'customer') stepRoot.innerHTML = CustomerStep(shared)
     if (id === 'tickets') {
       stepRoot.innerHTML = TicketsStep({
         ...shared,
-        ticketTypes: TICKET_TYPES,
+        ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
+        pricingNotices: getPricingNotices(),
       })
     }
     if (id === 'payment') {
@@ -368,7 +371,7 @@ export function runBooking() {
       stepRoot.innerHTML = ReviewStep({
         stepNo: shared.stepNo,
         state,
-        ticketTypes: TICKET_TYPES,
+        ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
         payment: getPayment(),
         customerName: getCustomerName(),
@@ -454,6 +457,8 @@ export function runBooking() {
 
   function selectTicketType(ticketId) {
     if (!ticketId || !(ticketId in state.tickets)) return
+    const ticket = TICKET_TYPES.find(item => item.id === ticketId)
+    if (!ticket || ticket.onlineAvailable === false) return
     const nextTickets = createEmptyTickets()
     nextTickets[ticketId] = 1
     const nextUnits = getTicketUnitsFromTickets(nextTickets)
@@ -517,10 +522,82 @@ export function runBooking() {
   }
 
   function getTotals() {
-    const subtotal = TICKET_TYPES.reduce((sum, ticket) => sum + ticket.price * (state.tickets[ticket.id] || 0), 0)
+    const pricedTickets = getPricedTicketTypes()
+    const ticketSubtotal = pricedTickets.reduce((sum, ticket) => sum + ticket.price * (state.tickets[ticket.id] || 0), 0)
+    const screenSurcharge = getScreenSurcharge()
+    const surcharge = screenSurcharge ? screenSurcharge.total : 0
+    const subtotal = ticketSubtotal + surcharge
     const coupon = getAppliedCoupon()
     const discount = coupon ? Math.min(subtotal, coupon.discount(state)) : 0
-    return { subtotal, discount, total: Math.max(0, subtotal - discount) }
+    return {
+      ticketSubtotal,
+      surcharge,
+      subtotal,
+      discount,
+      total: Math.max(0, subtotal - discount),
+      serviceDay: isCurseServiceDay(state.date),
+      screenSurcharge,
+    }
+  }
+
+  function getPricedTicketTypes() {
+    const serviceDay = isCurseServiceDay(state.date)
+    return TICKET_TYPES.map(ticket => {
+      const servicePrice = serviceDay && ticket.serviceDayEligible
+        ? SERVICE_DAY_PRICE * ticket.seats
+        : null
+      return {
+        ...ticket,
+        basePrice: ticket.price,
+        price: servicePrice || ticket.price,
+        priceNote: servicePrice ? '呪いのサービスデー適用' : '',
+      }
+    })
+  }
+
+  function getScreenFee() {
+    const screen = getScreen()
+    const unitPrice = Number(screen?.threeDExtraFee ?? (screen?.is3d ? THREE_D_EXTRA_FEE : 0))
+    if (!unitPrice) return null
+    return {
+      id: '3d',
+      label: '3D追加料金',
+      unitPrice,
+      note: `スクリーン ${screen.num} は3D対応`,
+    }
+  }
+
+  function getScreenSurcharge() {
+    const screenFee = getScreenFee()
+    const units = getTicketSeatUnits()
+    if (!screenFee || !units) return null
+    return {
+      ...screenFee,
+      units,
+      total: screenFee.unitPrice * units,
+    }
+  }
+
+  function getPricingNotices() {
+    const notices = []
+    const screenFee = getScreenFee()
+    if (isCurseServiceDay(state.date)) {
+      notices.push({
+        title: '呪いのサービスデー',
+        body: '毎月13日は中高生以上の券種が1席1,300円になります。ペアチケットは2席分として2,600円で計算します。',
+      })
+    }
+    if (screenFee) {
+      notices.push({
+        title: '3D追加料金',
+        body: `${screenFee.note}のため、1席につき${formatYen(screenFee.unitPrice)}を自動加算します。`,
+      })
+    }
+    notices.push({
+      title: '障がい者割引',
+      body: 'オンラインでは手帳確認ができないため、この予約フローでは選択できません。劇場窓口で手帳をご提示いただいた場合に適用します。',
+    })
+    return notices
   }
 
   function getTicketSeatUnits() {
@@ -645,6 +722,11 @@ function isPlayingDate(movie, date) {
   const match = String(date).match(/\((.)\)/)
   if (!match) return true
   return movie.playingDays.includes(dayMap[match[1]])
+}
+
+function isCurseServiceDay(dateLabel) {
+  const match = String(dateLabel || '').match(/\/(\d{1,2})\(/)
+  return Number(match?.[1]) === 13
 }
 
 function createEmptyTickets() {

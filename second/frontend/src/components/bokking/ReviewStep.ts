@@ -27,6 +27,12 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
               <strong>${formatYen(ticket.price * state.tickets[ticket.id])}</strong>
             </div>
           `).join('')}
+          ${totals.screenSurcharge ? `
+            <div>
+              <span>${escapeHtml(totals.screenSurcharge.label)} x ${escapeHtml(totals.screenSurcharge.units)}</span>
+              <strong>${formatYen(totals.screenSurcharge.total)}</strong>
+            </div>
+          ` : ''}
           <div>
             <span>割引</span>
             <strong>-${formatYen(totals.discount)}</strong>

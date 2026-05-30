@@ -464,9 +464,9 @@ export const NEWS = [
     id: 3,
     date: "2025.04.10",
     tag: "キャンペーン",
-    title: "毎月13日は「呪いのサービスデー」— 全作品1,300円均一",
+    title: "毎月13日は「呪いのサービスデー」— 中学生以上1,300円",
     body: [
-      "毎月13日は「呪いのサービスデー」として、全作品を1,300円均一でご鑑賞いただけます。",
+      "毎月13日は「呪いのサービスデー」として、中学生以上の券種を1,300円でご鑑賞いただけます。",
       "特別興行や一部イベント上映は対象外となる場合があります。"
     ]
   },
@@ -537,19 +537,25 @@ export const SCREENS = [
     num: 1,
     type: "大スクリーン",
     seats: 200,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "バリアフリー対応", "車椅子スペース 4席"]
+    is3d: true,
+    threeDExtraFee: 400,
+    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応", "車椅子スペース 4席"]
   },
   {
     num: 2,
     type: "大スクリーン",
     seats: 200,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "バリアフリー対応"]
+    is3d: true,
+    threeDExtraFee: 400,
+    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応"]
   },
   {
     num: 3,
     type: "大スクリーン",
     seats: 200,
-    features: ["IMAX互換スクリーン", "Dolby Atmos", "4K レーザープロジェクター"]
+    is3d: true,
+    threeDExtraFee: 400,
+    features: ["IMAX互換スクリーン", "RealD 3D対応", "Dolby Atmos", "4K レーザープロジェクター"]
   },
   {
     num: 4,
@@ -622,7 +628,7 @@ export const PRICES = [
   {
     cat: "呪いのサービスデー（毎月13日）",
     price: "1,300円",
-    note: "全席・全年齢均一"
+    note: "中学生以上"
   }
 ];
 

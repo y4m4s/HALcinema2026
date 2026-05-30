@@ -21,7 +21,7 @@ export function PaymentStep({ state, stepNo, paymentMethods, totals, coupon, can
         <div class="coupon-box">
           <label>
             <span>クーポンコード</span>
-            <input type="text" value="${escapeAttr(state.couponInput)}" data-coupon-input placeholder="NOROI13 / LATE100 / GROUP200">
+            <input type="text" value="${escapeAttr(state.couponInput)}" data-coupon-input placeholder="LATE100 / GROUP200">
           </label>
           <div class="coupon-actions">
             <button class="btn-ghost" type="button" data-action="apply-coupon">適用</button>
@@ -31,7 +31,8 @@ export function PaymentStep({ state, stepNo, paymentMethods, totals, coupon, can
           ${state.couponError ? `<p class="coupon-error">${escapeHtml(state.couponError)}</p>` : ''}
         </div>
         <div class="ticket-total-line">
-          <span>小計 ${formatYen(totals.subtotal)}</span>
+          <span>券種 ${formatYen(totals.ticketSubtotal)}</span>
+          ${totals.surcharge ? `<span>追加料金 ${formatYen(totals.surcharge)}</span>` : ''}
           <span>割引 -${formatYen(totals.discount)}</span>
           <strong>合計 ${formatYen(totals.total)}</strong>
         </div>

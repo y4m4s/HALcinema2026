@@ -89,7 +89,7 @@ export const ticketsPage: PageDefinition = {
           <tr>
             <td>呪いのサービスデー（毎月13日）</td>
             <td><div class="ticket-price">1,300円</div></td>
-            <td><div class="ticket-note">全席・全年齢均一</div></td>
+            <td><div class="ticket-note">中学生以上</div></td>
           </tr>
         </tbody>
       </table>
@@ -102,7 +102,7 @@ export const ticketsPage: PageDefinition = {
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>障がい者割引は、窓口でのご購入のみ適用となります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>R15+・R18+作品は年齢確認のため身分証の提示をお願いする場合があります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>3D上映は対象作品のみです。3Dメガネは無料貸出。</li>
-          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、全作品・全年齢1,300円均一となります。</li>
+          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が1,300円となります。小学生・幼児は通常料金です。</li>
         </ul>
       </div>
 
@@ -114,7 +114,7 @@ export const ticketsPage: PageDefinition = {
         <div class="coming-card">
           <div class="coming-release">毎月13日</div>
           <div class="coming-title tickets-promo-title">呪いのサービスデー</div>
-          <p class="coming-synopsis">全作品・全年齢1,300円均一。13日がかかわる恐怖を、割引価格でどうぞ。</p>
+          <p class="coming-synopsis">中学生以上の券種が1,300円。13日がかかわる恐怖を、割引価格でどうぞ。</p>
         </div>
         <div class="coming-card">
           <div class="coming-release">最終回上映</div>
