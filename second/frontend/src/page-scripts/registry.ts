@@ -3,6 +3,7 @@ import { runCompleted } from './completed'
 import { runContact } from './contact'
 import { runDetail } from './detail'
 import { runHome } from './home'
+import { runLogin } from './login'
 import { runNews } from './news'
 import { runQuestion } from './question'
 import { runSchedule } from './schedule'
@@ -17,6 +18,7 @@ export const pageRunners: Record<string, PageRunner | undefined> = {
   "contact": runContact,
   "detail": runDetail,
   "index": runHome,
+  "login": runLogin,
   "news": runNews,
   "question": runQuestion,
   "schedule": runSchedule,
