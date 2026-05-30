@@ -1,4 +1,9 @@
 ﻿/* eslint-disable no-irregular-whitespace */
+import { auth } from '../firebase'
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+
+let currentUser: User | null = auth.currentUser
+let authListenerReady = false
 
 function getCurrentPage() {
   const path = location.pathname
@@ -55,10 +60,60 @@ function buildNavHtml() {
           `,
             )
             .join('')}
+            <span id="nav-auth-slot" class="nav-auth-slot"></span>
         </div>
       </nav>
     </header>
   `
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => 
+    c === '&' ? '&amp;' : 
+    c === '<' ? '&lt;' : 
+    c === '>' ? '&gt;' : 
+    c === '"' ? '&quot;' : 
+    '&#39;' // c === '''
+  )
+}
+
+function authAreaHtml(){
+  if (currentUser) {
+    const email = escapeHtml(currentUser.email ?? 'logged in')
+    return `
+      <span class="nav-auth-user" title="${email}" >
+      ${email}</span>
+      <button type="button" data-auth-logout>ログアウト</button>
+    `
+  }
+  return `<a href="/login" class="nav-link" data-nav="login">
+    <span>ログイン</span></a>`
+}
+
+function updateAuthArea(){
+  const slot = document.getElementById('nav-auth-slot')
+  if (!slot) return
+  slot.innerHTML = authAreaHtml()
+  const logoutBtn = slot.querySelector('[data-auth-logout]') as HTMLButtonElement | null
+  if (logoutBtn) {
+    logoutBtn.onclick = async() => {
+      logoutBtn.disabled = true
+      try {
+        await signOut(auth)
+      } catch {
+        logoutBtn.disabled = false
+      }
+    }
+  }
+}
+
+function ensureAuthListener(){
+  if (authListenerReady) return
+  authListenerReady = true
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user
+    updateAuthArea()
+  })
 }
 
 function renderNav() {
@@ -77,6 +132,8 @@ function renderNav() {
       link.removeAttribute('aria-current')
     }
   })
+
+  updateAuthArea()
 }
 
 function buildFooterHtml() {
@@ -178,5 +235,6 @@ export function runCommon() {
   renderNav()
   renderBreadcrumb()
   renderFooter()
+  ensureAuthListener()
 }
 
