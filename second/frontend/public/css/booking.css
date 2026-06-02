@@ -2,6 +2,7 @@
   background:
     linear-gradient(180deg, rgba(9, 18, 34, 0.96) 0%, var(--bg) 360px),
     radial-gradient(circle at 74% 0%, rgba(139, 28, 28, 0.2), transparent 32%);
+  font-family: var(--sans);
 }
 
 .booking-page {
@@ -19,11 +20,10 @@
   margin-bottom: 32px;
 }
 
-.booking-page .section-title,
 .booking-context-title,
 .booking-panel-head h2,
 .complete h2 {
-  font-family: var(--sans);
+  font-family: var(--serif);
 }
 
 .booking-context {
@@ -90,10 +90,10 @@
 .booking-context-title {
   color: #edf4ff;
   font-size: 28px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.25;
   margin: 8px 0 12px;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
 }
 
 .booking-context-meta {
@@ -289,7 +289,7 @@
   font-weight: 600;
   line-height: 1.35;
   color: #edf4ff;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   margin-top: 8px;
 }
 
@@ -912,6 +912,67 @@
   margin: 0;
 }
 
+.account-form-error {
+  border: 1px solid rgba(255, 129, 107, 0.5);
+  background: rgba(255, 129, 107, 0.1);
+  color: #ffb1a6;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+}
+
+.account-member-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  background: rgba(8, 13, 24, 0.45);
+  padding: 18px;
+}
+
+.account-member-card div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+}
+
+.account-member-card span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.account-member-card strong {
+  color: #edf4ff;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.account-register-form {
+  margin-top: 18px;
+}
+
+.account-register-tel {
+  width: 100%;
+}
+
+.account-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 14px;
+}
+
+.account-checkbox-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent2);
+}
+
 .account-promo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
@@ -920,9 +981,18 @@
   min-height: 220px;
   border: 1px solid var(--border);
   background:
-    linear-gradient(135deg, rgba(8, 13, 24, 0.9), rgba(43, 31, 42, 0.76)),
-    linear-gradient(90deg, rgba(74, 159, 212, 0.18), rgba(255, 129, 107, 0.08));
+    linear-gradient(135deg, rgba(8, 13, 24, 0.92), rgba(16, 33, 58, 0.78)),
+    linear-gradient(90deg, rgba(74, 159, 212, 0.2), rgba(45, 106, 160, 0.1));
   padding: 28px;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.account-promo:hover {
+  border-color: var(--border2);
+  background:
+    linear-gradient(135deg, rgba(8, 13, 24, 0.94), rgba(19, 43, 72, 0.82)),
+    linear-gradient(90deg, rgba(74, 159, 212, 0.26), rgba(45, 106, 160, 0.14));
+  transform: translateY(-1px);
 }
 
 .account-promo strong {
@@ -943,23 +1013,55 @@
   margin-top: 14px;
 }
 
-.account-promo ul {
-  display: grid;
+.account-promo-link-text {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
+  color: var(--accent2);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  margin-top: 18px;
+}
+
+.account-promo-link-text::after {
+  content: '>';
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.account-benefit-list {
+  display: grid;
+  gap: 12px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.account-promo li {
-  border: 1px solid rgba(74, 159, 212, 0.34);
-  background: rgba(16, 33, 58, 0.62);
+.account-benefit-list li {
+  border-left: 2px solid rgba(74, 159, 212, 0.52);
   color: var(--text2);
-  font-size: 12px;
+  display: grid;
+  gap: 4px;
   letter-spacing: 0;
   min-width: 142px;
-  padding: 9px 12px;
-  text-align: center;
+  padding: 2px 0 2px 12px;
+  text-align: left;
+}
+
+.account-benefit-list span {
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.account-benefit-list strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 0;
 }
 
 .account-guest-actions .btn-primary,
@@ -974,8 +1076,13 @@
 }
 
 .account-join-button {
-  border-color: rgba(255, 129, 107, 0.62);
-  color: #ff9c8f;
+  border-color: var(--border2);
+  color: var(--accent2);
+}
+
+.account-join-button:hover {
+  border-color: var(--accent2);
+  color: #e8f4ff;
 }
 
 .account-nav-row {
@@ -1199,6 +1306,7 @@
   gap: 1px;
   border: 1px solid var(--border);
   background: var(--border);
+  margin-top: 16px;
   margin-bottom: 18px;
 }
 
@@ -1549,6 +1657,11 @@
   .account-panel-actions .btn-primary,
   .account-panel-actions .btn-ghost {
     width: 100%;
+  }
+
+  .account-member-card div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .account-promo {

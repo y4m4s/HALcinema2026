@@ -170,6 +170,13 @@
   background: rgba(74, 173, 122, 0.1);
 }
 
+.news-tag[data-tag="会員"],
+.news-detail-tag[data-tag="会員"] {
+  color: var(--accent2);
+  border-color: rgba(74, 159, 212, 0.52);
+  background: rgba(74, 159, 212, 0.12);
+}
+
 .news-tag[data-tag="メンテナンス"],
 .news-detail-tag[data-tag="メンテナンス"] {
   color: #c48b42;

@@ -40,6 +40,7 @@ const THREE_D_EXTRA_FEE = 400
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
+const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
 
 const SCREEN_SEAT_LAYOUTS = {
   200: { rows: 10, columns: 20 },
@@ -82,6 +83,7 @@ export function runBooking() {
   const initialSlot = resolveInitialSlot(movie, params)
   const initialDate = params.get('date') || getDefaultDate(movie)
   const initialStep = getStepIndex(params.get('step'))
+  const savedMemberSession = readMemberSession()
 
   const state = {
     currentStep: initialStep,
@@ -92,23 +94,13 @@ export function runBooking() {
     slot: initialSlot ? initialSlot.slot : null,
     selectedSeats: [],
     agreed: false,
-    account: 'guest',
-    customer: {
-      name: '',
-      nameKana: '',
-      lastName: '',
-      firstName: '',
-      kana: '',
-      email: '',
-      emailConfirm: '',
-      tel: '',
-      tel1: '',
-      tel2: '',
-      tel3: '',
-      postal: '',
-      request: '',
-    },
-    mailMagazine: false,
+    account: savedMemberSession?.member ? 'member' : 'guest',
+    member: savedMemberSession?.member || null,
+    memberToken: savedMemberSession?.token || '',
+    login: createLoginState(),
+    join: createJoinState(),
+    customer: createCustomerState(savedMemberSession?.member),
+    mailMagazine: Boolean(savedMemberSession?.member?.mailMagazine),
     tickets: createEmptyTickets(),
     couponInput: '',
     couponCode: '',
@@ -125,6 +117,9 @@ export function runBooking() {
   stepperRoot.addEventListener('click', onStepperClick)
 
   render()
+  if (savedMemberSession?.token) {
+    void refreshMemberSession()
+  }
 
   function onClick(event) {
     if (isStepTransitioning) return
@@ -142,6 +137,8 @@ export function runBooking() {
     const accountChoice = target.closest('[data-account-choice]')
     if (accountChoice) {
       state.account = accountChoice.dataset.accountChoice
+      state.login.error = ''
+      state.join.error = ''
       render()
       return
     }
@@ -169,6 +166,21 @@ export function runBooking() {
 
     if (action === 'next') {
       goNext()
+      return
+    }
+
+    if (action === 'login-member') {
+      void loginMember()
+      return
+    }
+
+    if (action === 'register-member') {
+      void registerMember()
+      return
+    }
+
+    if (action === 'logout-member') {
+      void logoutMember()
       return
     }
 
@@ -218,6 +230,25 @@ export function runBooking() {
       return
     }
 
+    const loginField = target.closest('[data-login-field]')
+    if (loginField) {
+      state.login[loginField.dataset.loginField] = loginField.value
+      state.login.error = ''
+      syncAccountActions()
+      return
+    }
+
+    const registerField = target.closest('[data-register-field]')
+    if (registerField && registerField.type !== 'checkbox') {
+      const fieldName = registerField.dataset.registerField
+      state.join[fieldName] = fieldName.startsWith('tel')
+        ? String(registerField.value || '').replace(/\D/g, '')
+        : registerField.value
+      state.join.error = ''
+      syncAccountActions()
+      return
+    }
+
     const couponInput = target.closest('[data-coupon-input]')
     if (couponInput) {
       state.couponInput = couponInput.value.toUpperCase()
@@ -234,6 +265,14 @@ export function runBooking() {
     if (terms) {
       state.agreed = Boolean(terms.checked)
       render()
+      return
+    }
+
+    const registerCheck = target.closest('[data-register-field]')
+    if (registerCheck && registerCheck.type === 'checkbox') {
+      state.join[registerCheck.dataset.registerField] = Boolean(registerCheck.checked)
+      state.join.error = ''
+      syncAccountActions()
       return
     }
 
@@ -258,15 +297,29 @@ export function runBooking() {
 
   function goNext() {
     if (!canProceed()) return
-    const nextStep = Math.min(state.currentStep + 1, FLOW_STEPS.length - 1)
+    const nextStep = getNextStepIndex()
     state.currentStep = nextStep
     state.maxStep = Math.max(state.maxStep, nextStep)
     render()
   }
 
   function goPrev() {
-    state.currentStep = Math.max(0, state.currentStep - 1)
+    state.currentStep = getPreviousStepIndex()
     render()
+  }
+
+  function getNextStepIndex() {
+    if (FLOW_STEPS[state.currentStep].id === 'account' && state.account === 'member') {
+      return getStepIndex('payment')
+    }
+    return Math.min(state.currentStep + 1, FLOW_STEPS.length - 1)
+  }
+
+  function getPreviousStepIndex() {
+    if (FLOW_STEPS[state.currentStep].id === 'payment' && state.account === 'member') {
+      return getStepIndex('account')
+    }
+    return Math.max(0, state.currentStep - 1)
   }
 
   function render() {
@@ -349,7 +402,12 @@ export function runBooking() {
         totals: getTotals(),
       })
     }
-    if (id === 'account') stepRoot.innerHTML = AccountStep(shared)
+    if (id === 'account') {
+      stepRoot.innerHTML = AccountStep({
+        ...shared,
+        canLogin: isLoginValid(),
+      })
+    }
     if (id === 'customer') stepRoot.innerHTML = CustomerStep(shared)
     if (id === 'tickets') {
       stepRoot.innerHTML = TicketsStep({
@@ -472,7 +530,7 @@ export function runBooking() {
     if (id === 'tickets') return getTicketSeatUnits() > 0 && getTicketSeatUnits() <= MAX_SEATS_PER_ORDER
     if (id === 'seat') return Boolean(state.slot && state.screen && state.selectedSeats.length === getTicketSeatUnits() && getTicketSeatUnits() > 0)
     if (id === 'terms') return state.agreed
-    if (id === 'account') return state.account === 'guest'
+    if (id === 'account') return state.account === 'guest' || (state.account === 'member' && Boolean(state.member))
     if (id === 'customer') return isCustomerValid()
     if (id === 'payment') return Boolean(state.payment)
     if (id === 'review') return true
@@ -633,6 +691,210 @@ export function runBooking() {
     if (nextButton) nextButton.disabled = !canProceed()
   }
 
+  function syncAccountActions() {
+    const loginButton = stepRoot.querySelector('[data-action="login-member"]')
+    if (loginButton) loginButton.disabled = !isLoginValid() || state.login.loading
+
+    const registerButton = stepRoot.querySelector('[data-action="register-member"]')
+    if (registerButton) registerButton.disabled = state.join.loading
+  }
+
+  async function loginMember() {
+    if (!isLoginValid() || state.login.loading) return
+
+    state.login.loading = true
+    state.login.error = ''
+    render()
+
+    try {
+      const result = await requestJSON('/api/members/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          identifier: state.login.identifier.trim(),
+          password: state.login.password,
+        }),
+      })
+      completeMemberAuth(result)
+    } catch (error) {
+      state.login.loading = false
+      state.login.error = getRequestErrorMessage(error)
+      render()
+    }
+  }
+
+  async function registerMember() {
+    if (state.join.loading) return
+    syncJoinStateFromDOM()
+
+    const validationMessage = getJoinValidationMessage()
+    if (validationMessage) {
+      state.join.error = validationMessage
+      render()
+      return
+    }
+
+    state.join.loading = true
+    state.join.error = ''
+    render()
+
+    try {
+      const result = await requestJSON('/api/members/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: state.join.name.trim(),
+          nameKana: state.join.nameKana.trim(),
+          email: state.join.email.trim(),
+          tel: getJoinPhoneNumber(),
+          password: state.join.password,
+          mailMagazine: Boolean(state.join.mailMagazine),
+        }),
+      })
+      completeMemberAuth(result)
+    } catch (error) {
+      state.join.loading = false
+      state.join.error = getRequestErrorMessage(error)
+      render()
+    }
+  }
+
+  async function logoutMember() {
+    const token = state.memberToken
+    clearMemberAuth()
+    render()
+
+    if (!token) return
+    try {
+      await requestJSON('/api/members/logout', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      })
+    } catch {
+      // Local logout should still complete even if the session has already expired.
+    }
+  }
+
+  async function refreshMemberSession() {
+    const token = state.memberToken
+    if (!token) return
+
+    try {
+      const result = await requestJSON('/api/members/me', {
+        headers: getAuthHeaders(token),
+      })
+      if (result.member) {
+        applyMemberSession(result.member, token)
+        render()
+      }
+    } catch {
+      if (state.memberToken === token) {
+        clearMemberAuth()
+        render()
+      }
+    }
+  }
+
+  function completeMemberAuth(result) {
+    if (!result?.member || !result?.token) {
+      state.login.loading = false
+      state.join.loading = false
+      state.login.error = '会員情報の取得に失敗しました。'
+      render()
+      return
+    }
+
+    state.login = createLoginState()
+    state.join = createJoinState()
+    applyMemberSession(result.member, result.token)
+    state.currentStep = getStepIndex('payment')
+    state.maxStep = Math.max(state.maxStep, state.currentStep)
+    render()
+  }
+
+  function applyMemberSession(member, token) {
+    state.account = 'member'
+    state.member = member
+    state.memberToken = token
+    state.mailMagazine = Boolean(member.mailMagazine)
+    fillCustomerFromMember(member)
+    writeMemberSession({ member, token })
+  }
+
+  function clearMemberAuth() {
+    state.account = 'guest'
+    state.member = null
+    state.memberToken = ''
+    state.login = createLoginState()
+    state.join = createJoinState()
+    state.customer = createCustomerState()
+    state.mailMagazine = false
+    removeMemberSession()
+  }
+
+  function fillCustomerFromMember(member) {
+    const telParts = splitPhoneNumber(member.tel)
+    state.customer = {
+      ...state.customer,
+      name: member.name || '',
+      nameKana: member.nameKana || '',
+      lastName: member.name || '',
+      firstName: '',
+      kana: member.nameKana || '',
+      email: member.email || '',
+      emailConfirm: member.email || '',
+      tel: member.tel || '',
+      tel1: telParts[0] || '',
+      tel2: telParts[1] || '',
+      tel3: telParts[2] || '',
+    }
+  }
+
+  function isLoginValid() {
+    return Boolean(
+      String(state.login.identifier || '').trim() &&
+      String(state.login.password || '').trim()
+    )
+  }
+
+  function getJoinValidationMessage() {
+    const join = state.join
+    const phone = getJoinPhoneNumber()
+    const email = String(join.email || '').trim()
+    const emailConfirm = String(join.emailConfirm || '').trim()
+    const password = String(join.password || '')
+    const passwordConfirm = String(join.passwordConfirm || '')
+
+    if (!String(join.name || '').trim()) return '氏名を入力してください。'
+    if (!String(join.nameKana || '').trim()) return '氏名（かな）を入力してください。'
+    if (!/^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone)) return '電話番号を3つの欄に分けて入力してください。'
+    if (!isValidEmail(email)) return 'メールアドレスを正しく入力してください。'
+    if (email !== emailConfirm) return '確認用メールアドレスが一致していません。'
+    if (password.length < 8) return 'パスワードは8文字以上で入力してください。'
+    if (password !== passwordConfirm) return '確認用パスワードが一致していません。'
+
+    return ''
+  }
+
+  function getJoinPhoneNumber() {
+    return [state.join.tel1, state.join.tel2, state.join.tel3]
+      .map(part => String(part || '').trim())
+      .filter(Boolean)
+      .join('-')
+  }
+
+  function syncJoinStateFromDOM() {
+    stepRoot.querySelectorAll('[data-register-field]').forEach((field) => {
+      const fieldName = field.dataset.registerField
+      if (!fieldName) return
+      if (field.type === 'checkbox') {
+        state.join[fieldName] = Boolean(field.checked)
+        return
+      }
+      state.join[fieldName] = fieldName.startsWith('tel')
+        ? String(field.value || '').replace(/\D/g, '')
+        : field.value
+    })
+  }
+
   function getPayment() {
     return PAYMENT_METHODS.find(method => method.id === state.payment)
   }
@@ -676,6 +938,110 @@ export function runBooking() {
     }
     history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`)
   }
+}
+
+function createLoginState() {
+  return {
+    identifier: '',
+    password: '',
+    loading: false,
+    error: '',
+  }
+}
+
+function createJoinState() {
+  return {
+    name: '',
+    nameKana: '',
+    email: '',
+    emailConfirm: '',
+    tel1: '',
+    tel2: '',
+    tel3: '',
+    password: '',
+    passwordConfirm: '',
+    mailMagazine: false,
+    loading: false,
+    error: '',
+  }
+}
+
+function createCustomerState(member = null) {
+  const phoneParts = splitPhoneNumber(member?.tel || '')
+  return {
+    name: member?.name || '',
+    nameKana: member?.nameKana || '',
+    lastName: member?.name || '',
+    firstName: '',
+    kana: member?.nameKana || '',
+    email: member?.email || '',
+    emailConfirm: member?.email || '',
+    tel: member?.tel || '',
+    tel1: phoneParts[0] || '',
+    tel2: phoneParts[1] || '',
+    tel3: phoneParts[2] || '',
+    postal: '',
+    request: '',
+  }
+}
+
+function readMemberSession() {
+  try {
+    const raw = window.localStorage.getItem(MEMBER_SESSION_STORAGE_KEY)
+    if (!raw) return null
+    const session = JSON.parse(raw)
+    if (!session?.token || !session?.member) return null
+    return session
+  } catch {
+    return null
+  }
+}
+
+function writeMemberSession(session) {
+  try {
+    window.localStorage.setItem(MEMBER_SESSION_STORAGE_KEY, JSON.stringify(session))
+  } catch {
+    // Storage can be unavailable in private browsing; the current purchase still works.
+  }
+}
+
+function removeMemberSession() {
+  try {
+    window.localStorage.removeItem(MEMBER_SESSION_STORAGE_KEY)
+  } catch {
+    // Nothing to clean up when storage is unavailable.
+  }
+}
+
+async function requestJSON(path, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  }
+  const response = await fetch(path, {
+    ...options,
+    headers,
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(data.error || '通信に失敗しました。')
+  }
+  return data
+}
+
+function getAuthHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+function getRequestErrorMessage(error) {
+  return error instanceof Error ? error.message : '通信に失敗しました。'
+}
+
+function splitPhoneNumber(value) {
+  const parts = String(value || '').split('-')
+  return parts.length === 3 ? parts : ['', '', '']
 }
 
 function resolveMovie(params) {

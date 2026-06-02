@@ -15,6 +15,7 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
           ${renderReviewItem('上映日時', `${state.date} ${state.slot ? state.slot.start + ' - ' + state.slot.end : ''}`)}
           ${renderReviewItem('スクリーン', `スクリーン ${state.screen || '-'}`)}
           ${renderReviewItem('座席', state.selectedSeats.join(' / '))}
+          ${state.member ? renderReviewItem('会員番号', state.member.memberNo) : ''}
           ${renderReviewItem('購入者', customerName)}
           ${renderReviewItem('メール', state.customer.email)}
           ${renderReviewItem('電話番号', phoneNumber)}

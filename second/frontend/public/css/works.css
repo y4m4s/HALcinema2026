@@ -313,6 +313,14 @@
   margin-top: 14px;
 }
 
+.work-card-actions.single {
+  width: min(220px, 100%);
+  grid-template-columns: 1fr;
+  align-self: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .work-card-action {
   min-height: 38px;
   display: grid;

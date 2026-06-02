@@ -32,6 +32,12 @@ type pageSummary struct {
 func main() {
 	router := gin.Default()
 	frontendDist := getEnv("FRONTEND_DIST", filepath.Join("..", "frontend", "dist"))
+	memberDBPath := getEnv("MEMBER_DB_PATH", defaultMemberDBPath())
+	memberStore, err := openMemberStore(memberDBPath)
+	if err != nil {
+		panic(err)
+	}
+	defer memberStore.Close()
 
 	router.GET("/", func(c *gin.Context) {
 		serveFrontend(c, frontendDist)
@@ -69,6 +75,8 @@ func main() {
 				{Path: "/news", Title: "お知らせ"},
 			})
 		})
+
+		registerMemberRoutes(api, memberStore)
 	}
 
 	router.Static("/assets", filepath.Join(frontendDist, "assets"))
@@ -106,4 +114,26 @@ func getEnv(key string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func defaultMemberDBPath() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return filepath.Join("..", "halcinema_members.sqlite3")
+	}
+
+	if filepath.Base(cwd) == "backend" && filepath.Base(filepath.Dir(cwd)) == "second" {
+		return filepath.Join(filepath.Dir(cwd), "halcinema_members.sqlite3")
+	}
+
+	if filepath.Base(cwd) == "second" {
+		return filepath.Join(cwd, "halcinema_members.sqlite3")
+	}
+
+	secondDir := filepath.Join(cwd, "second")
+	if stat, err := os.Stat(secondDir); err == nil && stat.IsDir() {
+		return filepath.Join(secondDir, "halcinema_members.sqlite3")
+	}
+
+	return filepath.Join("..", "halcinema_members.sqlite3")
 }

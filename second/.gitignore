@@ -3,4 +3,5 @@ frontend/dist/
 backend/tmp/
 backend/server.exe
 backend/server
+halcinema_members.sqlite3*
 .logs/

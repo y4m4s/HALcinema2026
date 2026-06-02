@@ -47,15 +47,15 @@ export function TicketsStep({
         <h2>券種を選択してください</h2>
       </div>
       <div class="booking-step-body">
-        ${notices}
         <div class="ticket-list">${ticketRows}</div>
+        <p class="booking-help">券種は1つだけ選択できます。ペアチケットのみ2席分として座席選択に進みます。</p>
+        ${notices}
         <div class="ticket-total-line">
           <span>券種 ${formatYen(totals.ticketSubtotal)}</span>
           ${totals.surcharge ? `<span>追加料金 ${formatYen(totals.surcharge)}</span>` : ''}
           <span>割引 -${formatYen(totals.discount)}</span>
           <strong>合計 ${formatYen(totals.total)}</strong>
         </div>
-        <p class="booking-help">券種は1つだけ選択できます。ペアチケットのみ2席分として座席選択に進みます。</p>
         ${renderStepNav({ isFirstStep, canProceed, nextLabel: '座席選択へ' })}
       </div>
     </section>

@@ -73,9 +73,16 @@ function renderMovieCard(movie) {
   const genres = Array.isArray(movie.genre) ? movie.genre : [];
   const detailHref = `detail.html?id=${movie.id}`;
   const bookingHref = buildBookingHref(movie);
-  const bookingAction = movie.status === "now" && bookingHref
-    ? `<a href="${escapeHtml(bookingHref)}" class="work-card-action primary">予約する</a>`
-    : `<a href="${detailHref}" class="work-card-action">詳細を見る</a>`;
+  const actions = movie.status === "now" && bookingHref
+    ? `
+        <div class="work-card-actions">
+          <a href="${detailHref}" class="work-card-action">詳細</a>
+          <a href="${escapeHtml(bookingHref)}" class="work-card-action primary">予約する</a>
+        </div>`
+    : `
+        <div class="work-card-actions single">
+          <a href="${detailHref}" class="work-card-action">詳細</a>
+        </div>`;
 
   return `
     <article class="work-card">
@@ -102,10 +109,7 @@ function renderMovieCard(movie) {
             <strong>${director}</strong>
           </div>
         </div>
-        <div class="work-card-actions">
-          <a href="${detailHref}" class="work-card-action">詳細</a>
-          ${bookingAction}
-        </div>
+        ${actions}
       </div>
     </article>
   `;
