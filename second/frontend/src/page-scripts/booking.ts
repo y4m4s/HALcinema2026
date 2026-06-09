@@ -107,6 +107,11 @@ export function runBooking() {
     couponError: '',
     payment: 'credit',
     confirmationNo: '',
+    dbReservedSeats: [],
+    availabilityKey: '',
+    availabilityLoading: false,
+    submittingReservation: false,
+    reservationError: '',
   }
   let renderedStep = null
   let isStepTransitioning = false
@@ -210,10 +215,7 @@ export function runBooking() {
 
     if (action === 'complete') {
       if (!canProceed()) return
-      state.confirmationNo = createConfirmationNo()
-      state.currentStep = getStepIndex('complete')
-      state.maxStep = state.currentStep
-      render()
+      void completeReservation()
     }
   }
 
@@ -359,6 +361,7 @@ export function runBooking() {
     renderStepper()
     renderStep()
     updateUrl()
+    void refreshAvailability()
   }
 
   function renderContext() {
@@ -577,6 +580,89 @@ export function runBooking() {
     state.couponCode = code
     state.couponInput = code
     state.couponError = ''
+  }
+
+  async function refreshAvailability() {
+    const key = getAvailabilityKey()
+    if (!key || state.availabilityLoading || state.availabilityKey === key) return
+
+    state.availabilityKey = key
+    state.availabilityLoading = true
+
+    try {
+      const params = new URLSearchParams({
+        movie: String(state.movie.id),
+        screen: String(state.screen),
+        start: state.slot.start,
+        end: state.slot.end || '',
+        date: state.date || '',
+      })
+      const result = await requestJSON(`/api/reservations/availability?${params.toString()}`)
+      if (state.availabilityKey !== key) return
+
+      const reserved = Array.isArray(result.reservedSeats) ? result.reservedSeats : []
+      state.dbReservedSeats = reserved
+      if (state.selectedSeats.length) {
+        const reservedSet = new Set(reserved)
+        const nextSeats = state.selectedSeats.filter(seat => !reservedSet.has(seat))
+        if (nextSeats.length !== state.selectedSeats.length) {
+          state.selectedSeats = nextSeats
+          state.agreed = false
+          state.maxStep = Math.min(state.maxStep, getStepIndex('seat'))
+        }
+      }
+    } catch {
+      if (state.availabilityKey === key) state.dbReservedSeats = []
+    } finally {
+      if (state.availabilityKey === key) {
+        state.availabilityLoading = false
+        render()
+      }
+    }
+  }
+
+  async function completeReservation() {
+    if (state.submittingReservation) return
+
+    state.submittingReservation = true
+    state.reservationError = ''
+    render()
+
+    try {
+      const result = await requestJSON('/api/reservations', {
+        method: 'POST',
+        headers: state.memberToken ? getAuthHeaders(state.memberToken) : {},
+        body: JSON.stringify({
+          movieId: String(state.movie.id),
+          screen: String(state.screen),
+          start: state.slot?.start || '',
+          end: state.slot?.end || '',
+          date: state.date || '',
+          seats: state.selectedSeats,
+          tickets: state.tickets,
+          couponCode: state.couponCode,
+          paymentMethod: state.payment,
+          customer: {
+            name: getCustomerName(),
+            nameKana: state.customer.nameKana || state.customer.kana,
+            email: state.customer.email,
+            tel: getPhoneNumber(),
+          },
+        }),
+      })
+
+      state.confirmationNo = result.confirmationNo || result.reservationId || createConfirmationNo()
+      state.currentStep = getStepIndex('complete')
+      state.maxStep = state.currentStep
+      state.submittingReservation = false
+      state.dbReservedSeats = Array.from(new Set([...(state.dbReservedSeats || []), ...state.selectedSeats]))
+      render()
+    } catch (error) {
+      state.submittingReservation = false
+      state.reservationError = getRequestErrorMessage(error)
+      state.availabilityKey = ''
+      render()
+    }
   }
 
   function getTotals() {
@@ -899,6 +985,17 @@ export function runBooking() {
     return PAYMENT_METHODS.find(method => method.id === state.payment)
   }
 
+  function getAvailabilityKey() {
+    if (!state.movie?.id || !state.screen || !state.slot?.start) return ''
+    return [
+      state.movie.id,
+      state.screen,
+      state.slot.start,
+      state.slot.end || '',
+      state.date || '',
+    ].join('|')
+  }
+
   function getScreen() {
     return SCREENS.find(screen => screen.num === Number(state.screen))
   }
@@ -914,15 +1011,7 @@ export function runBooking() {
   }
 
   function getUnavailableSeats() {
-    const taken = new Set()
-    const layout = getSeatLayout()
-    getSeatRows(layout).forEach(row => {
-      row.seats.forEach(seatId => {
-        const hash = hashString(`${state.movie.id}-${state.screen}-${state.slot?.start}-${state.date}-${seatId}`)
-        if (hash % 7 === 0 || hash % 19 === 0) taken.add(seatId)
-      })
-    })
-    return taken
+    return new Set(state.dbReservedSeats || [])
   }
 
   function updateUrl() {

@@ -38,6 +38,10 @@ func main() {
 		panic(err)
 	}
 	defer memberStore.Close()
+	reservationStore, err := newReservationStore(memberStore.db)
+	if err != nil {
+		panic(err)
+	}
 
 	router.GET("/", func(c *gin.Context) {
 		serveFrontend(c, frontendDist)
@@ -77,6 +81,7 @@ func main() {
 		})
 
 		registerMemberRoutes(api, memberStore)
+		registerReservationRoutes(api, reservationStore, memberStore)
 	}
 
 	router.Static("/assets", filepath.Join(frontendDist, "assets"))

@@ -3,6 +3,8 @@
 import { escapeHtml, formatYen, renderReviewItem } from './utils'
 
 export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, customerName, phoneNumber }) {
+  const submitting = Boolean(state.submittingReservation)
+  const error = state.reservationError
   return `
     <section class="booking-step-panel booking-step-constrained">
       <div class="booking-panel-head">
@@ -45,8 +47,9 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
         </div>
         <div class="booking-nav-row">
           <button class="btn-ghost" type="button" data-action="prev">戻る</button>
-          <button class="btn-primary" type="button" data-action="complete">購入を確定する</button>
+          <button class="btn-primary" type="button" data-action="complete" ${submitting ? 'disabled' : ''}>${submitting ? '予約を保存中...' : '購入を確定する'}</button>
         </div>
+        ${error ? `<p class="coupon-error">${escapeHtml(error)}</p>` : ''}
       </div>
     </section>
   `
