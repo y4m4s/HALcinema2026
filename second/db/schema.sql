@@ -3,7 +3,7 @@ PRAGMA busy_timeout = 5000;
 
 -- ============================================================
 -- HAL Cinema second schema
--- D_IA33_03_データ項目一覧.xlsx を基にした SQLite 用DDL。
+-- D_IA33_03_データ項目一覧.xlsx / D_IA33_04_テーブル定義書.xlsx を基にした SQLite 用DDL。
 -- ============================================================
 
 -- ============================================================
@@ -235,6 +235,7 @@ CREATE TABLE ticket_types (
 -- ============================================================
 -- reservations: 予約
 -- xlsx: 予約ID / スケジュールID / 会員ID / クーポンID / 予約ステータス / 予約日時
+-- 予約IDは定義書に合わせて R + 数字10桁。
 -- ============================================================
 CREATE TABLE reservations (
     id                  TEXT    PRIMARY KEY,
@@ -249,12 +250,14 @@ CREATE TABLE reservations (
                              CHECK (status IN ('pending', 'confirmed', 'cancelled', 'used', 'expired')),
     reserved_at         TEXT    NOT NULL DEFAULT (datetime('now')),
     created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    updated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (id GLOB 'R[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
 );
 
 -- ============================================================
 -- reservation_details: 予約明細
 -- xlsx: 予約明細ID / 予約ID / チケット種別ID / 料金
+-- 予約明細IDは定義書に合わせて RD + 数字10桁。
 -- ============================================================
 CREATE TABLE reservation_details (
     id              TEXT    PRIMARY KEY,
@@ -262,7 +265,8 @@ CREATE TABLE reservation_details (
     ticket_type_id  INTEGER NOT NULL REFERENCES ticket_types(id) ON DELETE RESTRICT,
     price           INTEGER NOT NULL CHECK (price >= 0),
     created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+    updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (id GLOB 'RD[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
 );
 
 -- ============================================================
@@ -281,6 +285,7 @@ CREATE TABLE reservation_seats (
 -- ============================================================
 -- payments: 支払い
 -- xlsx: 支払いID / 予約ID / 支払い方法ID / 支払金額 / 支払いステータス / 支払い日時
+-- 支払いIDは定義書に合わせて P + 数字3桁。
 -- ============================================================
 CREATE TABLE payments (
     id                 TEXT    PRIMARY KEY,
@@ -291,7 +296,8 @@ CREATE TABLE payments (
                             CHECK (status IN ('unpaid', 'paid', 'failed', 'refunded', 'cancelled')),
     paid_at            TEXT,
     created_at         TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at         TEXT    NOT NULL DEFAULT (datetime('now'))
+    updated_at         TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (id GLOB 'P[0-9][0-9][0-9]')
 );
 
 -- ============================================================

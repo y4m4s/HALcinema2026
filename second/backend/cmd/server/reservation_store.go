@@ -216,7 +216,7 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		return reservationCreateResponse{}, err
 	}
 
-	reservationID, err := createUniqueID(ctx, tx, "reservations", "R")
+	reservationID, err := createNumericID(ctx, tx, "reservations", "R", 10)
 	if err != nil {
 		return reservationCreateResponse{}, err
 	}
@@ -270,7 +270,7 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 
 	nextSeat := 0
 	for _, ticket := range tickets {
-		detailID, err := createUniqueID(ctx, tx, "reservation_details", "RD")
+		detailID, err := createNumericID(ctx, tx, "reservation_details", "RD", 10)
 		if err != nil {
 			return reservationCreateResponse{}, err
 		}
@@ -314,7 +314,7 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		}
 	}
 
-	paymentID, err := createUniqueID(ctx, tx, "payments", "P")
+	paymentID, err := createNumericID(ctx, tx, "payments", "P", 3)
 	if err != nil {
 		return reservationCreateResponse{}, err
 	}
@@ -693,27 +693,31 @@ func nullableString(value string) any {
 	return value
 }
 
-func createUniqueID(ctx context.Context, tx *sql.Tx, table string, prefix string) (string, error) {
-	for attempt := 0; attempt < 5; attempt++ {
-		token, err := randomToken(5)
-		if err != nil {
-			return "", err
-		}
-		token = strings.ToUpper(strings.NewReplacer("-", "", "_", "").Replace(token))
-		if len(token) > 8 {
-			token = token[:8]
-		}
-
-		id := fmt.Sprintf("%s%s%s", prefix, time.Now().UTC().Format("060102150405"), token)
-		var exists int
-		query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id = ?", table)
-		if err := tx.QueryRowContext(ctx, query, id).Scan(&exists); err != nil {
-			return "", err
-		}
-		if exists == 0 {
-			return id, nil
-		}
+func createNumericID(ctx context.Context, tx *sql.Tx, table string, prefix string, digitCount int) (string, error) {
+	if digitCount <= 0 {
+		return "", fmt.Errorf("invalid digit count for %s", table)
 	}
 
-	return "", fmt.Errorf("failed to allocate id for %s", table)
+	limit := int64(1)
+	for i := 0; i < digitCount; i++ {
+		limit *= 10
+	}
+
+	pattern := prefix + strings.Repeat("[0-9]", digitCount)
+	query := fmt.Sprintf(
+		"SELECT COALESCE(MAX(CAST(substr(id, ?) AS INTEGER)), 0) FROM %s WHERE id GLOB ?",
+		table,
+	)
+
+	var current int64
+	if err := tx.QueryRowContext(ctx, query, len(prefix)+1, pattern).Scan(&current); err != nil {
+		return "", err
+	}
+
+	next := current + 1
+	if next >= limit {
+		return "", fmt.Errorf("id sequence exhausted for %s", table)
+	}
+
+	return fmt.Sprintf("%s%0*d", prefix, digitCount, next), nil
 }

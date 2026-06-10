@@ -3,10 +3,17 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestReservationStoreCreateAndAvailability(t *testing.T) {
@@ -47,11 +54,28 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	if result.ReservationID == "" || result.ConfirmationNo != result.ReservationID {
+	reservationIDPattern := regexp.MustCompile(`^R[0-9]{10}$`)
+	if !reservationIDPattern.MatchString(result.ReservationID) || result.ConfirmationNo != result.ReservationID {
 		t.Fatalf("Create() result = %+v", result)
 	}
 	if result.Amount != 2200 {
 		t.Fatalf("Create() amount = %d, want 2200", result.Amount)
+	}
+
+	var reservationDetailID string
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM reservation_details WHERE reservation_id = ?`, result.ReservationID).Scan(&reservationDetailID); err != nil {
+		t.Fatalf("reservation detail id query error = %v", err)
+	}
+	if !regexp.MustCompile(`^RD[0-9]{10}$`).MatchString(reservationDetailID) {
+		t.Fatalf("reservation detail id = %q, want RD + 10 digits", reservationDetailID)
+	}
+
+	var paymentID string
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM payments WHERE reservation_id = ?`, result.ReservationID).Scan(&paymentID); err != nil {
+		t.Fatalf("payment id query error = %v", err)
+	}
+	if !regexp.MustCompile(`^P[0-9]{3}$`).MatchString(paymentID) {
+		t.Fatalf("payment id = %q, want P + 3 digits", paymentID)
 	}
 
 	availability, err := store.Availability(ctx, req)
@@ -69,6 +93,71 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if !errors.Is(err, errSeatAlreadyReserved) {
 		t.Fatalf("duplicate Create() error = %v, want %v", err, errSeatAlreadyReserved)
 	}
+}
+
+func TestReservationRoutesCreate(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api")
+	registerReservationRoutes(api, store, memberStore)
+
+	body := `{
+		"movieId": "1",
+		"screen": "1",
+		"start": "17:00",
+		"end": "19:26",
+		"date": "5/15(金)",
+		"seats": ["A1"],
+		"tickets": {"adult": 1},
+		"paymentMethod": "credit",
+		"customer": {
+			"name": "Test User",
+			"nameKana": "てすとゆーざー",
+			"email": "test@example.com",
+			"tel": "090-1234-5678"
+		}
+	}`
+
+	response := performReservationRequest(router, body)
+	if response.Code != http.StatusCreated {
+		t.Fatalf("POST /api/reservations status = %d, body = %s", response.Code, response.Body.String())
+	}
+
+	var result reservationCreateResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatalf("response json error = %v", err)
+	}
+	if !regexp.MustCompile(`^R[0-9]{10}$`).MatchString(result.ReservationID) || result.ConfirmationNo != result.ReservationID {
+		t.Fatalf("reservation response = %+v", result)
+	}
+
+	duplicate := performReservationRequest(router, body)
+	if duplicate.Code != http.StatusConflict {
+		t.Fatalf("duplicate POST status = %d, body = %s", duplicate.Code, duplicate.Body.String())
+	}
+}
+
+func performReservationRequest(router *gin.Engine, body string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPost, "/api/reservations", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	return response
 }
 
 func applySQLFile(t *testing.T, dbPath string, sqlPath string) {
