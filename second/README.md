@@ -11,6 +11,31 @@
 - `frontend/public/assets/` - `../mock/assets` から移行した画像・フォントなどの静的ファイル
 - `backend/` - Go + Gin の API サーバー
 
+## データベースのセットアップ
+
+実DBファイル `second/halcinema_members.sqlite3` は Git 管理対象外（`.gitignore`）です。クローン直後はDBが存在しないため、先に初期化スクリプトを一度実行してください。実行しないとバックエンドが `reservation schema missing` で起動に失敗します。
+
+DBは `db/schema.sql`（テーブル定義）と `db/seed.sql`（初期データ）から再生成します。**Go さえあれば動作し、外部の `sqlite3` CLI は不要**です。
+
+```powershell
+# Windows (PowerShell)
+./second/db/init.ps1
+```
+
+```bash
+# macOS / Linux
+./second/db/init.sh
+```
+
+スクリプトは内部で `go run ./cmd/dbinit` を呼び出し、`schema.sql` → `seed.sql` の順に適用します。`schema.sql` は各テーブルを `DROP TABLE IF EXISTS` してから作り直すため、**何度実行しても安全**です（毎回まっさらな初期データ状態に戻るので、DBをリセットしたいときにも使えます）。
+
+スクリプトを使わず直接実行することもできます。
+
+```powershell
+cd second/backend
+go run ./cmd/dbinit
+```
+
 ## 開発
 
 バックエンドは `second/backend` から起動します。
