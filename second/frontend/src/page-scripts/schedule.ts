@@ -8,6 +8,34 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
   let dateIdx = 0;
   let movieIdx = 0;
   let movieDateIdx = 0;
+  // 上映回ごとの予約状況をDBから取得し `作品ID-スクリーン-開始時刻` で引けるようにする。
+  // 取得できた回はモックの status を上書きし、失敗時はモック値のまま表示する。
+  const availabilityByKey = new Map();
+
+  function slotKey(movieId, screen, start) {
+    return `${movieId}-${screen}-${start}`;
+  }
+
+  function resolveSlotStatus(movie, screen, slot) {
+    const live = availabilityByKey.get(slotKey(movie.id, screen, slot.start));
+    return live || slot.status || 'ok';
+  }
+
+  async function loadAvailability() {
+    try {
+      const res = await fetch('/api/schedules/availability');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data)) return;
+      availabilityByKey.clear();
+      data.forEach(function (item) {
+        availabilityByKey.set(slotKey(item.movieId, item.screen, item.start), item.status);
+      });
+      renderRows();
+    } catch (e) {
+      /* オフライン等ではモック表示にフォールバック */
+    }
+  }
   document.getElementById('view-tabs').addEventListener('click', function (e) {
     const btn = e.target.closest('.view-tab');
     if (!btn) return;
@@ -154,8 +182,9 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
 
     const theatersHtml = getScreenSchedules(m).map(function (sc) {
       const slotsHtml = sc.slots.map(function (slot) {
-        const statusClass = slot.status === 'soldout' ? 'soldout' : slot.status === 'few' ? 'few' : 'ok';
-        const statusText  = slot.status === 'soldout' ? '販売終了' : slot.status === 'few' ? '△残りわずか' : '◎余裕あり';
+        const status = resolveSlotStatus(m, sc.screen, slot);
+        const statusClass = status === 'soldout' ? 'soldout' : status === 'few' ? 'few' : 'ok';
+        const statusText  = status === 'soldout' ? '販売終了' : status === 'few' ? '△残りわずか' : '◎余裕あり';
         const slotInner = `
             <div class="time-slot-time">${slot.start} 〜 ${slot.end}</div>
             <div class="time-slot-status ${statusClass}">${statusText}</div>`;
@@ -217,4 +246,5 @@ const nowShowing = MOVIES.filter(m => m.status === 'now');
   }
 
   render();
+  loadAvailability();
 }

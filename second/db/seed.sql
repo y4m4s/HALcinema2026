@@ -269,6 +269,102 @@ INSERT INTO schedules (id, movie_id, screen_id, start_at, end_at) VALUES
 ('SCH0030', 'M009', 'SCR006', '2026-05-22 16:40', '2026-05-22 18:52');
 
 -- ============================================================
+-- 予約状況シード (reservations / reservation_details / reservation_seats)
+-- 上映スケジュール画面の予約状況表示（◎余裕あり / △残りわずか / 販売終了）を
+-- DBの実際の座席占有から再現するためのデータ。
+-- 各上映回ごとに占有目標 status を割り当て、座席数を以下のとおり埋める。
+--   soldout(販売終了)  … 全席を予約済みにする（残席0）
+--   few(残りわずか)    … 定員の約92%を予約済み（残席 約8% ≦ 15%）
+--   ok(余裕あり)       … 定員の約40%を予約済み
+-- 占有のみを再現する簡易データのため、1予約=1明細に座席をまとめて紐付ける。
+-- status の値は frontend のモック表示 (page-scripts/data.ts) と一致させている。
+-- ============================================================
+CREATE TEMP TABLE _schedule_fill(schedule_id TEXT PRIMARY KEY, status TEXT NOT NULL);
+INSERT INTO _schedule_fill (schedule_id, status) VALUES
+('SCH0001', 'soldout'),
+('SCH0002', 'ok'),
+('SCH0003', 'few'),
+('SCH0004', 'ok'),
+('SCH0005', 'soldout'),
+('SCH0006', 'ok'),
+('SCH0007', 'few'),
+('SCH0008', 'ok'),
+('SCH0009', 'ok'),
+('SCH0010', 'soldout'),
+('SCH0011', 'soldout'),
+('SCH0012', 'few'),
+('SCH0013', 'ok'),
+('SCH0014', 'ok'),
+('SCH0015', 'soldout'),
+('SCH0016', 'ok'),
+('SCH0017', 'ok'),
+('SCH0018', 'soldout'),
+('SCH0019', 'few'),
+('SCH0020', 'ok'),
+('SCH0021', 'few'),
+('SCH0022', 'ok'),
+('SCH0023', 'soldout'),
+('SCH0024', 'ok'),
+('SCH0025', 'ok'),
+('SCH0026', 'few'),
+('SCH0027', 'ok'),
+('SCH0028', 'few'),
+('SCH0029', 'ok'),
+('SCH0030', 'soldout');
+
+-- 1上映回につき1予約。予約ID/明細IDはスケジュール番号から決定的に生成する。
+INSERT INTO reservations
+    (id, schedule_id, member_id, customer_name, customer_name_kana,
+     customer_email, customer_tel, status, reserved_at, created_at, updated_at)
+SELECT
+    'R'  || printf('%010d', CAST(substr(schedule_id, 4) AS INTEGER)),
+    schedule_id, NULL, 'シード予約', 'しーどよやく',
+    'seed-reservation@example.com', '00000000000',
+    'confirmed', '2026-05-20 10:00:00', '2026-05-20 10:00:00', '2026-05-20 10:00:00'
+FROM _schedule_fill;
+
+INSERT INTO reservation_details (id, reservation_id, ticket_type_id, price)
+SELECT
+    'RD' || printf('%010d', CAST(substr(schedule_id, 4) AS INTEGER)),
+    'R'  || printf('%010d', CAST(substr(schedule_id, 4) AS INTEGER)),
+    2, 1800
+FROM _schedule_fill;
+
+INSERT INTO reservation_seats (reservation_detail_id, schedule_id, seat_id)
+WITH target AS (
+    SELECT
+        f.schedule_id,
+        sch.screen_id,
+        CASE f.status
+            WHEN 'soldout' THEN st.capacity
+            WHEN 'few'     THEN st.capacity - CAST(st.capacity * 0.08 AS INTEGER)
+            ELSE                CAST(st.capacity * 0.4 AS INTEGER)
+        END AS reserve_count
+    FROM _schedule_fill f
+    JOIN schedules    sch ON sch.id = f.schedule_id
+    JOIN screens      scr ON scr.id = sch.screen_id
+    JOIN screen_types st  ON st.id  = scr.screen_type_id
+),
+ranked AS (
+    -- 座席は random() でシャッフルした順に埋め、頭から連番ではなく散らばるようにする。
+    SELECT
+        t.schedule_id,
+        t.reserve_count,
+        se.id AS seat_id,
+        ROW_NUMBER() OVER (PARTITION BY t.schedule_id ORDER BY random()) AS rn
+    FROM target t
+    JOIN seats se ON se.screen_id = t.screen_id
+)
+SELECT
+    'RD' || printf('%010d', CAST(substr(schedule_id, 4) AS INTEGER)),
+    schedule_id,
+    seat_id
+FROM ranked
+WHERE rn <= reserve_count;
+
+DROP TABLE _schedule_fill;
+
+-- ============================================================
 -- news
 -- ============================================================
 INSERT INTO news (id, title, body, tag, published_at, is_published) VALUES

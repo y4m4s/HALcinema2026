@@ -8,6 +8,15 @@ import (
 )
 
 func registerReservationRoutes(api *gin.RouterGroup, reservations *reservationStore, members *memberStore) {
+	api.GET("/schedules/availability", func(c *gin.Context) {
+		availability, err := reservations.SchedulesAvailability(c.Request.Context())
+		if err != nil {
+			writeReservationStoreError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, availability)
+	})
+
 	group := api.Group("/reservations")
 	{
 		group.GET("/availability", func(c *gin.Context) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,13 +34,15 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	// seed.sql の占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
+	testSeat := firstFreeSeat(t, memberStore.db, "SCH0002")
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
 		Date:          "5/15(金)",
-		Seats:         []string{"A1"},
+		Seats:         []string{testSeat},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "credit",
 		Customer: reservationCustomer{
@@ -48,6 +51,14 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 			Email:    "test@example.com",
 			Tel:      "090-1234-5678",
 		},
+	}
+
+	baseline, err := store.Availability(ctx, req)
+	if err != nil {
+		t.Fatalf("baseline Availability() error = %v", err)
+	}
+	if containsString(baseline.ReservedSeats, testSeat) {
+		t.Fatalf("baseline reserved seats unexpectedly contain %s: %#v", testSeat, baseline.ReservedSeats)
 	}
 
 	result, err := store.Create(ctx, req, nil)
@@ -85,8 +96,11 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if availability.ScheduleID != "SCH0002" {
 		t.Fatalf("Availability() schedule = %q, want SCH0002", availability.ScheduleID)
 	}
-	if len(availability.ReservedSeats) != 1 || availability.ReservedSeats[0] != "A1" {
-		t.Fatalf("Availability() reserved seats = %#v, want [A1]", availability.ReservedSeats)
+	if !containsString(availability.ReservedSeats, testSeat) {
+		t.Fatalf("Availability() reserved seats = %#v, want to contain %s", availability.ReservedSeats, testSeat)
+	}
+	if len(availability.ReservedSeats) != len(baseline.ReservedSeats)+1 {
+		t.Fatalf("Availability() reserved count = %d, want %d", len(availability.ReservedSeats), len(baseline.ReservedSeats)+1)
 	}
 
 	_, err = store.Create(ctx, req, nil)
@@ -116,13 +130,15 @@ func TestReservationRoutesCreate(t *testing.T) {
 	api := router.Group("/api")
 	registerReservationRoutes(api, store, memberStore)
 
-	body := `{
+	// 占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
+	freeSeat := firstFreeSeat(t, memberStore.db, "SCH0002")
+	body := fmt.Sprintf(`{
 		"movieId": "1",
 		"screen": "1",
 		"start": "17:00",
 		"end": "19:26",
 		"date": "5/15(金)",
-		"seats": ["A1"],
+		"seats": [%q],
 		"tickets": {"adult": 1},
 		"paymentMethod": "credit",
 		"customer": {
@@ -131,7 +147,7 @@ func TestReservationRoutesCreate(t *testing.T) {
 			"email": "test@example.com",
 			"tel": "090-1234-5678"
 		}
-	}`
+	}`, freeSeat)
 
 	response := performReservationRequest(router, body)
 	if response.Code != http.StatusCreated {
@@ -150,6 +166,39 @@ func TestReservationRoutesCreate(t *testing.T) {
 	if duplicate.Code != http.StatusConflict {
 		t.Fatalf("duplicate POST status = %d, body = %s", duplicate.Code, duplicate.Body.String())
 	}
+}
+
+// firstFreeSeat returns a seat_code on the given schedule's screen that is not
+// yet reserved, so tests stay valid regardless of the randomized seed occupancy.
+func firstFreeSeat(t *testing.T, db *sql.DB, scheduleID string) string {
+	t.Helper()
+	var code string
+	err := db.QueryRow(
+		`SELECT s.seat_code
+		   FROM seats AS s
+		   JOIN schedules AS sch ON sch.screen_id = s.screen_id
+		  WHERE sch.id = ?
+		    AND s.is_active = 1
+		    AND s.id NOT IN (
+		        SELECT rs.seat_id FROM reservation_seats AS rs WHERE rs.schedule_id = ?
+		    )
+		  ORDER BY s.id
+		  LIMIT 1`,
+		scheduleID, scheduleID,
+	).Scan(&code)
+	if err != nil {
+		t.Fatalf("firstFreeSeat(%q) error = %v", scheduleID, err)
+	}
+	return code
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func performReservationRequest(router *gin.Engine, body string) *httptest.ResponseRecorder {

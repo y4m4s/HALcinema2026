@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +48,18 @@ type reservationCustomer struct {
 type reservationAvailabilityResponse struct {
 	ScheduleID    string   `json:"scheduleId"`
 	ReservedSeats []string `json:"reservedSeats"`
+}
+
+type scheduleAvailabilityItem struct {
+	ScheduleID string `json:"scheduleId"`
+	MovieID    int    `json:"movieId"`
+	Screen     int    `json:"screen"`
+	Start      string `json:"start"`
+	End        string `json:"end"`
+	Capacity   int    `json:"capacity"`
+	Reserved   int    `json:"reserved"`
+	Remaining  int    `json:"remaining"`
+	Status     string `json:"status"`
 }
 
 type reservationCreateResponse struct {
@@ -158,6 +172,98 @@ func (s *reservationStore) Availability(ctx context.Context, req reservationCrea
 		ScheduleID:    showtime.id,
 		ReservedSeats: reservedSeats,
 	}, nil
+}
+
+// SchedulesAvailability returns the seat occupancy of every showtime so the
+// schedule page can display 余裕あり / 残りわずか / 販売終了 from live data.
+func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]scheduleAvailabilityItem, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT sch.id, sch.movie_id, sch.screen_id, sch.start_at, sch.end_at,
+		        st.capacity,
+		        (SELECT COUNT(*)
+		           FROM reservation_seats AS rs
+		           JOIN reservation_details AS rd ON rd.id = rs.reservation_detail_id
+		           JOIN reservations AS r ON r.id = rd.reservation_id
+		          WHERE rs.schedule_id = sch.id
+		            AND r.status IN ('pending', 'confirmed', 'used')) AS reserved
+		   FROM schedules AS sch
+		   JOIN screens AS scr ON scr.id = sch.screen_id
+		   JOIN screen_types AS st ON st.id = scr.screen_type_id
+		  ORDER BY sch.start_at, sch.id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []scheduleAvailabilityItem{}
+	for rows.Next() {
+		var (
+			id, movieID, screenID, startAt, endAt string
+			capacity, reserved                     int
+		)
+		if err := rows.Scan(&id, &movieID, &screenID, &startAt, &endAt, &capacity, &reserved); err != nil {
+			return nil, err
+		}
+		remaining := capacity - reserved
+		if remaining < 0 {
+			remaining = 0
+		}
+		items = append(items, scheduleAvailabilityItem{
+			ScheduleID: id,
+			MovieID:    trailingInt(movieID),
+			Screen:     trailingInt(screenID),
+			Start:      clockFromTimestamp(startAt),
+			End:        clockFromTimestamp(endAt),
+			Capacity:   capacity,
+			Reserved:   reserved,
+			Remaining:  remaining,
+			Status:     occupancyStatus(capacity, reserved),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// occupancyStatus maps seat occupancy to the schedule page status keys.
+// Thresholds are kept in sync with db/seed.sql の占有目標.
+func occupancyStatus(capacity, reserved int) string {
+	remaining := capacity - reserved
+	if capacity <= 0 {
+		return "ok"
+	}
+	if remaining <= 0 {
+		return "soldout"
+	}
+	if remaining*100 <= capacity*15 {
+		return "few"
+	}
+	return "ok"
+}
+
+// trailingInt extracts the trailing numeric part of an ID such as "M001" -> 1
+// or "SCR012" -> 12, so the schedule page can match its numeric mock data.
+func trailingInt(id string) int {
+	start := len(id)
+	for start > 0 && id[start-1] >= '0' && id[start-1] <= '9' {
+		start--
+	}
+	number, err := strconv.Atoi(id[start:])
+	if err != nil {
+		return 0
+	}
+	return number
+}
+
+// clockFromTimestamp returns the "HH:MM" portion of "2026-05-23 10:00".
+func clockFromTimestamp(value string) string {
+	if len(value) >= 16 {
+		return value[11:16]
+	}
+	return value
 }
 
 func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequest, member *memberResponse) (reservationCreateResponse, error) {
@@ -693,6 +799,9 @@ func nullableString(value string) any {
 	return value
 }
 
+// createNumericID allocates an ID of the form prefix + digitCount 桁のゼロ埋め数字
+// (例: R0000000042 / P007)。連番ではなく毎回ランダムな数字を採番し、既存IDと
+// 衝突した場合は別の値で採番し直す。桁数は schema.sql の CHECK 制約と一致させる。
 func createNumericID(ctx context.Context, tx *sql.Tx, table string, prefix string, digitCount int) (string, error) {
 	if digitCount <= 0 {
 		return "", fmt.Errorf("invalid digit count for %s", table)
@@ -703,21 +812,41 @@ func createNumericID(ctx context.Context, tx *sql.Tx, table string, prefix strin
 		limit *= 10
 	}
 
-	pattern := prefix + strings.Repeat("[0-9]", digitCount)
-	query := fmt.Sprintf(
-		"SELECT COALESCE(MAX(CAST(substr(id, ?) AS INTEGER)), 0) FROM %s WHERE id GLOB ?",
-		table,
-	)
+	existsQuery := fmt.Sprintf("SELECT 1 FROM %s WHERE id = ? LIMIT 1", table)
 
-	var current int64
-	if err := tx.QueryRowContext(ctx, query, len(prefix)+1, pattern).Scan(&current); err != nil {
-		return "", err
+	// 桁数が小さい(例: P+3桁)ほど候補が枯渇しやすいので、空き番号探索の上限を
+	// 候補数に応じて広げつつ固定上限でも頭打ちにする。
+	maxAttempts := 100
+	if limit < int64(maxAttempts) {
+		maxAttempts = int(limit)
 	}
 
-	next := current + 1
-	if next >= limit {
-		return "", fmt.Errorf("id sequence exhausted for %s", table)
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		number, err := randomNumberBelow(limit)
+		if err != nil {
+			return "", err
+		}
+		candidate := fmt.Sprintf("%s%0*d", prefix, digitCount, number)
+
+		var exists int
+		err = tx.QueryRowContext(ctx, existsQuery, candidate).Scan(&exists)
+		if errors.Is(err, sql.ErrNoRows) {
+			return candidate, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		// 衝突したので別の番号で採番し直す。
 	}
 
-	return fmt.Sprintf("%s%0*d", prefix, digitCount, next), nil
+	return "", fmt.Errorf("could not allocate unique id for %s", table)
+}
+
+// randomNumberBelow returns a uniformly distributed integer in [0, limit).
+func randomNumberBelow(limit int64) (int64, error) {
+	number, err := rand.Int(rand.Reader, big.NewInt(limit))
+	if err != nil {
+		return 0, err
+	}
+	return number.Int64(), nil
 }
