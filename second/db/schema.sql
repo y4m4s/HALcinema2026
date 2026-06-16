@@ -62,10 +62,12 @@ CREATE TABLE member_sessions (
 -- ============================================================
 -- coupons: クーポン
 -- xlsx: クーポンID / クーポンコード / 割引額
+-- クーポンコードは定義書に合わせて 大文字英字4桁 + 数字3桁。
 -- ============================================================
 CREATE TABLE coupons (
     id               TEXT    PRIMARY KEY,
-    code             TEXT    NOT NULL UNIQUE,
+    code             TEXT    NOT NULL UNIQUE
+                             CHECK (code GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'),
     discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
     is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),

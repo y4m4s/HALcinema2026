@@ -64,9 +64,16 @@ INSERT INTO payment_methods (id, code, name, display_order) VALUES
 ('PT003', 'konbini', 'コンビニ払い',     3);
 
 INSERT INTO coupons (id, code, discount_amount) VALUES
-('C001', 'LATE100',      100),
-('C002', 'GROUP200',     200),
-('C003', 'HORRORCOS100', 100);
+('C001', 'LATE100', 100),   -- レイトショー割引 100円引き
+('C002', 'GRUP200', 200),   -- グループ割引 200円引き
+('C003', 'HORS100', 100),   -- ホラーコスプレ割引 100円引き
+('C004', 'WELC300', 300),   -- ウェルカムクーポン 300円引き
+('C005', 'BDAY500', 500),   -- 誕生日クーポン 500円引き
+('C006', 'WEEK150', 150),   -- 平日割引 150円引き
+('C007', 'MEMS300', 300),   -- 会員特典 300円引き
+('C008', 'SUMM200', 200),   -- 夏季特別割引 200円引き
+('C009', 'WINT200', 200),   -- 冬季特別割引 200円引き
+('C010', 'HOLI150', 150);   -- 祝日割引 150円引き
 
 INSERT INTO ticket_types (id, code, name, price, required_seat_count, display_order, is_active) VALUES
 (1, 'pair',       'ペアチケット',       3200, 2, 1, 1),
