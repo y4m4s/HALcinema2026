@@ -451,6 +451,13 @@ func isUniqueConstraintError(err error) bool {
 	return strings.Contains(message, "unique") || strings.Contains(message, "constraint")
 }
 
+func isForeignKeyConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "foreign key")
+}
+
 func boolToInt(value bool) int {
 	if value {
 		return 1

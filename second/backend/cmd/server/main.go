@@ -17,13 +17,6 @@ type healthResponse struct {
 	Time    string `json:"time"`
 }
 
-type movieSummary struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Genre       string `json:"genre"`
-	ReleaseYear int    `json:"releaseYear"`
-}
-
 type pageSummary struct {
 	Path  string `json:"path"`
 	Title string `json:"title"`
@@ -39,6 +32,10 @@ func main() {
 	}
 	defer memberStore.Close()
 	reservationStore, err := newReservationStore(memberStore.db)
+	if err != nil {
+		panic(err)
+	}
+	movieStore, err := newMovieStore(memberStore.db)
 	if err != nil {
 		panic(err)
 	}
@@ -58,14 +55,6 @@ func main() {
 			})
 		})
 
-		api.GET("/movies", func(c *gin.Context) {
-			c.JSON(http.StatusOK, []movieSummary{
-				{ID: 1, Title: "境界のシアター", Genre: "Mystery", ReleaseYear: 2026},
-				{ID: 2, Title: "午前零時の上映会", Genre: "Horror", ReleaseYear: 2026},
-				{ID: 3, Title: "沈黙のスクリーン", Genre: "Suspense", ReleaseYear: 2026},
-			})
-		})
-
 		api.GET("/pages", func(c *gin.Context) {
 			c.JSON(http.StatusOK, []pageSummary{
 				{Path: "/", Title: "トップ"},
@@ -82,6 +71,7 @@ func main() {
 
 		registerMemberRoutes(api, memberStore)
 		registerReservationRoutes(api, reservationStore, memberStore)
+		registerMovieRoutes(api, movieStore)
 	}
 
 	router.Static("/assets", filepath.Join(frontendDist, "assets"))
