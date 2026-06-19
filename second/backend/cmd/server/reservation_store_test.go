@@ -166,6 +166,48 @@ func TestReservationRoutesCreate(t *testing.T) {
 	if duplicate.Code != http.StatusConflict {
 		t.Fatalf("duplicate POST status = %d, body = %s", duplicate.Code, duplicate.Body.String())
 	}
+
+	tooLarge := performReservationRequest(router, `{"movieId":"`+strings.Repeat("1", int(maxAPIJSONBodyBytes))+`"}`)
+	if tooLarge.Code != http.StatusBadRequest {
+		t.Fatalf("oversized POST status = %d, body = %s", tooLarge.Code, tooLarge.Body.String())
+	}
+}
+
+func TestReservationStoreRejectsInputLimits(t *testing.T) {
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         []string{"A1"},
+		Tickets:       map[string]int{"adult": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Test User",
+			NameKana: "てすとゆーざー",
+			Email:    "test@example.com",
+			Tel:      "090-1234-5678",
+		},
+	}
+
+	oversizedName := normalizeReservationRequest(req)
+	oversizedName.Customer.Name = strings.Repeat("あ", maxPersonNameRunes+1)
+	if err := validateReservationRequest(oversizedName); !isValidationError(err) {
+		t.Fatalf("oversized customer name error = %v, want validationError", err)
+	}
+
+	badCoupon := normalizeReservationRequest(req)
+	badCoupon.CouponCode = "BAD<script>"
+	if err := validateReservationRequest(badCoupon); !isValidationError(err) {
+		t.Fatalf("bad coupon error = %v, want validationError", err)
+	}
+
+	badEmail := normalizeReservationRequest(req)
+	badEmail.Customer.Email = "Display Name <test@example.com>"
+	if err := validateReservationRequest(badEmail); !isValidationError(err) {
+		t.Fatalf("bad email error = %v, want validationError", err)
+	}
 }
 
 // firstFreeSeat returns a seat_code on the given schedule's screen that is not

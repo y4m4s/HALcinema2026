@@ -396,9 +396,10 @@
   border: 1px solid var(--border2);
   background: var(--bg2);
   color: var(--text2);
+  cursor: pointer;
   font-family: var(--mono);
   font-size: 10px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, transform 0.15s;
 }
 
 .seat-button:hover:not(:disabled),
@@ -415,9 +416,25 @@
   cursor: default;
 }
 
-.seat-button.limit-disabled {
-  opacity: 0.34;
-  cursor: default;
+.seat-map.has-selection .seat-button:not(.selected):not(.unavailable) {
+  border-color: rgba(84, 100, 120, 0.34);
+  background: rgba(8, 13, 24, 0.68);
+  color: rgba(188, 204, 231, 0.58);
+  pointer-events: auto;
+}
+
+.seat-map.has-selection .seat-button:not(.selected):not(.unavailable):hover {
+  border-color: rgba(105, 199, 255, 0.72);
+  background: rgba(74, 159, 212, 0.18);
+  color: #fff;
+}
+
+.seat-map.has-selection .seat-button.selected {
+  border-color: rgba(105, 199, 255, 0.95);
+  background: rgba(74, 159, 212, 0.36);
+  box-shadow: 0 0 0 1px rgba(105, 199, 255, 0.34), 0 0 18px rgba(74, 159, 212, 0.38);
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .seat-selection-status {

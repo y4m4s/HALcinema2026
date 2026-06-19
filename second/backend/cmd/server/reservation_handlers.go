@@ -38,6 +38,8 @@ func registerReservationRoutes(api *gin.RouterGroup, reservations *reservationSt
 		})
 
 		group.POST("", func(c *gin.Context) {
+			limitJSONBody(c)
+
 			var req reservationCreateRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
 				writeAPIError(c, http.StatusBadRequest, "入力内容を確認してください。")

@@ -41,6 +41,15 @@ const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
 const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
+const INPUT_LIMITS = {
+  name: 40,
+  nameKana: 60,
+  email: 254,
+  telPart: 5,
+  coupon: 20,
+  loginIdentifier: 254,
+  password: 128,
+}
 
 const SCREEN_SEAT_LAYOUTS = {
   200: { rows: 10, columns: 20 },
@@ -226,7 +235,10 @@ export function runBooking() {
 
     const field = target.closest('[data-customer-field]')
     if (field) {
-      state.customer[field.dataset.customerField] = field.value
+      const fieldName = field.dataset.customerField
+      const nextValue = normalizeCustomerInput(fieldName, field.value)
+      if (field.value !== nextValue) field.value = nextValue
+      state.customer[fieldName] = nextValue
       syncCustomerDerivedValues()
       syncCurrentStepAction()
       return
@@ -234,7 +246,10 @@ export function runBooking() {
 
     const loginField = target.closest('[data-login-field]')
     if (loginField) {
-      state.login[loginField.dataset.loginField] = loginField.value
+      const fieldName = loginField.dataset.loginField
+      const nextValue = normalizeLoginInput(fieldName, loginField.value)
+      if (loginField.value !== nextValue) loginField.value = nextValue
+      state.login[fieldName] = nextValue
       state.login.error = ''
       syncAccountActions()
       return
@@ -243,9 +258,9 @@ export function runBooking() {
     const registerField = target.closest('[data-register-field]')
     if (registerField && registerField.type !== 'checkbox') {
       const fieldName = registerField.dataset.registerField
-      state.join[fieldName] = fieldName.startsWith('tel')
-        ? String(registerField.value || '').replace(/\D/g, '')
-        : registerField.value
+      const nextValue = normalizeRegisterInput(fieldName, registerField.value)
+      if (registerField.value !== nextValue) registerField.value = nextValue
+      state.join[fieldName] = nextValue
       state.join.error = ''
       syncAccountActions()
       return
@@ -253,7 +268,9 @@ export function runBooking() {
 
     const couponInput = target.closest('[data-coupon-input]')
     if (couponInput) {
-      state.couponInput = couponInput.value.toUpperCase()
+      const nextValue = normalizeCouponInput(couponInput.value)
+      if (couponInput.value !== nextValue) couponInput.value = nextValue
+      state.couponInput = nextValue
       state.couponError = ''
     }
   }
@@ -475,16 +492,13 @@ export function runBooking() {
     if (!screen) return '<div class="booking-empty">上映回を選択すると座席表が表示されます。</div>'
     const layout = getSeatLayout(screen)
     const unavailable = getUnavailableSeats()
-    const ticketUnits = getTicketSeatUnits()
-    const selectionLimitReached = ticketUnits > 0 && state.selectedSeats.length >= ticketUnits
     return getSeatRows(layout).map(row => {
       const seats = row.seats.map(seatId => {
         const selected = state.selectedSeats.includes(seatId)
         const reserved = unavailable.has(seatId)
-        const limitDisabled = !reserved && !selected && selectionLimitReached
-        const disabled = reserved || limitDisabled
+        const disabled = reserved
         return `
-          <button class="seat-button${selected ? ' selected' : ''}${reserved ? ' unavailable' : ''}${limitDisabled ? ' limit-disabled' : ''}" type="button" data-seat-id="${escapeAttr(seatId)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
+          <button class="seat-button${selected ? ' selected' : ''}${reserved ? ' unavailable' : ''}" type="button" data-seat-id="${escapeAttr(seatId)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
             ${escapeHtml(seatId)}
           </button>`
       }).join('')
@@ -508,8 +522,12 @@ export function runBooking() {
     }
 
     const ticketUnits = getTicketSeatUnits()
-    if (ticketUnits <= 0 || state.selectedSeats.length >= Math.min(ticketUnits, MAX_SEATS_PER_ORDER)) return
-    state.selectedSeats = state.selectedSeats.concat(seatId).sort(sortSeats)
+    const seatLimit = Math.min(ticketUnits, MAX_SEATS_PER_ORDER)
+    if (seatLimit <= 0) return
+
+    const nextSeats = state.selectedSeats.concat(seatId)
+    while (nextSeats.length > seatLimit) nextSeats.shift()
+    state.selectedSeats = nextSeats
     state.couponCode = ''
     state.agreed = false
     state.maxStep = state.currentStep
@@ -550,6 +568,9 @@ export function runBooking() {
     return Boolean(
       name &&
       kana &&
+      isWithinMax(name, INPUT_LIMITS.name) &&
+      isWithinMax(kana, INPUT_LIMITS.nameKana) &&
+      isWithinMax(email, INPUT_LIMITS.email) &&
       /^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone) &&
       isValidEmail(email) &&
       email === emailConfirm
@@ -557,7 +578,7 @@ export function runBooking() {
   }
 
   function applyCoupon() {
-    const code = state.couponInput.trim().toUpperCase()
+    const code = normalizeCouponInput(state.couponInput)
     if (!code) {
       state.couponError = 'クーポンコードを入力してください。'
       state.couponCode = ''
@@ -937,7 +958,9 @@ export function runBooking() {
   function isLoginValid() {
     return Boolean(
       String(state.login.identifier || '').trim() &&
-      String(state.login.password || '').trim()
+      String(state.login.password || '').trim() &&
+      isWithinMax(state.login.identifier, INPUT_LIMITS.loginIdentifier) &&
+      isWithinMax(state.login.password, INPUT_LIMITS.password)
     )
   }
 
@@ -951,10 +974,14 @@ export function runBooking() {
 
     if (!String(join.name || '').trim()) return '氏名を入力してください。'
     if (!String(join.nameKana || '').trim()) return '氏名（かな）を入力してください。'
+    if (!isWithinMax(join.name, INPUT_LIMITS.name)) return '氏名は40文字以内で入力してください。'
+    if (!isWithinMax(join.nameKana, INPUT_LIMITS.nameKana)) return '氏名（かな）は60文字以内で入力してください。'
     if (!/^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone)) return '電話番号を3つの欄に分けて入力してください。'
     if (!isValidEmail(email)) return 'メールアドレスを正しく入力してください。'
+    if (!isWithinMax(email, INPUT_LIMITS.email)) return 'メールアドレスは254文字以内で入力してください。'
     if (email !== emailConfirm) return '確認用メールアドレスが一致していません。'
-    if (password.length < 8) return 'パスワードは8文字以上で入力してください。'
+    if (Array.from(password).length < 8) return 'パスワードは8文字以上で入力してください。'
+    if (!isWithinMax(password, INPUT_LIMITS.password)) return 'パスワードは128文字以内で入力してください。'
     if (password !== passwordConfirm) return '確認用パスワードが一致していません。'
 
     return ''
@@ -975,9 +1002,9 @@ export function runBooking() {
         state.join[fieldName] = Boolean(field.checked)
         return
       }
-      state.join[fieldName] = fieldName.startsWith('tel')
-        ? String(field.value || '').replace(/\D/g, '')
-        : field.value
+      const nextValue = normalizeRegisterInput(fieldName, field.value)
+      if (field.value !== nextValue) field.value = nextValue
+      state.join[fieldName] = nextValue
     })
   }
 
@@ -1231,27 +1258,54 @@ function getRowLabel(index) {
   return `${alphabet[Math.floor(index / alphabet.length) - 1]}${alphabet[index % alphabet.length]}`
 }
 
-function sortSeats(a, b) {
-  const left = parseSeatId(a)
-  const right = parseSeatId(b)
-  if (left.row !== right.row) return left.row.localeCompare(right.row, 'ja')
-  return left.number - right.number
-}
-
-function parseSeatId(seatId) {
-  const match = String(seatId).match(/^([A-Z]+)(\d+)$/)
-  return {
-    row: match ? match[1] : String(seatId),
-    number: match ? Number(match[2]) : 0,
-  }
-}
-
 function hashString(value) {
   return Array.from(String(value)).reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) >>> 0, 0)
 }
 
 function createConfirmationNo() {
   return `HAL-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+}
+
+function normalizeCustomerInput(field, value) {
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.telPart)
+  if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
+  if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
+  if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
+  return limitString(stripControlChars(value), 100)
+}
+
+function normalizeLoginInput(field, value) {
+  if (field === 'password') return limitString(stripControlChars(value), INPUT_LIMITS.password)
+  return limitString(stripControlChars(value), INPUT_LIMITS.loginIdentifier)
+}
+
+function normalizeRegisterInput(field, value) {
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.telPart)
+  if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
+  if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
+  if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
+  if (field === 'password' || field === 'passwordConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.password)
+  return limitString(stripControlChars(value), 100)
+}
+
+function normalizeCouponInput(value) {
+  return limitString(String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''), INPUT_LIMITS.coupon)
+}
+
+function normalizeDigits(value, maxLength) {
+  return limitString(String(value || '').replace(/\D/g, ''), maxLength)
+}
+
+function limitString(value, maxLength) {
+  return Array.from(String(value || '')).slice(0, maxLength).join('')
+}
+
+function isWithinMax(value, maxLength) {
+  return Array.from(String(value || '')).length <= maxLength
+}
+
+function stripControlChars(value) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '')
 }
 
 function isValidEmail(value) {

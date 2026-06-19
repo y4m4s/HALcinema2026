@@ -201,7 +201,7 @@ func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]schedul
 	for rows.Next() {
 		var (
 			id, movieID, screenID, startAt, endAt string
-			capacity, reserved                     int
+			capacity, reserved                    int
 		)
 		if err := rows.Scan(&id, &movieID, &screenID, &startAt, &endAt, &capacity, &reserved); err != nil {
 			return nil, err
@@ -681,20 +681,62 @@ func validateReservationRequest(req reservationCreateRequest) error {
 	if req.MovieID == "" || req.Screen == "" || req.Start == "" {
 		return validationError("上映回を指定してください。")
 	}
+	if exceedsRunes(req.Date, maxDateLabelRunes) || hasControlChars(req.Date) {
+		return validationError("鑑賞日を正しく指定してください。")
+	}
 	if req.Customer.Name == "" {
 		return validationError("購入者氏名を入力してください。")
 	}
-	if req.Customer.Email == "" {
-		return validationError("メールアドレスを入力してください。")
+	if req.Customer.NameKana == "" {
+		return validationError("購入者氏名（かな）を入力してください。")
+	}
+	if exceedsRunes(req.Customer.Name, maxPersonNameRunes) {
+		return validationError("購入者氏名は40文字以内で入力してください。")
+	}
+	if exceedsRunes(req.Customer.NameKana, maxPersonKanaRunes) {
+		return validationError("購入者氏名（かな）は60文字以内で入力してください。")
+	}
+	if hasControlChars(req.Customer.Name) || hasControlChars(req.Customer.NameKana) {
+		return validationError("購入者氏名を正しく入力してください。")
+	}
+	if !validEmailAddress(req.Customer.Email) {
+		return validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(req.Customer.Tel) {
 		return validationError("電話番号をハイフン区切りで入力してください。")
+	}
+	if req.PaymentMethod == "" {
+		return validationError("支払方法を選択してください。")
+	}
+	if len(req.PaymentMethod) > maxPaymentMethodLength || hasControlChars(req.PaymentMethod) {
+		return validationError("支払方法を正しく指定してください。")
+	}
+	if req.CouponCode != "" {
+		if len(req.CouponCode) > maxCouponCodeLength || !couponCodePattern.MatchString(req.CouponCode) {
+			return validationError("クーポンコードを正しく入力してください。")
+		}
+	}
+	if len(req.Tickets) > maxTicketTypeCount {
+		return validationError("券種の指定数が多すぎます。")
+	}
+	for code, count := range req.Tickets {
+		if len(code) > 32 || hasControlChars(code) {
+			return validationError("券種を正しく指定してください。")
+		}
+		if count < 0 || count > 6 {
+			return validationError("券種の枚数を正しく指定してください。")
+		}
 	}
 	if len(req.Seats) == 0 {
 		return validationError("座席を選択してください。")
 	}
 	if len(req.Seats) > 6 {
 		return validationError("一度に予約できる座席は6席までです。")
+	}
+	for _, seat := range req.Seats {
+		if len(seat) > maxSeatCodeLength || hasControlChars(seat) {
+			return validationError("座席を正しく指定してください。")
+		}
 	}
 	return nil
 }

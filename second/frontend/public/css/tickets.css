@@ -104,6 +104,7 @@
 
 .tickets-page .coming-grid {
   width: min(864px, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .tickets-subsection-title {
@@ -112,6 +113,12 @@
 
 .tickets-promo-title {
   font-size: 18px;
+}
+
+@media (max-width: 960px) {
+  .tickets-page .coming-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
