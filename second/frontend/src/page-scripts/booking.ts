@@ -760,8 +760,6 @@ export function runBooking() {
   }
 
   function getPhoneNumber() {
-    // const parts = [state.customer.tel1, state.customer.tel2, state.customer.tel3].map(part => String(part || '').trim())
-    // if (parts.every(Boolean)) return parts.join('-')
     return state.customer.tel.trim()
   }
 
@@ -918,7 +916,6 @@ export function runBooking() {
   }
 
   function fillCustomerFromMember(member) {
-    // const telParts = splitPhoneNumber(member.tel)
     state.customer = {
       ...state.customer,
       name: member.name || '',
@@ -929,9 +926,6 @@ export function runBooking() {
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
-      // tel1: telParts[0] || '',
-      // tel2: telParts[1] || '',
-      // tel3: telParts[2] || '',
     }
   }
 
@@ -961,13 +955,6 @@ export function runBooking() {
 
     return ''
   }
-
-  // function getJoinPhoneNumber() {
-  //   return [state.join.tel1, state.join.tel2, state.join.tel3]
-  //     .map(part => String(part || '').trim())
-  //     .filter(Boolean)
-  //     .join('-')
-  // }
 
   function syncJoinStateFromDOM() {
     stepRoot.querySelectorAll('[data-register-field]').forEach((field) => {
@@ -1047,9 +1034,6 @@ function createJoinState() {
     email: '',
     emailConfirm: '',
     tel: '',
-    // tel1: '',
-    // tel2: '',
-    // tel3: '',
     password: '',
     passwordConfirm: '',
     mailMagazine: false,
@@ -1069,9 +1053,6 @@ function createCustomerState(member = null) {
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
-    // tel1: phoneParts[0] || '',
-    // tel2: phoneParts[1] || '',
-    // tel3: phoneParts[2] || '',
     postal: '',
     request: '',
   }
@@ -1130,11 +1111,6 @@ function getAuthHeaders(token) {
 function getRequestErrorMessage(error) {
   return error instanceof Error ? error.message : '通信に失敗しました。'
 }
-
-// function splitPhoneNumber(value) {
-//   const parts = String(value || '').split('-')
-//   return parts.length === 3 ? parts : ['', '', '']
-// }
 
 function resolveMovie(params) {
   const requestedId = Number(params.get('movie') || params.get('id'))
