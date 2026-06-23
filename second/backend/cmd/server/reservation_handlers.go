@@ -37,6 +37,24 @@ func registerReservationRoutes(api *gin.RouterGroup, reservations *reservationSt
 			c.JSON(http.StatusOK, availability)
 		})
 
+		group.POST("/lookup", func(c *gin.Context) {
+			limitJSONBody(c)
+
+			var req reservationLookupRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
+				writeAPIError(c, http.StatusBadRequest, "入力内容を確認してください。")
+				return
+			}
+
+			result, err := reservations.Lookup(c.Request.Context(), req)
+			if err != nil {
+				writeReservationStoreError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, result)
+		})
+
 		group.POST("", func(c *gin.Context) {
 			limitJSONBody(c)
 
@@ -84,6 +102,8 @@ func writeReservationStoreError(c *gin.Context, err error) {
 		writeAPIError(c, http.StatusBadRequest, "指定された券種が見つかりません。")
 	case errors.Is(err, errPaymentMethodNotFound):
 		writeAPIError(c, http.StatusBadRequest, "指定された支払方法が見つかりません。")
+	case errors.Is(err, errReservationNotFound):
+		writeAPIError(c, http.StatusNotFound, "予約情報が見つかりません。")
 	default:
 		writeAPIError(c, http.StatusInternalServerError, "予約情報の処理に失敗しました。")
 	}

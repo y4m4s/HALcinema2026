@@ -70,7 +70,7 @@ const COUPONS = {
     isAvailable: (state) => Number(String(state.slot?.start || '0').split(':')[0]) >= 20,
     discount: (state) => getTicketUnitsFromState(state) * 100,
   },
-  GROUP200: {
+  GRUP200: {
     label: 'グループ割引',
     description: '4席以上で1席200円引き',
     isAvailable: (state) => getTicketUnitsFromState(state) >= 4,
@@ -157,14 +157,21 @@ export function runBooking() {
       return
     }
 
+    const ticketIncrement = target.closest('[data-ticket-increment]')
+    if (ticketIncrement) {
+      adjustTicketCount(ticketIncrement.dataset.ticketIncrement, 1)
+      return
+    }
+
+    const ticketDecrement = target.closest('[data-ticket-decrement]')
+    if (ticketDecrement) {
+      adjustTicketCount(ticketDecrement.dataset.ticketDecrement, -1)
+      return
+    }
+
     const ticketChoice = target.closest('[data-ticket-choice]')
     if (ticketChoice) {
-      selectTicketType(ticketChoice.dataset.ticketChoice)
-      state.couponCode = ''
-      state.couponError = ''
-      state.agreed = false
-      state.maxStep = state.currentStep
-      render()
+      adjustTicketCount(ticketChoice.dataset.ticketChoice, 1)
       return
     }
 
@@ -435,6 +442,7 @@ export function runBooking() {
         ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
         pricingNotices: getPricingNotices(),
+        maxSeatsPerOrder: MAX_SEATS_PER_ORDER,
       })
     }
     if (id === 'payment') {
@@ -534,16 +542,28 @@ export function runBooking() {
     render()
   }
 
-  function selectTicketType(ticketId) {
+  function adjustTicketCount(ticketId, delta) {
     if (!ticketId || !(ticketId in state.tickets)) return
     const ticket = TICKET_TYPES.find(item => item.id === ticketId)
     if (!ticket || ticket.onlineAvailable === false) return
-    const nextTickets = createEmptyTickets()
-    nextTickets[ticketId] = 1
+    const nextTickets = { ...state.tickets }
+    const currentCount = Number(nextTickets[ticketId] || 0)
+    const nextCount = Math.max(0, currentCount + delta)
+    if (nextCount === currentCount) return
+
+    nextTickets[ticketId] = nextCount
     const nextUnits = getTicketUnitsFromTickets(nextTickets)
     if (nextUnits > MAX_SEATS_PER_ORDER) return
     state.tickets = nextTickets
-    if (state.selectedSeats.length !== nextUnits) state.selectedSeats = []
+    if (state.selectedSeats.length > nextUnits) {
+      state.selectedSeats = state.selectedSeats.slice(0, nextUnits)
+    }
+    if (nextUnits === 0) state.selectedSeats = []
+    state.couponCode = ''
+    state.couponError = ''
+    state.agreed = false
+    state.maxStep = state.currentStep
+    render()
   }
 
   function canProceed() {

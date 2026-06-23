@@ -6,6 +6,7 @@ import { runDetail } from './detail'
 import { runHome } from './home'
 import { runNews } from './news'
 import { runQuestion } from './question'
+import { runReservation } from './reservation'
 import { runSchedule } from './schedule'
 import { runTheater } from './theater'
 import { runWorks } from './works'
@@ -21,6 +22,7 @@ export const pageRunners: Record<string, PageRunner | undefined> = {
   "index": runHome,
   "news": runNews,
   "question": runQuestion,
+  "reservation": runReservation,
   "schedule": runSchedule,
   "theater": runTheater,
   "works": runWorks,

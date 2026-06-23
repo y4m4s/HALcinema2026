@@ -1263,6 +1263,7 @@
   gap: 18px;
   padding: 16px;
   background: rgba(16, 33, 58, 0.9);
+  cursor: pointer;
   text-align: left;
   transition: background 0.2s, color 0.2s;
 }
@@ -1279,6 +1280,16 @@
 
 .ticket-option.disabled:hover {
   background: rgba(16, 33, 58, 0.9);
+}
+
+.ticket-option-main {
+  min-width: 0;
+}
+
+.ticket-option-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .ticket-option strong {
@@ -1316,6 +1327,45 @@
   border-color: var(--accent2);
   background: rgba(74, 159, 212, 0.16);
   color: #fff;
+}
+
+.ticket-option-controls {
+  display: grid;
+  grid-template-columns: 34px 38px 34px;
+  align-items: center;
+  border: 1px solid var(--border2);
+  background: rgba(5, 12, 22, 0.42);
+}
+
+.ticket-quantity-button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.ticket-quantity-button:hover:not(:disabled) {
+  background: rgba(74, 159, 212, 0.22);
+  color: #fff;
+}
+
+.ticket-quantity-button:disabled {
+  cursor: default;
+  color: rgba(237, 241, 247, 0.28);
+}
+
+.ticket-option .ticket-quantity-count {
+  display: block;
+  margin: 0;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: center;
 }
 
 .ticket-pricing-notes {
@@ -1737,6 +1787,15 @@
   .ticket-pricing-notes div {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .ticket-option {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .ticket-option-side {
+    justify-content: space-between;
   }
 
   .ticket-total-line {

@@ -9,6 +9,7 @@ function getCurrentPage() {
   if (path.includes('access')) return 'access'
   if (path.includes('tickets')) return 'tickets'
   if (path.includes('question')) return 'question'
+  if (path.includes('reservation')) return 'reservation'
   if (path.includes('detail')) return 'works'
   return 'home'
 }
@@ -25,6 +26,7 @@ function getPageMeta() {
   if (path.includes('tickets')) return { label: '料金案内' }
   if (path.includes('access')) return { label: '交通案内' }
   if (path.includes('question')) return { label: 'よくある質問' }
+  if (path.includes('reservation')) return { label: '予約確認' }
   if (path.includes('contact')) return { label: 'お問い合わせ' }
   if (path.includes('completed')) {
     return { label: 'お問い合わせ完了', parent: { label: 'お問い合わせ', href: '/contact' } }
@@ -41,6 +43,7 @@ function buildNavHtml() {
     { id: 'access', label: '交通案内', href: '/access' },
     { id: 'tickets', label: '料金案内', href: '/tickets' },
     { id: 'question', label: 'よくある質問', href: '/question' },
+    { id: 'reservation', label: '予約確認', href: '/reservation' },
   ]
 
   return `
