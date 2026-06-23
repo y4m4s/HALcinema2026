@@ -70,12 +70,29 @@ const COUPONS = {
     isAvailable: (state) => Number(String(state.slot?.start || '0').split(':')[0]) >= 20,
     discount: (state) => getTicketUnitsFromState(state) * 100,
   },
-  GRUP200: {
+  GROUP200: {
     label: 'グループ割引',
     description: '4席以上で1席200円引き',
     isAvailable: (state) => getTicketUnitsFromState(state) >= 4,
     discount: (state) => getTicketUnitsFromState(state) * 200,
   },
+  HORS100: createPerSeatCoupon('ホラーコスプレ割引', '1席100円引き', 100),
+  WELC300: createPerSeatCoupon('ウェルカムクーポン', '1席300円引き', 300),
+  BDAY500: createPerSeatCoupon('誕生日クーポン', '1席500円引き', 500),
+  WEEK150: createPerSeatCoupon('平日割引', '1席150円引き', 150),
+  MEMS300: createPerSeatCoupon('会員特典', '1席300円引き', 300),
+  SUMM200: createPerSeatCoupon('夏季特別割引', '1席200円引き', 200),
+  WINT200: createPerSeatCoupon('冬季特別割引', '1席200円引き', 200),
+  HOLI150: createPerSeatCoupon('祝日割引', '1席150円引き', 150),
+}
+
+function createPerSeatCoupon(label, description, amount) {
+  return {
+    label,
+    description,
+    isAvailable: () => true,
+    discount: (state) => getTicketUnitsFromState(state) * amount,
+  }
 }
 
 export function runBooking() {

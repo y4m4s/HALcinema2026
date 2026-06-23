@@ -65,7 +65,7 @@ INSERT INTO payment_methods (id, code, name, display_order) VALUES
 
 INSERT INTO coupons (id, code, discount_amount) VALUES
 ('C001', 'LATE100', 100),   -- レイトショー割引 100円引き
-('C002', 'GRUP200', 200),   -- グループ割引 200円引き
+('C002', 'GROUP200', 200),  -- グループ割引 200円引き
 ('C003', 'HORS100', 100),   -- ホラーコスプレ割引 100円引き
 ('C004', 'WELC300', 300),   -- ウェルカムクーポン 300円引き
 ('C005', 'BDAY500', 500),   -- 誕生日クーポン 500円引き

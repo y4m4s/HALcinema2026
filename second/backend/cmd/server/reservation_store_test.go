@@ -194,6 +194,97 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 	}
 }
 
+func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	ctx := context.Background()
+	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 4)
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         seats,
+		Tickets:       map[string]int{"adult": 4},
+		CouponCode:    "GROUP200",
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Coupon User",
+			NameKana: "くーぽんゆーざー",
+			Email:    "coupon@example.com",
+			Tel:      "090-3456-7890",
+		},
+	}
+
+	result, err := store.Create(ctx, req, nil)
+	if err != nil {
+		t.Fatalf("Create() group coupon error = %v", err)
+	}
+	if result.Amount != 8000 {
+		t.Fatalf("Create() amount = %d, want 8000", result.Amount)
+	}
+
+	var couponID string
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = ?`, result.ReservationID).Scan(&couponID); err != nil {
+		t.Fatalf("coupon id query error = %v", err)
+	}
+	if couponID != "C002" {
+		t.Fatalf("coupon_id = %q, want C002", couponID)
+	}
+}
+
+func TestReservationStoreMigratesLegacyGroupCoupon(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	forceLegacyCouponTable(t, memberStore.db)
+
+	if _, err := newReservationStore(memberStore.db); err != nil {
+		t.Fatalf("newReservationStore() migration error = %v", err)
+	}
+
+	ctx := context.Background()
+	var tableSQL string
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'coupons'`).Scan(&tableSQL); err != nil {
+		t.Fatalf("coupon table sql query error = %v", err)
+	}
+	if strings.Contains(tableSQL, "GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'") {
+		t.Fatalf("coupon table still has legacy CHECK: %s", tableSQL)
+	}
+
+	var groupCount, legacyCount int
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE code = 'GROUP200'`).Scan(&groupCount); err != nil {
+		t.Fatalf("GROUP200 count query error = %v", err)
+	}
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE code = 'GRUP200'`).Scan(&legacyCount); err != nil {
+		t.Fatalf("GRUP200 count query error = %v", err)
+	}
+	if groupCount != 1 || legacyCount != 0 {
+		t.Fatalf("coupon migration counts: GROUP200=%d GRUP200=%d, want 1 and 0", groupCount, legacyCount)
+	}
+}
+
 func TestReservationRoutesCreate(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
 	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
@@ -338,6 +429,59 @@ func firstFreeSeats(t *testing.T, db *sql.DB, scheduleID string, count int) []st
 		t.Fatalf("firstFreeSeats(%q) returned %d seats, want %d", scheduleID, len(seats), count)
 	}
 	return seats
+}
+
+func forceLegacyCouponTable(t *testing.T, db *sql.DB) {
+	t.Helper()
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("db.Conn() error = %v", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		t.Fatalf("disable foreign keys error = %v", err)
+	}
+	defer conn.ExecContext(context.Background(), `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("BeginTx() error = %v", err)
+	}
+	defer tx.Rollback()
+
+	statements := []string{
+		`DROP TABLE IF EXISTS coupons_legacy`,
+		`CREATE TABLE coupons_legacy (
+			id               TEXT    PRIMARY KEY,
+			code             TEXT    NOT NULL UNIQUE
+			                         CHECK (code GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'),
+			discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
+			is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+			created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+		)`,
+		`INSERT INTO coupons_legacy
+			(id, code, discount_amount, is_active, created_at, updated_at)
+		 SELECT id,
+		        CASE WHEN code = 'GROUP200' THEN 'GRUP200' ELSE code END,
+		        discount_amount,
+		        is_active,
+		        created_at,
+		        updated_at
+		   FROM coupons`,
+		`DROP TABLE coupons`,
+		`ALTER TABLE coupons_legacy RENAME TO coupons`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			t.Fatalf("legacy coupon statement error = %v\nSQL: %s", err, statement)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("legacy coupon commit error = %v", err)
+	}
 }
 
 func containsString(values []string, target string) bool {

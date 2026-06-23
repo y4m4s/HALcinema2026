@@ -154,6 +154,7 @@ func (s *reservationStore) init(ctx context.Context) error {
 		"reservations",
 		"reservation_details",
 		"reservation_seats",
+		"coupons",
 		"payment_methods",
 		"payments",
 	}
@@ -172,7 +173,88 @@ func (s *reservationStore) init(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return s.migrateCouponCodeFormat(ctx)
+}
+
+func (s *reservationStore) migrateCouponCodeFormat(ctx context.Context) error {
+	var tableSQL string
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'coupons'`,
+	).Scan(&tableSQL)
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(tableSQL, "GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'") {
+		if err := s.rebuildCouponsForFlexibleCodes(ctx); err != nil {
+			return err
+		}
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE coupons
+		    SET code = 'GROUP200',
+		        updated_at = datetime('now')
+		  WHERE code = 'GRUP200'
+		    AND NOT EXISTS (SELECT 1 FROM coupons WHERE code = 'GROUP200')`,
+	)
+	return err
+}
+
+func (s *reservationStore) rebuildCouponsForFlexibleCodes(ctx context.Context) error {
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return err
+	}
+	defer conn.ExecContext(context.Background(), `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	statements := []string{
+		`DROP TABLE IF EXISTS coupons_new`,
+		`CREATE TABLE coupons_new (
+			id               TEXT    PRIMARY KEY,
+			code             TEXT    NOT NULL UNIQUE
+			                         CHECK (
+			                             length(code) BETWEEN 1 AND 20
+			                             AND code = upper(code)
+			                             AND code NOT GLOB '*[^A-Z0-9_-]*'
+			                         ),
+			discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
+			is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+			created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+			updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+		)`,
+		`INSERT INTO coupons_new
+			(id, code, discount_amount, is_active, created_at, updated_at)
+		 SELECT id,
+		        CASE WHEN code = 'GRUP200' THEN 'GROUP200' ELSE code END,
+		        discount_amount,
+		        is_active,
+		        created_at,
+		        updated_at
+		   FROM coupons`,
+		`DROP TABLE coupons`,
+		`ALTER TABLE coupons_new RENAME TO coupons`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (s *reservationStore) Availability(ctx context.Context, req reservationCreateRequest) (reservationAvailabilityResponse, error) {
@@ -806,7 +888,7 @@ func (s *reservationStore) resolveCoupon(ctx context.Context, code string, start
 		if showtimeHour(startAt) < 20 {
 			return "", 0, validationError("この上映回ではレイトショー割引を利用できません。")
 		}
-	case "GRUP200":
+	case "GROUP200":
 		if seatCount < 4 {
 			return "", 0, validationError("グループ割引は4席以上で利用できます。")
 		}
