@@ -41,11 +41,11 @@ function renderLoginPanel(state, canLogin) {
       <div class="account-login-form">
         <label class="account-login-row">
           <span class="account-login-label">ID <em>必須</em></span>
-          <input type="text" autocomplete="username" value="${escapeAttr(login.identifier || '')}" data-login-field="identifier" placeholder="メールアドレス / 会員番号" ${loading ? 'disabled' : ''}>
+          <input type="text" autocomplete="username" value="${escapeAttr(login.identifier || '')}" data-login-field="identifier" placeholder="メールアドレス / 会員番号" maxlength="254" ${loading ? 'disabled' : ''}>
         </label>
         <label class="account-login-row">
           <span class="account-login-label">パスワード <em>必須</em></span>
-          <input type="password" autocomplete="current-password" value="${escapeAttr(login.password || '')}" data-login-field="password" ${loading ? 'disabled' : ''}>
+          <input type="password" autocomplete="current-password" value="${escapeAttr(login.password || '')}" data-login-field="password" maxlength="128" ${loading ? 'disabled' : ''}>
         </label>
       </div>
       ${login.error ? `<p class="account-form-error">${escapeHtml(login.error)}</p>` : ''}
@@ -152,10 +152,19 @@ function renderRegisterPanel(state) {
 }
 
 function renderRegisterRow({ label, field, value, placeholder, type = 'text', autocomplete = '', loading }) {
+  const maxlength = getRegisterFieldMaxlength(field)
   return `
     <label class="account-login-row">
       <span class="account-login-label">${escapeHtml(label)} <em>必須</em></span>
-      <input type="${escapeAttr(type)}" value="${escapeAttr(value || '')}" data-register-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}" ${autocomplete ? `autocomplete="${escapeAttr(autocomplete)}"` : ''} ${loading ? 'disabled' : ''}>
+      <input type="${escapeAttr(type)}" value="${escapeAttr(value || '')}" data-register-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}" maxlength="${escapeAttr(maxlength)}" ${autocomplete ? `autocomplete="${escapeAttr(autocomplete)}"` : ''} ${loading ? 'disabled' : ''}>
     </label>
   `
+}
+
+function getRegisterFieldMaxlength(field) {
+  if (field === 'name') return 40
+  if (field === 'nameKana') return 60
+  if (field === 'email' || field === 'emailConfirm') return 254
+  if (field === 'password' || field === 'passwordConfirm') return 128
+  return 100
 }

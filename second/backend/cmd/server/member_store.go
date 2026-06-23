@@ -20,13 +20,27 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const memberSessionTTL = 30 * 24 * time.Hour
+const (
+	memberSessionTTL       = 30 * 24 * time.Hour
+	maxPersonNameRunes     = 40
+	maxPersonKanaRunes     = 60
+	maxEmailLength         = 254
+	maxPasswordRunes       = 128
+	maxCouponCodeLength    = 20
+	maxLoginIdentifierSize = 254
+	maxAPIJSONBodyBytes    = 32 * 1024
+	maxSeatCodeLength      = 8
+	maxPaymentMethodLength = 24
+	maxDateLabelRunes      = 20
+	maxTicketTypeCount     = 16
+)
 
 var (
 	errDuplicateEmail     = errors.New("duplicate email")
 	errInvalidCredentials = errors.New("invalid credentials")
 	errUnauthorized       = errors.New("unauthorized")
 	memberPhonePattern    = regexp.MustCompile(`^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$`)
+	couponCodePattern     = regexp.MustCompile(`^[A-Z0-9_-]+$`)
 )
 
 type validationError string
@@ -217,6 +231,12 @@ func (s *memberStore) Login(ctx context.Context, req memberLoginRequest) (member
 	if identifier == "" || password == "" {
 		return memberResponse{}, "", validationError("IDとパスワードを入力してください。")
 	}
+	if len(identifier) > maxLoginIdentifierSize || exceedsRunes(password, maxPasswordRunes) {
+		return memberResponse{}, "", validationError("IDまたはパスワードが長すぎます。")
+	}
+	if hasControlChars(identifier) || hasControlChars(password) {
+		return memberResponse{}, "", validationError("IDまたはパスワードを正しく入力してください。")
+	}
 
 	member, err := s.memberByIdentifier(ctx, identifier)
 	if err != nil {
@@ -403,7 +423,16 @@ func normalizeRegisterRequest(req memberRegisterRequest) (memberRegisterRequest,
 	if normalized.NameKana == "" {
 		return normalized, validationError("氏名（かな）を入力してください。")
 	}
-	if _, err := mail.ParseAddress(normalized.Email); err != nil {
+	if exceedsRunes(normalized.Name, maxPersonNameRunes) {
+		return normalized, validationError("氏名は40文字以内で入力してください。")
+	}
+	if exceedsRunes(normalized.NameKana, maxPersonKanaRunes) {
+		return normalized, validationError("氏名（かな）は60文字以内で入力してください。")
+	}
+	if hasControlChars(normalized.Name) || hasControlChars(normalized.NameKana) {
+		return normalized, validationError("氏名を正しく入力してください。")
+	}
+	if !validEmailAddress(normalized.Email) {
 		return normalized, validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(normalized.Tel) {
@@ -411,6 +440,12 @@ func normalizeRegisterRequest(req memberRegisterRequest) (memberRegisterRequest,
 	}
 	if len([]rune(normalized.Password)) < 8 {
 		return normalized, validationError("パスワードは8文字以上で入力してください。")
+	}
+	if exceedsRunes(normalized.Password, maxPasswordRunes) {
+		return normalized, validationError("パスワードは128文字以内で入力してください。")
+	}
+	if hasControlChars(normalized.Password) {
+		return normalized, validationError("パスワードを正しく入力してください。")
 	}
 
 	return normalized, nil
@@ -449,6 +484,27 @@ func isUniqueConstraintError(err error) bool {
 	}
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "unique") || strings.Contains(message, "constraint")
+}
+
+func exceedsRunes(value string, max int) bool {
+	return len([]rune(value)) > max
+}
+
+func hasControlChars(value string) bool {
+	for _, char := range value {
+		if char < 0x20 || char == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
+func validEmailAddress(value string) bool {
+	if value == "" || len(value) > maxEmailLength || hasControlChars(value) {
+		return false
+	}
+	parsed, err := mail.ParseAddress(value)
+	return err == nil && parsed.Address == value
 }
 
 func boolToInt(value bool) int {

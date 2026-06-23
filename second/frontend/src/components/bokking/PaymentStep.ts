@@ -21,7 +21,7 @@ export function PaymentStep({ state, stepNo, paymentMethods, totals, coupon, can
         <div class="coupon-box">
           <label>
             <span>クーポンコード</span>
-            <input type="text" value="${escapeAttr(state.couponInput)}" data-coupon-input placeholder="クーポンコードを入力してください。">
+            <input type="text" value="${escapeAttr(state.couponInput)}" data-coupon-input placeholder="クーポンコードを入力してください。" maxlength="20" autocomplete="off" spellcheck="false" autocapitalize="characters">
           </label>
           <div class="coupon-actions">
             <button class="btn-ghost" type="button" data-action="apply-coupon">適用</button>

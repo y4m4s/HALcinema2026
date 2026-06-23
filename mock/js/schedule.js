@@ -55,10 +55,12 @@ document.addEventListener('DOMContentLoaded', function () {
           return `
             <div class="movie-tab-card${i === movieIdx ? ' active' : ''}" data-idx="${i}">
               ${poster}
+              ${/*
               <div class="movie-tab-body">
                 <div class="movie-tab-title">${m.title}</div>
                 <div class="movie-tab-meta">${m.rating} · ${m.duration}分</div>
               </div>
+              */''}
             </div>`;
         }).join('') + '</div>';
       root.querySelector('.movie-tabs').addEventListener('click', function (e) {

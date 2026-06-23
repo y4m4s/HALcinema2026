@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ var (
 	errSeatAlreadyReserved      = errors.New("seat already reserved")
 	errTicketTypeNotFound       = errors.New("ticket type not found")
 	errPaymentMethodNotFound    = errors.New("payment method not found")
+	errReservationNotFound      = errors.New("reservation not found")
 )
 
 type reservationStore struct {
@@ -67,6 +69,46 @@ type reservationCreateResponse struct {
 	ConfirmationNo string `json:"confirmationNo"`
 	Amount         int    `json:"amount"`
 	Status         string `json:"status"`
+}
+
+type reservationLookupRequest struct {
+	ReservationID  string `json:"reservationId"`
+	ConfirmationNo string `json:"confirmationNo"`
+	Email          string `json:"email"`
+	Tel            string `json:"tel"`
+}
+
+type reservationLookupResponse struct {
+	ReservationID string                    `json:"reservationId"`
+	Status        string                    `json:"status"`
+	MovieTitle    string                    `json:"movieTitle"`
+	Date          string                    `json:"date"`
+	Start         string                    `json:"start"`
+	End           string                    `json:"end"`
+	Screen        string                    `json:"screen"`
+	Seats         []string                  `json:"seats"`
+	Tickets       []reservationLookupTicket `json:"tickets"`
+	Payment       reservationLookupPayment  `json:"payment"`
+	Customer      reservationLookupCustomer `json:"customer"`
+}
+
+type reservationLookupTicket struct {
+	Code  string `json:"code"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+	Price int    `json:"price"`
+}
+
+type reservationLookupPayment struct {
+	Method string `json:"method"`
+	Status string `json:"status"`
+	Amount int    `json:"amount"`
+}
+
+type reservationLookupCustomer struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Tel   string `json:"tel"`
 }
 
 type resolvedShowtime struct {
@@ -264,6 +306,158 @@ func clockFromTimestamp(value string) string {
 		return value[11:16]
 	}
 	return value
+}
+
+func dateFromTimestamp(value string) string {
+	if len(value) >= 10 {
+		return value[:10]
+	}
+	return value
+}
+
+func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequest) (reservationLookupResponse, error) {
+	req = normalizeReservationLookupRequest(req)
+	if err := validateReservationLookupRequest(req); err != nil {
+		return reservationLookupResponse{}, err
+	}
+
+	var (
+		response              reservationLookupResponse
+		startAt, endAt        string
+		paymentMethod, status string
+		amount                int
+	)
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT r.id, r.status, r.customer_name, r.customer_email, r.customer_tel,
+		        sch.start_at, sch.end_at, m.title, scr.name,
+		        COALESCE(pm.name, ''), COALESCE(p.status, ''), COALESCE(p.amount, 0)
+		   FROM reservations AS r
+		   JOIN schedules AS sch ON sch.id = r.schedule_id
+		   JOIN movies AS m ON m.id = sch.movie_id
+		   JOIN screens AS scr ON scr.id = sch.screen_id
+		   LEFT JOIN payments AS p ON p.reservation_id = r.id
+		   LEFT JOIN payment_methods AS pm ON pm.id = p.payment_method_id
+		  WHERE r.id = ?
+		    AND lower(r.customer_email) = ?
+		    AND r.customer_tel = ?
+		  ORDER BY p.created_at DESC
+		  LIMIT 1`,
+		req.ReservationID,
+		req.Email,
+		req.Tel,
+	).Scan(
+		&response.ReservationID,
+		&response.Status,
+		&response.Customer.Name,
+		&response.Customer.Email,
+		&response.Customer.Tel,
+		&startAt,
+		&endAt,
+		&response.MovieTitle,
+		&response.Screen,
+		&paymentMethod,
+		&status,
+		&amount,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return reservationLookupResponse{}, errReservationNotFound
+	}
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+
+	response.Date = dateFromTimestamp(startAt)
+	response.Start = clockFromTimestamp(startAt)
+	response.End = clockFromTimestamp(endAt)
+	response.Payment = reservationLookupPayment{
+		Method: paymentMethod,
+		Status: status,
+		Amount: amount,
+	}
+
+	seats, err := s.reservationSeatCodes(ctx, response.ReservationID)
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+	response.Seats = seats
+
+	tickets, err := s.reservationTickets(ctx, response.ReservationID)
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+	response.Tickets = tickets
+
+	return response, nil
+}
+
+func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservationID string) ([]string, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT st.seat_code
+		   FROM reservation_seats AS rs
+		   JOIN seats AS st ON st.id = rs.seat_id
+		   JOIN reservation_details AS rd ON rd.id = rs.reservation_detail_id
+		  WHERE rd.reservation_id = ?
+		  ORDER BY st.seat_code`,
+		reservationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	seats := []string{}
+	for rows.Next() {
+		var seat string
+		if err := rows.Scan(&seat); err != nil {
+			return nil, err
+		}
+		seats = append(seats, seat)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return seats, nil
+}
+
+func (s *reservationStore) reservationTickets(ctx context.Context, reservationID string) ([]reservationLookupTicket, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT tt.code, tt.name, rd.price, tt.required_seat_count, COUNT(rs.seat_id)
+		   FROM reservation_details AS rd
+		   JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
+		   LEFT JOIN reservation_seats AS rs ON rs.reservation_detail_id = rd.id
+		  WHERE rd.reservation_id = ?
+		  GROUP BY rd.id, tt.code, tt.name, rd.price, tt.required_seat_count, tt.display_order
+		  ORDER BY tt.display_order, rd.id`,
+		reservationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tickets := []reservationLookupTicket{}
+	for rows.Next() {
+		var ticket reservationLookupTicket
+		var requiredSeatCount, seatCount int
+		if err := rows.Scan(&ticket.Code, &ticket.Name, &ticket.Price, &requiredSeatCount, &seatCount); err != nil {
+			return nil, err
+		}
+		if requiredSeatCount <= 0 {
+			requiredSeatCount = 1
+		}
+		ticket.Count = seatCount / requiredSeatCount
+		if ticket.Count <= 0 {
+			ticket.Count = 1
+		}
+		tickets = append(tickets, ticket)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tickets, nil
 }
 
 func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequest, member *memberResponse) (reservationCreateResponse, error) {
@@ -557,6 +751,9 @@ func (s *reservationStore) resolveTickets(ctx context.Context, requested map[str
 	if len(tickets) == 0 {
 		return nil, validationError("券種を選択してください。")
 	}
+	sort.Slice(tickets, func(i, j int) bool {
+		return tickets[i].id < tickets[j].id
+	})
 	return tickets, nil
 }
 
@@ -609,7 +806,7 @@ func (s *reservationStore) resolveCoupon(ctx context.Context, code string, start
 		if showtimeHour(startAt) < 20 {
 			return "", 0, validationError("この上映回ではレイトショー割引を利用できません。")
 		}
-	case "GROUP200":
+	case "GRUP200":
 		if seatCount < 4 {
 			return "", 0, validationError("グループ割引は4席以上で利用できます。")
 		}
@@ -677,24 +874,92 @@ func normalizeReservationRequest(req reservationCreateRequest) reservationCreate
 	return req
 }
 
+func normalizeReservationLookupRequest(req reservationLookupRequest) reservationLookupRequest {
+	if strings.TrimSpace(req.ReservationID) == "" {
+		req.ReservationID = req.ConfirmationNo
+	}
+	req.ReservationID = strings.ToUpper(strings.TrimSpace(req.ReservationID))
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Tel = strings.TrimSpace(req.Tel)
+	return req
+}
+
 func validateReservationRequest(req reservationCreateRequest) error {
 	if req.MovieID == "" || req.Screen == "" || req.Start == "" {
 		return validationError("上映回を指定してください。")
 	}
+	if exceedsRunes(req.Date, maxDateLabelRunes) || hasControlChars(req.Date) {
+		return validationError("鑑賞日を正しく指定してください。")
+	}
 	if req.Customer.Name == "" {
 		return validationError("購入者氏名を入力してください。")
 	}
-	if req.Customer.Email == "" {
-		return validationError("メールアドレスを入力してください。")
+	if req.Customer.NameKana == "" {
+		return validationError("購入者氏名（かな）を入力してください。")
+	}
+	if exceedsRunes(req.Customer.Name, maxPersonNameRunes) {
+		return validationError("購入者氏名は40文字以内で入力してください。")
+	}
+	if exceedsRunes(req.Customer.NameKana, maxPersonKanaRunes) {
+		return validationError("購入者氏名（かな）は60文字以内で入力してください。")
+	}
+	if hasControlChars(req.Customer.Name) || hasControlChars(req.Customer.NameKana) {
+		return validationError("購入者氏名を正しく入力してください。")
+	}
+	if !validEmailAddress(req.Customer.Email) {
+		return validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(req.Customer.Tel) {
 		return validationError("電話番号をハイフンなしで入力してください。")
+	}
+	if req.PaymentMethod == "" {
+		return validationError("支払方法を選択してください。")
+	}
+	if len(req.PaymentMethod) > maxPaymentMethodLength || hasControlChars(req.PaymentMethod) {
+		return validationError("支払方法を正しく指定してください。")
+	}
+	if req.CouponCode != "" {
+		if len(req.CouponCode) > maxCouponCodeLength || !couponCodePattern.MatchString(req.CouponCode) {
+			return validationError("クーポンコードを正しく入力してください。")
+		}
+	}
+	if len(req.Tickets) > maxTicketTypeCount {
+		return validationError("券種の指定数が多すぎます。")
+	}
+	for code, count := range req.Tickets {
+		if len(code) > 32 || hasControlChars(code) {
+			return validationError("券種を正しく指定してください。")
+		}
+		if count < 0 || count > 6 {
+			return validationError("券種の枚数を正しく指定してください。")
+		}
 	}
 	if len(req.Seats) == 0 {
 		return validationError("座席を選択してください。")
 	}
 	if len(req.Seats) > 6 {
 		return validationError("一度に予約できる座席は6席までです。")
+	}
+	for _, seat := range req.Seats {
+		if len(seat) > maxSeatCodeLength || hasControlChars(seat) {
+			return validationError("座席を正しく指定してください。")
+		}
+	}
+	return nil
+}
+
+func validateReservationLookupRequest(req reservationLookupRequest) error {
+	if req.ReservationID == "" || len(req.ReservationID) > 32 || hasControlChars(req.ReservationID) {
+		return validationError("予約番号を正しく入力してください。")
+	}
+	if !strings.HasPrefix(req.ReservationID, "R") {
+		return validationError("予約番号を正しく入力してください。")
+	}
+	if !validEmailAddress(req.Email) {
+		return validationError("メールアドレスを正しく入力してください。")
+	}
+	if !memberPhonePattern.MatchString(req.Tel) {
+		return validationError("電話番号をハイフン区切りで入力してください。")
 	}
 	return nil
 }
