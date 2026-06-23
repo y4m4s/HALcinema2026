@@ -17,12 +17,14 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
             field: 'name',
             value: state.customer.name,
             placeholder: '例）東急太郎',
+            maxlength: 40,
           })}
           ${renderCustomerRow({
             label: '氏名（かな）',
             field: 'nameKana',
             value: state.customer.nameKana,
             placeholder: '例）とうきゅうたろう',
+            maxlength: 60,
           })}
           <div class="customer-form-row">
             <div class="customer-label">
@@ -45,9 +47,9 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
               <strong>必須</strong>
             </div>
             <div class="customer-control">
-              <input type="email" value="${escapeAttr(state.customer.email)}" data-customer-field="email" placeholder="例）tokyu109cinemas@tokyu.109cinemas.net">
+              <input type="email" value="${escapeAttr(state.customer.email)}" data-customer-field="email" placeholder="例）tokyu109cinemas@tokyu.109cinemas.net" maxlength="254">
               <p>確認のためにもう一度入力してください。</p>
-              <input type="email" value="${escapeAttr(state.customer.emailConfirm)}" data-customer-field="emailConfirm" placeholder="">
+              <input type="email" value="${escapeAttr(state.customer.emailConfirm)}" data-customer-field="emailConfirm" placeholder="" maxlength="254">
             </div>
           </div>
         </div>
@@ -65,7 +67,7 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
   `
 }
 
-function renderCustomerRow({ label, field, value, placeholder }) {
+function renderCustomerRow({ label, field, value, placeholder, maxlength }) {
   return `
     <div class="customer-form-row">
       <div class="customer-label">
@@ -73,7 +75,7 @@ function renderCustomerRow({ label, field, value, placeholder }) {
         <strong>必須</strong>
       </div>
       <div class="customer-control">
-        <input type="text" value="${escapeAttr(value)}" data-customer-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}">
+        <input type="text" value="${escapeAttr(value)}" data-customer-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}" maxlength="${escapeAttr(maxlength)}">
       </div>
     </div>
   `

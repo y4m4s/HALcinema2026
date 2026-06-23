@@ -12,6 +12,7 @@ export function runTheater() {
   var elName = modal.querySelector('#screen-modal-name');
   var elNameEn = modal.querySelector('#screen-modal-name-en');
   var elContent = modal.querySelector('#screen-modal-content');
+  var activeButton = null;
 
   function populate(sourceCard) {
     var img = sourceCard.querySelector('.card-image img');
@@ -51,6 +52,9 @@ export function runTheater() {
   }
 
   function open(sourceCard) {
+    if (activeButton) activeButton.setAttribute('aria-expanded', 'false');
+    activeButton = sourceCard.querySelector('.card-cta');
+    if (activeButton) activeButton.setAttribute('aria-expanded', 'true');
     populate(sourceCard);
     modal.hidden = false;
     card.scrollTop = 0;
@@ -66,13 +70,14 @@ export function runTheater() {
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+    if (activeButton) activeButton.setAttribute('aria-expanded', 'false');
+    activeButton = null;
   }
 
-  document.querySelectorAll('.screen-card .card-cta').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
+  document.querySelectorAll('.screen-card').forEach(function (screenCard) {
+    screenCard.addEventListener('click', function (e) {
       e.preventDefault();
-      var c = btn.closest('.screen-card');
-      if (c) open(c);
+      open(screenCard);
     });
   });
 

@@ -103,9 +103,94 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 		t.Fatalf("Availability() reserved count = %d, want %d", len(availability.ReservedSeats), len(baseline.ReservedSeats)+1)
 	}
 
+	lookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "test@example.com",
+		Tel:           "090-1234-5678",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() error = %v", err)
+	}
+	if lookup.ReservationID != result.ReservationID || lookup.MovieTitle == "" || lookup.Payment.Amount != result.Amount {
+		t.Fatalf("Lookup() = %+v, want reservation details", lookup)
+	}
+	if !containsString(lookup.Seats, testSeat) {
+		t.Fatalf("Lookup() seats = %#v, want %s", lookup.Seats, testSeat)
+	}
+
+	_, err = store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "wrong@example.com",
+		Tel:           "090-1234-5678",
+	})
+	if !errors.Is(err, errReservationNotFound) {
+		t.Fatalf("Lookup() wrong email error = %v, want %v", err, errReservationNotFound)
+	}
+
 	_, err = store.Create(ctx, req, nil)
 	if !errors.Is(err, errSeatAlreadyReserved) {
 		t.Fatalf("duplicate Create() error = %v, want %v", err, errSeatAlreadyReserved)
+	}
+}
+
+func TestReservationStoreCreateMultipleSeats(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	ctx := context.Background()
+	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 3)
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         seats,
+		Tickets:       map[string]int{"adult": 2, "student": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Multi Seat User",
+			NameKana: "まるちしーとゆーざー",
+			Email:    "multi@example.com",
+			Tel:      "090-2345-6789",
+		},
+	}
+
+	result, err := store.Create(ctx, req, nil)
+	if err != nil {
+		t.Fatalf("Create() multiple seats error = %v", err)
+	}
+	if result.Amount != 6200 {
+		t.Fatalf("Create() amount = %d, want 6200", result.Amount)
+	}
+
+	lookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "multi@example.com",
+		Tel:           "090-2345-6789",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() multiple seats error = %v", err)
+	}
+	for _, seat := range seats {
+		if !containsString(lookup.Seats, seat) {
+			t.Fatalf("Lookup() seats = %#v, want %s", lookup.Seats, seat)
+		}
+	}
+	if len(lookup.Tickets) != 2 {
+		t.Fatalf("Lookup() tickets = %#v, want 2 ticket lines", lookup.Tickets)
 	}
 }
 
@@ -166,14 +251,61 @@ func TestReservationRoutesCreate(t *testing.T) {
 	if duplicate.Code != http.StatusConflict {
 		t.Fatalf("duplicate POST status = %d, body = %s", duplicate.Code, duplicate.Body.String())
 	}
+
+	tooLarge := performReservationRequest(router, `{"movieId":"`+strings.Repeat("1", int(maxAPIJSONBodyBytes))+`"}`)
+	if tooLarge.Code != http.StatusBadRequest {
+		t.Fatalf("oversized POST status = %d, body = %s", tooLarge.Code, tooLarge.Body.String())
+	}
+}
+
+func TestReservationStoreRejectsInputLimits(t *testing.T) {
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         []string{"A1"},
+		Tickets:       map[string]int{"adult": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Test User",
+			NameKana: "てすとゆーざー",
+			Email:    "test@example.com",
+			Tel:      "090-1234-5678",
+		},
+	}
+
+	oversizedName := normalizeReservationRequest(req)
+	oversizedName.Customer.Name = strings.Repeat("あ", maxPersonNameRunes+1)
+	if err := validateReservationRequest(oversizedName); !isValidationError(err) {
+		t.Fatalf("oversized customer name error = %v, want validationError", err)
+	}
+
+	badCoupon := normalizeReservationRequest(req)
+	badCoupon.CouponCode = "BAD<script>"
+	if err := validateReservationRequest(badCoupon); !isValidationError(err) {
+		t.Fatalf("bad coupon error = %v, want validationError", err)
+	}
+
+	badEmail := normalizeReservationRequest(req)
+	badEmail.Customer.Email = "Display Name <test@example.com>"
+	if err := validateReservationRequest(badEmail); !isValidationError(err) {
+		t.Fatalf("bad email error = %v, want validationError", err)
+	}
 }
 
 // firstFreeSeat returns a seat_code on the given schedule's screen that is not
 // yet reserved, so tests stay valid regardless of the randomized seed occupancy.
 func firstFreeSeat(t *testing.T, db *sql.DB, scheduleID string) string {
 	t.Helper()
-	var code string
-	err := db.QueryRow(
+	seats := firstFreeSeats(t, db, scheduleID, 1)
+	return seats[0]
+}
+
+func firstFreeSeats(t *testing.T, db *sql.DB, scheduleID string, count int) []string {
+	t.Helper()
+	rows, err := db.Query(
 		`SELECT s.seat_code
 		   FROM seats AS s
 		   JOIN schedules AS sch ON sch.screen_id = s.screen_id
@@ -183,13 +315,29 @@ func firstFreeSeat(t *testing.T, db *sql.DB, scheduleID string) string {
 		        SELECT rs.seat_id FROM reservation_seats AS rs WHERE rs.schedule_id = ?
 		    )
 		  ORDER BY s.id
-		  LIMIT 1`,
-		scheduleID, scheduleID,
-	).Scan(&code)
+		  LIMIT ?`,
+		scheduleID, scheduleID, count,
+	)
 	if err != nil {
-		t.Fatalf("firstFreeSeat(%q) error = %v", scheduleID, err)
+		t.Fatalf("firstFreeSeats(%q) error = %v", scheduleID, err)
 	}
-	return code
+	defer rows.Close()
+
+	seats := []string{}
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			t.Fatalf("firstFreeSeats(%q) scan error = %v", scheduleID, err)
+		}
+		seats = append(seats, code)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("firstFreeSeats(%q) rows error = %v", scheduleID, err)
+	}
+	if len(seats) != count {
+		t.Fatalf("firstFreeSeats(%q) returned %d seats, want %d", scheduleID, len(seats), count)
+	}
+	return seats
 }
 
 func containsString(values []string, target string) bool {

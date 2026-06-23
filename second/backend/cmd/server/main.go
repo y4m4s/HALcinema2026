@@ -75,6 +75,7 @@ func main() {
 				{Path: "/access", Title: "交通案内"},
 				{Path: "/tickets", Title: "料金案内"},
 				{Path: "/question", Title: "よくある質問"},
+				{Path: "/reservation", Title: "予約確認"},
 				{Path: "/contact", Title: "お問い合わせ"},
 				{Path: "/news", Title: "お知らせ"},
 			})
