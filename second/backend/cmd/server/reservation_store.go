@@ -201,7 +201,7 @@ func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]schedul
 	for rows.Next() {
 		var (
 			id, movieID, screenID, startAt, endAt string
-			capacity, reserved                     int
+			capacity, reserved                    int
 		)
 		if err := rows.Scan(&id, &movieID, &screenID, &startAt, &endAt, &capacity, &reserved); err != nil {
 			return nil, err
@@ -688,7 +688,7 @@ func validateReservationRequest(req reservationCreateRequest) error {
 		return validationError("メールアドレスを入力してください。")
 	}
 	if !memberPhonePattern.MatchString(req.Customer.Tel) {
-		return validationError("電話番号をハイフン区切りで入力してください。")
+		return validationError("電話番号をハイフンなしで入力してください。")
 	}
 	if len(req.Seats) == 0 {
 		return validationError("座席を選択してください。")

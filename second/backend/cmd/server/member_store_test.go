@@ -19,7 +19,7 @@ func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 		Name:         "Test User",
 		NameKana:     "test user",
 		Email:        "test@example.com",
-		Tel:          "090-1234-5678",
+		Tel:          "09012345678",
 		Password:     "password123",
 		MailMagazine: true,
 	}

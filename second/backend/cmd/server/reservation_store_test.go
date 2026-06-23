@@ -49,7 +49,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 			Name:     "Test User",
 			NameKana: "てすとゆーざー",
 			Email:    "test@example.com",
-			Tel:      "090-1234-5678",
+			Tel:      "09012345678",
 		},
 	}
 
@@ -145,7 +145,7 @@ func TestReservationRoutesCreate(t *testing.T) {
 			"name": "Test User",
 			"nameKana": "てすとゆーざー",
 			"email": "test@example.com",
-			"tel": "090-1234-5678"
+			"tel": "09012345678"
 		}
 	}`, freeSeat)
 

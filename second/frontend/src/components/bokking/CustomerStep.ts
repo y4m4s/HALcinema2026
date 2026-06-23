@@ -31,11 +31,12 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
             </div>
             <div class="customer-control">
               <div class="customer-tel-group">
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel1)}" data-customer-field="tel1" placeholder="例）012" maxlength="5">
-                <span>-</span>
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel2)}" data-customer-field="tel2" placeholder="例）345" maxlength="5">
-                <span>-</span>
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel3)}" data-customer-field="tel3" placeholder="例）6789" maxlength="5">
+                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel)}" data-customer-field="tel" placeholder="例）0123456789" maxlength="15">
+                <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel1)}" data-customer-field="tel1" placeholder="例）012" maxlength="5"> -->
+                <!-- <span>-</span> -->
+                <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel2)}" data-customer-field="tel2" placeholder="例）345" maxlength="5"> -->
+                <!-- <span>-</span> -->
+                <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel3)}" data-customer-field="tel3" placeholder="例）6789" maxlength="5"> -->
               </div>
             </div>
           </div>

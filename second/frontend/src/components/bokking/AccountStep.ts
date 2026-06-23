@@ -131,11 +131,12 @@ function renderRegisterPanel(state) {
       <label class="account-login-row">
         <span class="account-login-label">電話番号 <em>必須</em></span>
         <span class="account-register-tel customer-tel-group">
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel1 || '')}" data-register-field="tel1" placeholder="012" maxlength="5" ${loading ? 'disabled' : ''}>
-          <span>-</span>
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel2 || '')}" data-register-field="tel2" placeholder="345" maxlength="5" ${loading ? 'disabled' : ''}>
-          <span>-</span>
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel3 || '')}" data-register-field="tel3" placeholder="6789" maxlength="5" ${loading ? 'disabled' : ''}>
+          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel || '')}" data-register-field="tel" placeholder="0123456789" maxlength="15" ${loading ? 'disabled' : ''}>
+          <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel1 || '')}" data-register-field="tel1" placeholder="012" maxlength="5" ${loading ? 'disabled' : ''}> -->
+          <!-- <span>-</span> -->
+          <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel2 || '')}" data-register-field="tel2" placeholder="345" maxlength="5" ${loading ? 'disabled' : ''}> -->
+          <!-- <span>-</span> -->
+          <!-- <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel3 || '')}" data-register-field="tel3" placeholder="6789" maxlength="5" ${loading ? 'disabled' : ''}> -->
         </span>
       </label>
       ${renderRegisterRow({ label: 'メール', field: 'email', value: join.email, placeholder: 'example@hal-cinema.test', type: 'email', autocomplete: 'email', loading })}

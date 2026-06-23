@@ -550,7 +550,7 @@ export function runBooking() {
     return Boolean(
       name &&
       kana &&
-      /^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone) &&
+      /^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone) &&
       isValidEmail(email) &&
       email === emailConfirm
     )
@@ -760,8 +760,8 @@ export function runBooking() {
   }
 
   function getPhoneNumber() {
-    const parts = [state.customer.tel1, state.customer.tel2, state.customer.tel3].map(part => String(part || '').trim())
-    if (parts.every(Boolean)) return parts.join('-')
+    // const parts = [state.customer.tel1, state.customer.tel2, state.customer.tel3].map(part => String(part || '').trim())
+    // if (parts.every(Boolean)) return parts.join('-')
     return state.customer.tel.trim()
   }
 
@@ -830,7 +830,8 @@ export function runBooking() {
           name: state.join.name.trim(),
           nameKana: state.join.nameKana.trim(),
           email: state.join.email.trim(),
-          tel: getJoinPhoneNumber(),
+          // tel: getJoinPhoneNumber(),
+          tel: state.join.tel.trim(),
           password: state.join.password,
           mailMagazine: Boolean(state.join.mailMagazine),
         }),
@@ -917,7 +918,7 @@ export function runBooking() {
   }
 
   function fillCustomerFromMember(member) {
-    const telParts = splitPhoneNumber(member.tel)
+    // const telParts = splitPhoneNumber(member.tel)
     state.customer = {
       ...state.customer,
       name: member.name || '',
@@ -928,9 +929,9 @@ export function runBooking() {
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
-      tel1: telParts[0] || '',
-      tel2: telParts[1] || '',
-      tel3: telParts[2] || '',
+      // tel1: telParts[0] || '',
+      // tel2: telParts[1] || '',
+      // tel3: telParts[2] || '',
     }
   }
 
@@ -943,7 +944,8 @@ export function runBooking() {
 
   function getJoinValidationMessage() {
     const join = state.join
-    const phone = getJoinPhoneNumber()
+    // const phone = getJoinPhoneNumber()
+    const phone = String(join.tel || '').trim()
     const email = String(join.email || '').trim()
     const emailConfirm = String(join.emailConfirm || '').trim()
     const password = String(join.password || '')
@@ -951,7 +953,7 @@ export function runBooking() {
 
     if (!String(join.name || '').trim()) return '氏名を入力してください。'
     if (!String(join.nameKana || '').trim()) return '氏名（かな）を入力してください。'
-    if (!/^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone)) return '電話番号を3つの欄に分けて入力してください。'
+    if (!/^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone)) return '電話番号を入力してください。'
     if (!isValidEmail(email)) return 'メールアドレスを正しく入力してください。'
     if (email !== emailConfirm) return '確認用メールアドレスが一致していません。'
     if (password.length < 8) return 'パスワードは8文字以上で入力してください。'
@@ -960,12 +962,12 @@ export function runBooking() {
     return ''
   }
 
-  function getJoinPhoneNumber() {
-    return [state.join.tel1, state.join.tel2, state.join.tel3]
-      .map(part => String(part || '').trim())
-      .filter(Boolean)
-      .join('-')
-  }
+  // function getJoinPhoneNumber() {
+  //   return [state.join.tel1, state.join.tel2, state.join.tel3]
+  //     .map(part => String(part || '').trim())
+  //     .filter(Boolean)
+  //     .join('-')
+  // }
 
   function syncJoinStateFromDOM() {
     stepRoot.querySelectorAll('[data-register-field]').forEach((field) => {
@@ -1044,9 +1046,10 @@ function createJoinState() {
     nameKana: '',
     email: '',
     emailConfirm: '',
-    tel1: '',
-    tel2: '',
-    tel3: '',
+    tel: '',
+    // tel1: '',
+    // tel2: '',
+    // tel3: '',
     password: '',
     passwordConfirm: '',
     mailMagazine: false,
@@ -1056,7 +1059,7 @@ function createJoinState() {
 }
 
 function createCustomerState(member = null) {
-  const phoneParts = splitPhoneNumber(member?.tel || '')
+  // const phoneParts = splitPhoneNumber(member?.tel || '')
   return {
     name: member?.name || '',
     nameKana: member?.nameKana || '',
@@ -1066,9 +1069,9 @@ function createCustomerState(member = null) {
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
-    tel1: phoneParts[0] || '',
-    tel2: phoneParts[1] || '',
-    tel3: phoneParts[2] || '',
+    // tel1: phoneParts[0] || '',
+    // tel2: phoneParts[1] || '',
+    // tel3: phoneParts[2] || '',
     postal: '',
     request: '',
   }
@@ -1128,10 +1131,10 @@ function getRequestErrorMessage(error) {
   return error instanceof Error ? error.message : '通信に失敗しました。'
 }
 
-function splitPhoneNumber(value) {
-  const parts = String(value || '').split('-')
-  return parts.length === 3 ? parts : ['', '', '']
-}
+// function splitPhoneNumber(value) {
+//   const parts = String(value || '').split('-')
+//   return parts.length === 3 ? parts : ['', '', '']
+// }
 
 function resolveMovie(params) {
   const requestedId = Number(params.get('movie') || params.get('id'))
