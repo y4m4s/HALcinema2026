@@ -12,12 +12,14 @@
 }
 
 .reservation-shell {
-  width: min(1120px, calc(100% - 48px));
+  width: min(560px, calc(100% - 48px));
   margin: 0 auto 88px;
   display: grid;
-  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+}
+
+.reservation-shell.has-result .reservation-panel {
+  display: none;
 }
 
 .reservation-panel,
@@ -152,7 +154,7 @@
 
 @media (max-width: 920px) {
   .reservation-shell {
-    grid-template-columns: 1fr;
+    /* grid-template-columns: 1fr;  max-widthのため不要 */
   }
 }
 

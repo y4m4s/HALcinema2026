@@ -6,6 +6,7 @@ export function runReservation() {
   const form = document.getElementById('reservation-lookup-form')
   const resultRoot = document.getElementById('reservation-result')
   if (!form || !resultRoot) return
+  const shell = form.closest('.reservation-shell')
 
   form.addEventListener('input', function (event) {
     const target = event.target instanceof HTMLInputElement ? event.target : null
@@ -36,14 +37,22 @@ export function runReservation() {
     setLoading(true)
     resultRoot.innerHTML = ''
 
+
     try {
       const result = await requestJSON('/api/reservations/lookup', {
         method: 'POST',
         body: JSON.stringify({ reservationId, email, tel }),
       })
       renderReservation(result)
+      resultRoot.querySelector('[data-reservation-back]')?.addEventListener('click', () => {
+        resultRoot.innerHTML = ''
+        shell?.classList.remove('has-result')
+      })
+      shell?.classList.add('has-result')
+
     } catch (error) {
       renderError(error instanceof Error ? error.message : '予約情報の確認に失敗しました。')
+      shell?.classList.remove('has-result')
     } finally {
       setLoading(false)
     }
@@ -57,6 +66,7 @@ export function runReservation() {
 
     resultRoot.innerHTML = `
       <section class="reservation-detail-panel">
+        <button type="button" class="reservation-back" data-reservation-back>別の予約</button>
         <div class="reservation-detail-head">
           <div>
             <span>RESERVATION</span>
@@ -146,9 +156,8 @@ function dateLabel(value) {
 
 function normalizeTel(value) {
   return String(value || '')
-    .replace(/[^\d-]/g, '')
-    .replace(/-{2,}/g, '-')
-    .slice(0, 17)
+    .replace(/\D/g, '')
+    .slice(0, 15)
 }
 
 async function requestJSON(path, options = {}) {
