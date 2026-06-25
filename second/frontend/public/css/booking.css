@@ -1181,7 +1181,6 @@
 
 .customer-tel-group {
   display: grid;
-  grid-template-columns: minmax(90px, 140px) auto minmax(90px, 140px) auto minmax(90px, 140px);
   gap: 16px;
   align-items: center;
 }

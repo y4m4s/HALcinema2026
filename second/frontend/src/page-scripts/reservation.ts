@@ -66,14 +66,16 @@ export function runReservation() {
 
     resultRoot.innerHTML = `
       <section class="reservation-detail-panel">
-        <button type="button" class="reservation-back" data-reservation-back>別の予約</button>
         <div class="reservation-detail-head">
           <div>
             <span>RESERVATION</span>
             <h2>${escapeHtml(reservation.movieTitle || '-')}</h2>
           </div>
-          <strong>${escapeHtml(statusLabel(reservation.status))}</strong>
-        </div>
+          <div class="reservation-detail-actions">
+            <button type="button" class="reservation-back btn-ghost" data-reservation-back>別の予約を確認する</button>
+            <strong>${escapeHtml(statusLabel(reservation.status))}</strong>
+          </div>
+          </div>
         <div class="review-grid reservation-review-grid">
           ${reviewItem('予約番号', reservation.reservationId)}
           ${reviewItem('上映日時', `${dateLabel(reservation.date)} ${reservation.start || ''} - ${reservation.end || ''}`)}
