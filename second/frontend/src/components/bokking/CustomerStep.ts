@@ -49,7 +49,7 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep, errors = 
             <div class="customer-control">
               <input type="email" value="${escapeAttr(state.customer.email)}" data-customer-field="email" placeholder="例）halcinema@example.com" maxlength="254">
               <p class="customer-field-error" data-customer-error="email">${errors.email ? escapeHtml(errors.email) : ''}</p>
-              <p>確認のためにもう一度入力してください。</p>
+              <p class="customer-field-note">確認のためにもう一度入力してください。</p>
               <input type="email" value="${escapeAttr(state.customer.emailConfirm)}" data-customer-field="emailConfirm" placeholder="例）halcinema@example.com" maxlength="254">
               <p class="customer-field-error" data-customer-error="emailConfirm">${errors.emailConfirm ? escapeHtml(errors.emailConfirm) : ''}</p>
             </div>

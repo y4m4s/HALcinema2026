@@ -1217,14 +1217,14 @@
 }
 
 .customer-field-note {
-  color: var(--text3);
+  color: #ff4a4a;
   font-size: 12px;
   line-height: 1.6;
   margin: 4px 0 0;
 }
 
 .customer-field-error {
-  color: #ffb1a6;
+  color: #ff4a4a;
   font-size: 12px;
   line-height: 1.6;
   margin: 4px 0 0;
