@@ -492,7 +492,7 @@ func exceedsRunes(value string, max int) bool {
 
 func hasControlChars(value string) bool {
 	for _, char := range value {
-		if char < 0x20 || char == 0x7f {
+		if char < 0x20 || (char >= 0x7f && char <= 0x9f) {
 			return true
 		}
 	}

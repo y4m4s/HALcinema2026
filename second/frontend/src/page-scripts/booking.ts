@@ -248,6 +248,7 @@ export function runBooking() {
       state.customer[fieldName] = nextValue
       syncCustomerDerivedValues()
       syncCurrentStepAction()
+      syncCustomerErrors()
       return
     }
 
@@ -336,6 +337,7 @@ export function runBooking() {
 
   function getNextStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'account' && state.account === 'member') {
+      if (!state.customer.tel.trim()) return getStepIndex('customer')
       return getStepIndex('payment')
     }
     return Math.min(state.currentStep + 1, FLOW_STEPS.length - 1)
@@ -343,6 +345,7 @@ export function runBooking() {
 
   function getPreviousStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'payment' && state.account === 'member') {
+      if (!state.member?.tel) return getStepIndex('customer')
       return getStepIndex('account')
     }
     return Math.max(0, state.currentStep - 1)
@@ -435,7 +438,7 @@ export function runBooking() {
         canLogin: isLoginValid(),
       })
     }
-    if (id === 'customer') stepRoot.innerHTML = CustomerStep(shared)
+    if (id === 'customer') stepRoot.innerHTML = CustomerStep({ ...shared, errors: getCustomerErrors() })
     if (id === 'tickets') {
       stepRoot.innerHTML = TicketsStep({
         ...shared,
@@ -595,6 +598,23 @@ export function runBooking() {
       isValidEmail(email) &&
       email === emailConfirm
     )
+  }
+
+  function getCustomerErrors() {
+    const errors = {}
+    const c = state.customer
+    const name = c.name.trim()
+    const kana = c.nameKana.trim()
+    const phone = getPhoneNumber()
+    const email = c.email.trim()
+    const emailConfirm = c.emailConfirm.trim()
+    if (name && !isWithinMax(name, INPUT_LIMITS.name)) errors.name = '40文字以内で入力してください。'
+    if (kana && !isWithinMax(kana, INPUT_LIMITS.nameKana)) errors.nameKana = '60文字以内で入力してください。'
+    if (phone && !/^[0-9]{10,11}$/.test(phone)) errors.tel = '10〜11桁の数字で入力してください。'
+    if (email && !isValidEmail(email)) errors.email = 'メールアドレスの形式が正しくありません。'
+    if (email && !isWithinMax(email, INPUT_LIMITS.email)) errors.email = '254文字以内で入力してください。'
+    if (emailConfirm && email && email !== emailConfirm) errors.emailConfirm = 'メールアドレスが一致していません。'
+    return errors
   }
 
   function applyCoupon() {
@@ -814,6 +834,14 @@ export function runBooking() {
   function syncCurrentStepAction() {
     const nextButton = stepRoot.querySelector('[data-action="next"]')
     if (nextButton) nextButton.disabled = !canProceed()
+  }
+
+  function syncCustomerErrors() {
+    const errors = getCustomerErrors()
+    stepRoot.querySelectorAll('[data-customer-error]').forEach(el => {
+      const field = el.dataset.customerError
+      el.textContent = errors[field] || ''
+    })
   }
 
   function syncAccountActions() {
@@ -1097,8 +1125,6 @@ function createCustomerState(member = null) {
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
-    postal: '',
-    request: '',
   }
 }
 
@@ -1301,7 +1327,7 @@ function isWithinMax(value, maxLength) {
 }
 
 function stripControlChars(value) {
-  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '')
+  return String(value || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
 }
 
 function isValidEmail(value) {
