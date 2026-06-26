@@ -12,7 +12,11 @@ export function runReservation() {
     const target = event.target instanceof HTMLInputElement ? event.target : null
     if (!target) return
     if (target.name === 'reservationId') {
-      target.value = target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32)
+      let v = target.value.toUpperCase().replace(/[^R0-9]/g, '')
+      const rCount = (v.match(/R/g) || []).length
+      if (rCount > 1) v = 'R' + v.replace(/R/g, '')
+      if (v.length > 0 && !v.startsWith('R')) v = 'R' + v.replace(/R/g, '')
+      target.value = v.slice(0, 11)
     }
     if (target.name === 'email') {
       target.value = target.value.trim().slice(0, 254)

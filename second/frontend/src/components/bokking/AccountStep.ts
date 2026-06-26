@@ -131,7 +131,7 @@ function renderRegisterPanel(state) {
       <label class="account-login-row">
         <span class="account-login-label">電話番号 <em>必須</em></span>
         <span class="account-register-tel customer-tel-group">
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel || '')}" data-register-field="tel" placeholder="0123456789" maxlength="15" ${loading ? 'disabled' : ''}>
+          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel || '')}" data-register-field="tel" placeholder="例）09012345678（ハイフンなし）" maxlength="15" ${loading ? 'disabled' : ''}>
         </span>
       </label>
       ${renderRegisterRow({ label: 'メール', field: 'email', value: join.email, placeholder: 'example@hal-cinema.test', type: 'email', autocomplete: 'email', loading })}
@@ -164,6 +164,7 @@ function renderRegisterRow({ label, field, value, placeholder, type = 'text', au
 function getRegisterFieldMaxlength(field) {
   if (field === 'name') return 40
   if (field === 'nameKana') return 60
+  if (field === 'tel') return 15
   if (field === 'email' || field === 'emailConfirm') return 254
   if (field === 'password' || field === 'passwordConfirm') return 128
   return 100
