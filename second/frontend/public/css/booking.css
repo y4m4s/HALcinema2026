@@ -1209,6 +1209,26 @@
   color: #d4a800;
 }
 
+.customer-field-note {
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+}
+
+.customer-field-error {
+  color: #ffb1a6;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+  min-height: 0;
+  transition: opacity 0.2s;
+}
+
+.customer-field-error:empty {
+  display: none;
+}
+
 .customer-grid input,
 .booking-field-wide textarea,
 .coupon-box input {

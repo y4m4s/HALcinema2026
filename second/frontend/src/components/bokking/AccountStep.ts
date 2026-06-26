@@ -164,6 +164,7 @@ function renderRegisterRow({ label, field, value, placeholder, type = 'text', au
 function getRegisterFieldMaxlength(field) {
   if (field === 'name') return 40
   if (field === 'nameKana') return 60
+  if (field === 'tel') return 15
   if (field === 'email' || field === 'emailConfirm') return 254
   if (field === 'password' || field === 'passwordConfirm') return 128
   return 100
