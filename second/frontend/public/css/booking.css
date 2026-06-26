@@ -1179,15 +1179,8 @@
   color: var(--text3);
 }
 
-.customer-tel-group {
-  display: grid;
-  gap: 16px;
-  align-items: center;
-}
-
-.customer-tel-group span {
+.customer-control input[type="tel"] {
   color: var(--text2);
-  text-align: center;
 }
 
 .customer-mail-row {

@@ -31,10 +31,8 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
               <span>電話番号</span>
               <strong>必須</strong>
             </div>
-            <div class="customer-control">
-              <div class="customer-tel-group">
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel)}" data-customer-field="tel" placeholder="例）0123456789" maxlength="15">
-              </div>
+            <div class="customer-control">  
+              <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel)}" data-customer-field="tel" placeholder="例）0123456789" maxlength="15">
             </div>
           </div>
           <div class="customer-form-row customer-mail-row">
