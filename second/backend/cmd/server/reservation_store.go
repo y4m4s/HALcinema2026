@@ -23,6 +23,8 @@ var (
 	errReservationNotFound      = errors.New("reservation not found")
 )
 
+const reservationSeatHoldDuration = 30 * time.Minute
+
 type reservationStore struct {
 	db *sql.DB
 }
@@ -173,7 +175,25 @@ func (s *reservationStore) init(ctx context.Context) error {
 		}
 	}
 
-	return s.migrateCouponCodeFormat(ctx)
+	if err := s.migrateCouponCodeFormat(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateScheduleDateTimeFormat(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateSeatAttributes(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateReservationDetails(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateReservationDeadlines(ctx); err != nil {
+		return err
+	}
+	if err := s.migratePaymentIDs(ctx); err != nil {
+		return err
+	}
+	return s.expireStaleSeatHolds(ctx, time.Now().UTC().Format(time.RFC3339))
 }
 
 func (s *reservationStore) migrateCouponCodeFormat(ctx context.Context) error {
@@ -196,7 +216,7 @@ func (s *reservationStore) migrateCouponCodeFormat(ctx context.Context) error {
 		ctx,
 		`UPDATE coupons
 		    SET code = 'GROUP200',
-		        updated_at = datetime('now')
+		        updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 		  WHERE code = 'GRUP200'
 		    AND NOT EXISTS (SELECT 1 FROM coupons WHERE code = 'GROUP200')`,
 	)
@@ -233,8 +253,8 @@ func (s *reservationStore) rebuildCouponsForFlexibleCodes(ctx context.Context) e
 			                         ),
 			discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
 			is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-			created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-			updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+			created_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+			updated_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		)`,
 		`INSERT INTO coupons_new
 			(id, code, discount_amount, is_active, created_at, updated_at)
@@ -257,9 +277,366 @@ func (s *reservationStore) rebuildCouponsForFlexibleCodes(ctx context.Context) e
 	return tx.Commit()
 }
 
+func (s *reservationStore) migrateScheduleDateTimeFormat(ctx context.Context) error {
+	_, err := s.db.ExecContext(
+		ctx,
+		`UPDATE schedules
+		    SET start_at = CASE
+		            WHEN substr(start_at, 11, 1) = ' ' AND length(start_at) = 16
+		                THEN substr(start_at, 1, 10) || 'T' || substr(start_at, 12, 5) || ':00+09:00'
+		            WHEN substr(start_at, 11, 1) = ' ' AND length(start_at) = 19
+		                THEN substr(start_at, 1, 10) || 'T' || substr(start_at, 12, 8) || '+09:00'
+		            ELSE start_at
+		        END,
+		        end_at = CASE
+		            WHEN substr(end_at, 11, 1) = ' ' AND length(end_at) = 16
+		                THEN substr(end_at, 1, 10) || 'T' || substr(end_at, 12, 5) || ':00+09:00'
+		            WHEN substr(end_at, 11, 1) = ' ' AND length(end_at) = 19
+		                THEN substr(end_at, 1, 10) || 'T' || substr(end_at, 12, 8) || '+09:00'
+		            ELSE end_at
+		        END
+		  WHERE substr(start_at, 11, 1) = ' '
+		     OR substr(end_at, 11, 1) = ' '`,
+	)
+	return err
+}
+
+func (s *reservationStore) migrateSeatAttributes(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "seats")
+	if err != nil {
+		return err
+	}
+
+	statements := []string{}
+	if !columns["row_label"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN row_label TEXT NOT NULL DEFAULT ''`)
+	}
+	if !columns["col_no"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN col_no INTEGER NOT NULL DEFAULT 0`)
+	}
+	if !columns["seat_type"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN seat_type TEXT NOT NULL DEFAULT 'standard'`)
+	}
+	if !columns["is_wheelchair"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_wheelchair INTEGER NOT NULL DEFAULT 0`)
+	}
+	if !columns["is_premium"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0`)
+	}
+	if !columns["is_aisle"] {
+		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_aisle INTEGER NOT NULL DEFAULT 0`)
+	}
+
+	for _, statement := range statements {
+		if _, err := s.db.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE seats
+		    SET row_label = CASE WHEN row_label = '' THEN upper(substr(seat_code, 1, 1)) ELSE row_label END,
+		        col_no = CASE WHEN col_no <= 0 THEN CAST(substr(seat_code, 2) AS INTEGER) ELSE col_no END,
+		        is_aisle = CASE
+		            WHEN is_aisle = 0 AND (CAST(substr(seat_code, 2) AS INTEGER) = 1) THEN 1
+		            ELSE is_aisle
+		        END
+		  WHERE row_label = ''
+		     OR col_no <= 0`,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_seats_screen_row_col ON seats(screen_id, row_label, col_no)`)
+	return err
+}
+
+func (s *reservationStore) migrateReservationDetails(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "reservation_details")
+	if err != nil {
+		return err
+	}
+
+	statements := []string{}
+	if !columns["quantity"] {
+		statements = append(statements, `ALTER TABLE reservation_details ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1`)
+	}
+	if !columns["unit_price"] {
+		statements = append(statements, `ALTER TABLE reservation_details ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0`)
+	}
+	if !columns["subtotal"] {
+		statements = append(statements, `ALTER TABLE reservation_details ADD COLUMN subtotal INTEGER NOT NULL DEFAULT 0`)
+	}
+	for _, statement := range statements {
+		if _, err := s.db.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE reservation_details
+		    SET quantity = COALESCE((
+		            SELECT CASE
+		                WHEN COUNT(rs.seat_id) / CASE WHEN tt.required_seat_count > 0 THEN tt.required_seat_count ELSE 1 END > 0
+		                    THEN COUNT(rs.seat_id) / CASE WHEN tt.required_seat_count > 0 THEN tt.required_seat_count ELSE 1 END
+		                ELSE 1
+		            END
+		              FROM ticket_types AS tt
+		              LEFT JOIN reservation_seats AS rs ON rs.reservation_detail_id = reservation_details.id
+		             WHERE tt.id = reservation_details.ticket_type_id
+		             GROUP BY tt.required_seat_count
+		        ), quantity)
+		  WHERE quantity <= 1`,
+	)
+	if err != nil {
+		return err
+	}
+
+	if columns["price"] {
+		if _, err := s.db.ExecContext(ctx, `UPDATE reservation_details SET subtotal = price WHERE subtotal = 0 AND price >= 0`); err != nil {
+			return err
+		}
+	}
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE reservation_details
+		    SET unit_price = CASE WHEN quantity > 0 THEN subtotal / quantity ELSE subtotal END
+		  WHERE unit_price = 0
+		    AND subtotal > 0`,
+	)
+	return err
+}
+
+func (s *reservationStore) migrateReservationDeadlines(ctx context.Context) error {
+	reservationColumns, err := s.tableColumns(ctx, "reservations")
+	if err != nil {
+		return err
+	}
+	if !reservationColumns["seat_hold_expires_at"] {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE reservations ADD COLUMN seat_hold_expires_at TEXT`); err != nil {
+			return err
+		}
+	}
+
+	paymentColumns, err := s.tableColumns(ctx, "payments")
+	if err != nil {
+		return err
+	}
+	if !paymentColumns["payment_due_at"] {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE payments ADD COLUMN payment_due_at TEXT`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := s.db.ExecContext(
+		ctx,
+		`UPDATE reservations
+		    SET seat_hold_expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', reserved_at, '+30 minutes')
+		  WHERE status = 'pending'
+		    AND (seat_hold_expires_at IS NULL OR seat_hold_expires_at = '')`,
+	); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(
+		ctx,
+		`UPDATE payments
+		    SET payment_due_at = (
+		            SELECT r.seat_hold_expires_at
+		              FROM reservations AS r
+		             WHERE r.id = payments.reservation_id
+		        )
+		  WHERE status = 'unpaid'
+		    AND (payment_due_at IS NULL OR payment_due_at = '')`,
+	); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_reservations_status_hold_expires_at ON reservations(status, seat_hold_expires_at)`)
+	return err
+}
+
+func (s *reservationStore) migratePaymentIDs(ctx context.Context) error {
+	tableSQL, err := s.tableSQL(ctx, "payments")
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(tableSQL, "GLOB 'P[0-9][0-9][0-9]'") {
+		return nil
+	}
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return err
+	}
+	defer conn.ExecContext(context.Background(), `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	statements := []string{
+		`DROP TABLE IF EXISTS payments_new`,
+		`CREATE TABLE payments_new (
+			id                 TEXT    PRIMARY KEY,
+			reservation_id     TEXT    NOT NULL REFERENCES reservations(id) ON DELETE RESTRICT,
+			payment_method_id  TEXT    NOT NULL REFERENCES payment_methods(id) ON DELETE RESTRICT,
+			amount             INTEGER NOT NULL CHECK (amount >= 0),
+			status             TEXT    NOT NULL DEFAULT 'unpaid'
+			                        CHECK (status IN ('unpaid', 'paid', 'failed', 'refunded', 'cancelled')),
+			paid_at            TEXT,
+			payment_due_at     TEXT,
+			created_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+			updated_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+			CHECK (id GLOB 'P[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+		)`,
+		`INSERT INTO payments_new
+			(id, reservation_id, payment_method_id, amount, status, paid_at, payment_due_at, created_at, updated_at)
+		 SELECT CASE
+		            WHEN id GLOB 'P[0-9][0-9][0-9]' THEN 'P' || printf('%010d', CAST(substr(id, 2) AS INTEGER))
+		            ELSE id
+		        END,
+		        reservation_id,
+		        payment_method_id,
+		        amount,
+		        status,
+		        paid_at,
+		        payment_due_at,
+		        created_at,
+		        updated_at
+		   FROM payments`,
+		`DROP TABLE payments`,
+		`ALTER TABLE payments_new RENAME TO payments`,
+		`CREATE INDEX IF NOT EXISTS idx_payments_reservation_id ON payments(reservation_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (s *reservationStore) tableSQL(ctx context.Context, table string) (string, error) {
+	var tableSQL string
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`,
+		table,
+	).Scan(&tableSQL)
+	return tableSQL, err
+}
+
+func (s *reservationStore) tableColumns(ctx context.Context, table string) (map[string]bool, error) {
+	rows, err := s.db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns := map[string]bool{}
+	for rows.Next() {
+		var (
+			cid        int
+			name       string
+			columnType string
+			notNull    int
+			defaultVal sql.NullString
+			pk         int
+		)
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultVal, &pk); err != nil {
+			return nil, err
+		}
+		columns[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return columns, nil
+}
+
+func (s *reservationStore) expireStaleSeatHolds(ctx context.Context, now string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := expireStaleSeatHoldsTx(ctx, tx, now); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func expireStaleSeatHoldsTx(ctx context.Context, tx *sql.Tx, now string) error {
+	_, err := tx.ExecContext(
+		ctx,
+		`DELETE FROM reservation_seats
+		  WHERE reservation_detail_id IN (
+		      SELECT rd.id
+		        FROM reservation_details AS rd
+		        JOIN reservations AS r ON r.id = rd.reservation_id
+		       WHERE r.status = 'pending'
+		         AND r.seat_hold_expires_at IS NOT NULL
+		         AND r.seat_hold_expires_at <= ?
+		  )`,
+		now,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		`UPDATE payments
+		    SET status = 'cancelled',
+		        updated_at = ?
+		  WHERE status = 'unpaid'
+		    AND reservation_id IN (
+		        SELECT id
+		          FROM reservations
+		         WHERE status = 'pending'
+		           AND seat_hold_expires_at IS NOT NULL
+		           AND seat_hold_expires_at <= ?
+		    )`,
+		now,
+		now,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		`UPDATE reservations
+		    SET status = 'expired',
+		        updated_at = ?
+		  WHERE status = 'pending'
+		    AND seat_hold_expires_at IS NOT NULL
+		    AND seat_hold_expires_at <= ?`,
+		now,
+		now,
+	)
+	return err
+}
+
 func (s *reservationStore) Availability(ctx context.Context, req reservationCreateRequest) (reservationAvailabilityResponse, error) {
 	showtime, err := s.resolveShowtime(ctx, req)
 	if err != nil {
+		return reservationAvailabilityResponse{}, err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	if err := s.expireStaleSeatHolds(ctx, now); err != nil {
 		return reservationAvailabilityResponse{}, err
 	}
 
@@ -271,9 +648,13 @@ func (s *reservationStore) Availability(ctx context.Context, req reservationCrea
 		   JOIN reservation_details AS rd ON rd.id = rs.reservation_detail_id
 		   JOIN reservations AS r ON r.id = rd.reservation_id
 		  WHERE rs.schedule_id = ?
-		    AND r.status IN ('pending', 'confirmed', 'used')
+		    AND (
+		        r.status IN ('confirmed', 'used')
+		        OR (r.status = 'pending' AND r.seat_hold_expires_at > ?)
+		    )
 		  ORDER BY st.seat_code`,
 		showtime.id,
+		now,
 	)
 	if err != nil {
 		return reservationAvailabilityResponse{}, err
@@ -301,20 +682,31 @@ func (s *reservationStore) Availability(ctx context.Context, req reservationCrea
 // SchedulesAvailability returns the seat occupancy of every showtime so the
 // schedule page can display 余裕あり / 残りわずか / 販売終了 from live data.
 func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]scheduleAvailabilityItem, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	if err := s.expireStaleSeatHolds(ctx, now); err != nil {
+		return nil, err
+	}
+
 	rows, err := s.db.QueryContext(
 		ctx,
 		`SELECT sch.id, sch.movie_id, sch.screen_id, sch.start_at, sch.end_at,
-		        st.capacity,
+		        (SELECT COUNT(*)
+		           FROM seats AS seat
+		          WHERE seat.screen_id = sch.screen_id
+		            AND seat.is_active = 1) AS capacity,
 		        (SELECT COUNT(*)
 		           FROM reservation_seats AS rs
 		           JOIN reservation_details AS rd ON rd.id = rs.reservation_detail_id
 		           JOIN reservations AS r ON r.id = rd.reservation_id
 		          WHERE rs.schedule_id = sch.id
-		            AND r.status IN ('pending', 'confirmed', 'used')) AS reserved
+		            AND (
+		                r.status IN ('confirmed', 'used')
+		                OR (r.status = 'pending' AND r.seat_hold_expires_at > ?)
+		            )) AS reserved
 		   FROM schedules AS sch
 		   JOIN screens AS scr ON scr.id = sch.screen_id
-		   JOIN screen_types AS st ON st.id = scr.screen_type_id
 		  ORDER BY sch.start_at, sch.id`,
+		now,
 	)
 	if err != nil {
 		return nil, err
@@ -400,6 +792,10 @@ func dateFromTimestamp(value string) string {
 func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequest) (reservationLookupResponse, error) {
 	req = normalizeReservationLookupRequest(req)
 	if err := validateReservationLookupRequest(req); err != nil {
+		return reservationLookupResponse{}, err
+	}
+
+	if err := s.expireStaleSeatHolds(ctx, time.Now().UTC().Format(time.RFC3339)); err != nil {
 		return reservationLookupResponse{}, err
 	}
 
@@ -506,12 +902,10 @@ func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservation
 func (s *reservationStore) reservationTickets(ctx context.Context, reservationID string) ([]reservationLookupTicket, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
-		`SELECT tt.code, tt.name, rd.price, tt.required_seat_count, COUNT(rs.seat_id)
+		`SELECT tt.code, tt.name, rd.quantity, rd.subtotal
 		   FROM reservation_details AS rd
 		   JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
-		   LEFT JOIN reservation_seats AS rs ON rs.reservation_detail_id = rd.id
 		  WHERE rd.reservation_id = ?
-		  GROUP BY rd.id, tt.code, tt.name, rd.price, tt.required_seat_count, tt.display_order
 		  ORDER BY tt.display_order, rd.id`,
 		reservationID,
 	)
@@ -523,14 +917,9 @@ func (s *reservationStore) reservationTickets(ctx context.Context, reservationID
 	tickets := []reservationLookupTicket{}
 	for rows.Next() {
 		var ticket reservationLookupTicket
-		var requiredSeatCount, seatCount int
-		if err := rows.Scan(&ticket.Code, &ticket.Name, &ticket.Price, &requiredSeatCount, &seatCount); err != nil {
+		if err := rows.Scan(&ticket.Code, &ticket.Name, &ticket.Count, &ticket.Price); err != nil {
 			return nil, err
 		}
-		if requiredSeatCount <= 0 {
-			requiredSeatCount = 1
-		}
-		ticket.Count = seatCount / requiredSeatCount
 		if ticket.Count <= 0 {
 			ticket.Count = 1
 		}
@@ -594,7 +983,13 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 	}
 	defer tx.Rollback()
 
-	if err := ensureSeatsAvailable(ctx, tx, showtime.id, seats); err != nil {
+	nowTime := time.Now().UTC()
+	now := nowTime.Format(time.RFC3339)
+	if err := expireStaleSeatHoldsTx(ctx, tx, now); err != nil {
+		return reservationCreateResponse{}, err
+	}
+
+	if err := ensureSeatsAvailable(ctx, tx, showtime.id, seats, now); err != nil {
 		return reservationCreateResponse{}, err
 	}
 
@@ -621,18 +1016,19 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		}
 	}
 
-	now := time.Now().UTC().Format(time.RFC3339)
 	status := "confirmed"
+	var seatHoldExpiresAt any = nil
 	if req.PaymentMethod == "konbini" {
 		status = "pending"
+		seatHoldExpiresAt = nowTime.Add(reservationSeatHoldDuration).Format(time.RFC3339)
 	}
 
 	_, err = tx.ExecContext(
 		ctx,
 		`INSERT INTO reservations
 			(id, schedule_id, member_id, coupon_id, customer_name, customer_name_kana,
-			 customer_email, customer_tel, status, reserved_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 customer_email, customer_tel, status, reserved_at, seat_hold_expires_at, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		reservationID,
 		showtime.id,
 		memberID,
@@ -643,6 +1039,7 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		customer.Tel,
 		status,
 		now,
+		seatHoldExpiresAt,
 		now,
 		now,
 	)
@@ -663,11 +1060,13 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		_, err = tx.ExecContext(
 			ctx,
 			`INSERT INTO reservation_details
-				(id, reservation_id, ticket_type_id, price, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?)`,
+				(id, reservation_id, ticket_type_id, quantity, unit_price, subtotal, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			detailID,
 			reservationID,
 			ticket.id,
+			ticket.count,
+			effectiveTicketPrice(ticket.code, ticket.price, req.Date),
 			effectiveTicketPrice(ticket.code, ticket.price, req.Date)*ticket.count,
 			now,
 			now,
@@ -696,27 +1095,30 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		}
 	}
 
-	paymentID, err := createNumericID(ctx, tx, "payments", "P", 3)
+	paymentID, err := createNumericID(ctx, tx, "payments", "P", 10)
 	if err != nil {
 		return reservationCreateResponse{}, err
 	}
 	paymentStatus := "paid"
 	var paidAt any = now
+	var paymentDueAt any = nil
 	if req.PaymentMethod == "konbini" {
 		paymentStatus = "unpaid"
 		paidAt = nil
+		paymentDueAt = seatHoldExpiresAt
 	}
 	_, err = tx.ExecContext(
 		ctx,
 		`INSERT INTO payments
-			(id, reservation_id, payment_method_id, amount, status, paid_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, reservation_id, payment_method_id, amount, status, paid_at, payment_due_at, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		paymentID,
 		reservationID,
 		paymentMethodID,
 		total,
 		paymentStatus,
 		paidAt,
+		paymentDueAt,
 		now,
 		now,
 	)
@@ -901,7 +1303,7 @@ func (s *reservationStore) resolveCoupon(ctx context.Context, code string, start
 	return id, discount, nil
 }
 
-func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID string, seats []resolvedSeat) error {
+func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID string, seats []resolvedSeat, now string) error {
 	for _, seat := range seats {
 		var code string
 		err := tx.QueryRowContext(
@@ -913,10 +1315,14 @@ func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID string, se
 			   JOIN reservations AS r ON r.id = rd.reservation_id
 			  WHERE rs.schedule_id = ?
 			    AND rs.seat_id = ?
-			    AND r.status IN ('pending', 'confirmed', 'used')
+			    AND (
+			        r.status IN ('confirmed', 'used')
+			        OR (r.status = 'pending' AND r.seat_hold_expires_at > ?)
+			    )
 			  LIMIT 1`,
 			scheduleID,
 			seat.id,
+			now,
 		).Scan(&code)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
