@@ -39,7 +39,7 @@ var (
 	errDuplicateEmail     = errors.New("duplicate email")
 	errInvalidCredentials = errors.New("invalid credentials")
 	errUnauthorized       = errors.New("unauthorized")
-	memberPhonePattern    = regexp.MustCompile(`^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$`)
+	memberPhonePattern    = regexp.MustCompile(`^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$`)
 	couponCodePattern     = regexp.MustCompile(`^[A-Z0-9_-]+$`)
 )
 
@@ -436,7 +436,7 @@ func normalizeRegisterRequest(req memberRegisterRequest) (memberRegisterRequest,
 		return normalized, validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(normalized.Tel) {
-		return normalized, validationError("電話番号をハイフン区切りで入力してください。")
+		return normalized, validationError("電話番号をハイフンなしで入力してください。")
 	}
 	if len([]rune(normalized.Password)) < 8 {
 		return normalized, validationError("パスワードは8文字以上で入力してください。")

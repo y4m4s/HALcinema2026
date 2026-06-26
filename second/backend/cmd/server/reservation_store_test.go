@@ -49,7 +49,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 			Name:     "Test User",
 			NameKana: "てすとゆーざー",
 			Email:    "test@example.com",
-			Tel:      "090-1234-5678",
+			Tel:      "09012345678",
 		},
 	}
 
@@ -106,7 +106,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	lookup, err := store.Lookup(ctx, reservationLookupRequest{
 		ReservationID: result.ReservationID,
 		Email:         "test@example.com",
-		Tel:           "090-1234-5678",
+		Tel:           "09012345678",
 	})
 	if err != nil {
 		t.Fatalf("Lookup() error = %v", err)
@@ -121,7 +121,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	_, err = store.Lookup(ctx, reservationLookupRequest{
 		ReservationID: result.ReservationID,
 		Email:         "wrong@example.com",
-		Tel:           "090-1234-5678",
+		Tel:           "09012345678",
 	})
 	if !errors.Is(err, errReservationNotFound) {
 		t.Fatalf("Lookup() wrong email error = %v, want %v", err, errReservationNotFound)
@@ -164,7 +164,7 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 			Name:     "Multi Seat User",
 			NameKana: "まるちしーとゆーざー",
 			Email:    "multi@example.com",
-			Tel:      "090-2345-6789",
+			Tel:      "09023456789",
 		},
 	}
 
@@ -179,7 +179,7 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 	lookup, err := store.Lookup(ctx, reservationLookupRequest{
 		ReservationID: result.ReservationID,
 		Email:         "multi@example.com",
-		Tel:           "090-2345-6789",
+		Tel:           "09023456789",
 	})
 	if err != nil {
 		t.Fatalf("Lookup() multiple seats error = %v", err)
@@ -230,7 +230,7 @@ func TestReservationRoutesCreate(t *testing.T) {
 			"name": "Test User",
 			"nameKana": "てすとゆーざー",
 			"email": "test@example.com",
-			"tel": "090-1234-5678"
+			"tel": "09012345678"
 		}
 	}`, freeSeat)
 
@@ -272,7 +272,7 @@ func TestReservationStoreRejectsInputLimits(t *testing.T) {
 			Name:     "Test User",
 			NameKana: "てすとゆーざー",
 			Email:    "test@example.com",
-			Tel:      "090-1234-5678",
+			Tel:      "09012345678",
 		},
 	}
 

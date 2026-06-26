@@ -1083,7 +1083,9 @@
 
 .account-guest-actions .btn-primary,
 .account-guest-actions .btn-ghost {
-  min-width: min(320px, 100%);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 320px;
 }
 
 .account-join-button:disabled,
@@ -1179,7 +1181,6 @@
 
 .customer-tel-group {
   display: grid;
-  grid-template-columns: minmax(90px, 140px) auto minmax(90px, 140px) auto minmax(90px, 140px);
   gap: 16px;
   align-items: center;
 }
@@ -1723,6 +1724,7 @@
 
   .account-panel-actions .btn-primary,
   .account-panel-actions .btn-ghost {
+    max-width: 100%;
     width: 100%;
   }
 
