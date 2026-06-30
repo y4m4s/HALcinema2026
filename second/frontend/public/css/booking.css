@@ -363,6 +363,7 @@
 }
 
 .seat-map {
+  --seat-aisle: 28px;
   display: grid;
   gap: 8px;
   overflow-x: auto;
@@ -371,12 +372,17 @@
 
 .seat-row {
   display: grid;
-  grid-template-columns: 24px minmax(var(--seat-grid-min, 520px), 1fr);
+  grid-template-columns: 24px minmax(var(--seat-grid-min, 520px), 1fr) 24px;
   gap: 10px;
   align-items: center;
 }
 
-.seat-row > span {
+/* 横通路: 前後ブロックの境目の行の下に余白を追加する */
+.seat-row--aisle-after {
+  margin-bottom: 18px;
+}
+
+.seat-row-label {
   color: var(--text3);
   font-family: var(--mono);
   font-size: 11px;
@@ -385,35 +391,76 @@
 
 .seat-row-grid {
   display: grid;
-  grid-template-columns: repeat(var(--seat-cols, 12), minmax(30px, 1fr));
   gap: 6px;
   min-width: var(--seat-grid-min, 520px);
 }
 
+/* 縦通路: 左右ブロックの間を空けるスペーサー（座席ではない） */
+.seat-aisle {
+  display: block;
+  align-self: stretch;
+  pointer-events: none;
+}
+
 .seat-button {
   appearance: none;
-  height: 34px;
+  height: 32px;
+  display: grid;
+  place-items: center;
   border: 1px solid var(--border2);
-  background: var(--bg2);
+  border-radius: 7px 7px 4px 4px;
+  background: transparent;
   color: var(--text2);
   cursor: pointer;
   font-family: var(--mono);
   font-size: 10px;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, transform 0.15s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, transform 0.12s ease;
 }
 
-.seat-button:hover:not(:disabled),
+/* 選択可能: 控えめなアウトライン、ホバーで明るく浮き上がる */
+.seat-button:hover:not(:disabled) {
+  border-color: var(--accent2);
+  background: rgba(74, 159, 212, 0.14);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* 選択中: 水色塗り＋グロー＋わずかに拡大 */
 .seat-button.selected {
   border-color: var(--accent2);
-  background: rgba(74, 159, 212, 0.24);
+  background: rgba(74, 159, 212, 0.92);
   color: #fff;
+  box-shadow: 0 0 0 1px rgba(74, 159, 212, 0.5), 0 4px 14px rgba(74, 159, 212, 0.45);
+  transform: translateY(-2px) scale(1.06);
 }
 
+/* 予約済み: グレーアウト＋小さな「✕」 */
 .seat-button.unavailable {
+  position: relative;
   border-color: rgba(84, 100, 120, 0.22);
   background: rgba(84, 100, 120, 0.16);
-  color: rgba(150, 166, 192, 0.34);
+  color: transparent;
   cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 予約済みの「×」はフォント字形の中心ずれを避けるため2本のバーで描画する */
+.seat-button.unavailable::before,
+.seat-button.unavailable::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: rgba(150, 166, 192, 0.5);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.seat-button.unavailable::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .seat-map.has-selection .seat-button:not(.selected):not(.unavailable) {
@@ -431,10 +478,10 @@
 
 .seat-map.has-selection .seat-button.selected {
   border-color: rgba(105, 199, 255, 0.95);
-  background: rgba(74, 159, 212, 0.36);
-  box-shadow: 0 0 0 1px rgba(105, 199, 255, 0.34), 0 0 18px rgba(74, 159, 212, 0.38);
+  background: rgba(74, 159, 212, 0.92);
+  box-shadow: 0 0 0 1px rgba(105, 199, 255, 0.45), 0 4px 18px rgba(74, 159, 212, 0.5);
   opacity: 1;
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.06);
 }
 
 .seat-selection-status {
@@ -482,15 +529,18 @@
   width: 14px;
   height: 14px;
   border: 1px solid var(--border2);
+  border-radius: 4px 4px 2px 2px;
   display: inline-block;
 }
 
 .legend-free {
-  background: var(--bg2);
+  background: transparent;
 }
 
 .legend-selected {
-  background: rgba(74, 159, 212, 0.42);
+  border-color: var(--accent2);
+  background: rgba(74, 159, 212, 0.92);
+  box-shadow: 0 0 8px rgba(74, 159, 212, 0.5);
 }
 
 .legend-unavailable {
