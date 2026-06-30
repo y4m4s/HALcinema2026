@@ -611,7 +611,7 @@ export function runBooking() {
     return errors
   }
 
-  function applyCoupon() {
+  async function applyCoupon() {
     const code = normalizeCouponInput(state.couponInput)
     if (!code) {
       state.couponError = 'クーポンコードを入力してください。'
