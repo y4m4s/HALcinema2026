@@ -41,6 +41,15 @@ const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
 const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
+const INPUT_LIMITS = {
+  name: 40,
+  nameKana: 60,
+  email: 254,
+  tel: 15,
+  coupon: 20,
+  loginIdentifier: 254,
+  password: 128,
+}
 
 const SCREEN_SEAT_LAYOUTS = {
   200: { rows: 10, columns: 20 },
@@ -53,21 +62,6 @@ const PAYMENT_METHODS = [
   { id: 'qr', label: 'QR決済', note: '外部決済画面へ進む想定のデモです。' },
   { id: 'konbini', label: 'コンビニ払い', note: '支払期限まで座席を仮押さえします。' },
 ]
-
-const COUPONS = {
-  LATE100: {
-    label: 'レイトショー割引',
-    description: '20:00以降の回で1席100円引き',
-    isAvailable: (state) => Number(String(state.slot?.start || '0').split(':')[0]) >= 20,
-    discount: (state) => getTicketUnitsFromState(state) * 100,
-  },
-  GROUP200: {
-    label: 'グループ割引',
-    description: '4席以上で1席200円引き',
-    isAvailable: (state) => getTicketUnitsFromState(state) >= 4,
-    discount: (state) => getTicketUnitsFromState(state) * 200,
-  },
-}
 
 export function runBooking() {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
@@ -104,7 +98,9 @@ export function runBooking() {
     tickets: createEmptyTickets(),
     couponInput: '',
     couponCode: '',
+    coupon: null,
     couponError: '',
+    couponApplying: false,
     payment: 'credit',
     confirmationNo: '',
     dbReservedSeats: [],
@@ -148,14 +144,21 @@ export function runBooking() {
       return
     }
 
+    const ticketIncrement = target.closest('[data-ticket-increment]')
+    if (ticketIncrement) {
+      adjustTicketCount(ticketIncrement.dataset.ticketIncrement, 1)
+      return
+    }
+
+    const ticketDecrement = target.closest('[data-ticket-decrement]')
+    if (ticketDecrement) {
+      adjustTicketCount(ticketDecrement.dataset.ticketDecrement, -1)
+      return
+    }
+
     const ticketChoice = target.closest('[data-ticket-choice]')
     if (ticketChoice) {
-      selectTicketType(ticketChoice.dataset.ticketChoice)
-      state.couponCode = ''
-      state.couponError = ''
-      state.agreed = false
-      state.maxStep = state.currentStep
-      render()
+      adjustTicketCount(ticketChoice.dataset.ticketChoice, 1)
       return
     }
 
@@ -195,13 +198,13 @@ export function runBooking() {
     }
 
     if (action === 'apply-coupon') {
-      applyCoupon()
-      render()
+      void applyCoupon()
       return
     }
 
     if (action === 'remove-coupon') {
       state.couponCode = ''
+      state.coupon = null
       state.couponError = ''
       render()
       return
@@ -226,15 +229,22 @@ export function runBooking() {
 
     const field = target.closest('[data-customer-field]')
     if (field) {
-      state.customer[field.dataset.customerField] = field.value
+      const fieldName = field.dataset.customerField
+      const nextValue = normalizeCustomerInput(fieldName, field.value)
+      if (field.value !== nextValue) field.value = nextValue
+      state.customer[fieldName] = nextValue
       syncCustomerDerivedValues()
       syncCurrentStepAction()
+      syncCustomerErrors()
       return
     }
 
     const loginField = target.closest('[data-login-field]')
     if (loginField) {
-      state.login[loginField.dataset.loginField] = loginField.value
+      const fieldName = loginField.dataset.loginField
+      const nextValue = normalizeLoginInput(fieldName, loginField.value)
+      if (loginField.value !== nextValue) loginField.value = nextValue
+      state.login[fieldName] = nextValue
       state.login.error = ''
       syncAccountActions()
       return
@@ -243,9 +253,9 @@ export function runBooking() {
     const registerField = target.closest('[data-register-field]')
     if (registerField && registerField.type !== 'checkbox') {
       const fieldName = registerField.dataset.registerField
-      state.join[fieldName] = fieldName.startsWith('tel')
-        ? String(registerField.value || '').replace(/\D/g, '')
-        : registerField.value
+      const nextValue = normalizeRegisterInput(fieldName, registerField.value)
+      if (registerField.value !== nextValue) registerField.value = nextValue
+      state.join[fieldName] = nextValue
       state.join.error = ''
       syncAccountActions()
       return
@@ -253,7 +263,13 @@ export function runBooking() {
 
     const couponInput = target.closest('[data-coupon-input]')
     if (couponInput) {
-      state.couponInput = couponInput.value.toUpperCase()
+      const nextValue = normalizeCouponInput(couponInput.value)
+      if (couponInput.value !== nextValue) couponInput.value = nextValue
+      state.couponInput = nextValue
+      if (state.couponCode && state.couponCode !== nextValue) {
+        state.couponCode = ''
+        state.coupon = null
+      }
       state.couponError = ''
     }
   }
@@ -312,6 +328,7 @@ export function runBooking() {
 
   function getNextStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'account' && state.account === 'member') {
+      if (!state.customer.tel.trim()) return getStepIndex('customer')
       return getStepIndex('payment')
     }
     return Math.min(state.currentStep + 1, FLOW_STEPS.length - 1)
@@ -319,6 +336,7 @@ export function runBooking() {
 
   function getPreviousStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'payment' && state.account === 'member') {
+      if (!state.member?.tel) return getStepIndex('customer')
       return getStepIndex('account')
     }
     return Math.max(0, state.currentStep - 1)
@@ -411,13 +429,14 @@ export function runBooking() {
         canLogin: isLoginValid(),
       })
     }
-    if (id === 'customer') stepRoot.innerHTML = CustomerStep(shared)
+    if (id === 'customer') stepRoot.innerHTML = CustomerStep({ ...shared, errors: getCustomerErrors() })
     if (id === 'tickets') {
       stepRoot.innerHTML = TicketsStep({
         ...shared,
         ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
         pricingNotices: getPricingNotices(),
+        maxSeatsPerOrder: MAX_SEATS_PER_ORDER,
       })
     }
     if (id === 'payment') {
@@ -475,16 +494,13 @@ export function runBooking() {
     if (!screen) return '<div class="booking-empty">上映回を選択すると座席表が表示されます。</div>'
     const layout = getSeatLayout(screen)
     const unavailable = getUnavailableSeats()
-    const ticketUnits = getTicketSeatUnits()
-    const selectionLimitReached = ticketUnits > 0 && state.selectedSeats.length >= ticketUnits
     return getSeatRows(layout).map(row => {
       const seats = row.seats.map(seatId => {
         const selected = state.selectedSeats.includes(seatId)
         const reserved = unavailable.has(seatId)
-        const limitDisabled = !reserved && !selected && selectionLimitReached
-        const disabled = reserved || limitDisabled
+        const disabled = reserved
         return `
-          <button class="seat-button${selected ? ' selected' : ''}${reserved ? ' unavailable' : ''}${limitDisabled ? ' limit-disabled' : ''}" type="button" data-seat-id="${escapeAttr(seatId)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
+          <button class="seat-button${selected ? ' selected' : ''}${reserved ? ' unavailable' : ''}" type="button" data-seat-id="${escapeAttr(seatId)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
             ${escapeHtml(seatId)}
           </button>`
       }).join('')
@@ -501,6 +517,7 @@ export function runBooking() {
     if (state.selectedSeats.includes(seatId)) {
       state.selectedSeats = state.selectedSeats.filter(seat => seat !== seatId)
       state.couponCode = ''
+      state.coupon = null
       state.agreed = false
       state.maxStep = state.currentStep
       render()
@@ -508,24 +525,42 @@ export function runBooking() {
     }
 
     const ticketUnits = getTicketSeatUnits()
-    if (ticketUnits <= 0 || state.selectedSeats.length >= Math.min(ticketUnits, MAX_SEATS_PER_ORDER)) return
-    state.selectedSeats = state.selectedSeats.concat(seatId).sort(sortSeats)
+    const seatLimit = Math.min(ticketUnits, MAX_SEATS_PER_ORDER)
+    if (seatLimit <= 0) return
+
+    const nextSeats = state.selectedSeats.concat(seatId)
+    while (nextSeats.length > seatLimit) nextSeats.shift()
+    state.selectedSeats = nextSeats
     state.couponCode = ''
+    state.coupon = null
     state.agreed = false
     state.maxStep = state.currentStep
     render()
   }
 
-  function selectTicketType(ticketId) {
+  function adjustTicketCount(ticketId, delta) {
     if (!ticketId || !(ticketId in state.tickets)) return
     const ticket = TICKET_TYPES.find(item => item.id === ticketId)
     if (!ticket || ticket.onlineAvailable === false) return
-    const nextTickets = createEmptyTickets()
-    nextTickets[ticketId] = 1
+    const nextTickets = { ...state.tickets }
+    const currentCount = Number(nextTickets[ticketId] || 0)
+    const nextCount = Math.max(0, currentCount + delta)
+    if (nextCount === currentCount) return
+
+    nextTickets[ticketId] = nextCount
     const nextUnits = getTicketUnitsFromTickets(nextTickets)
     if (nextUnits > MAX_SEATS_PER_ORDER) return
     state.tickets = nextTickets
-    if (state.selectedSeats.length !== nextUnits) state.selectedSeats = []
+    if (state.selectedSeats.length > nextUnits) {
+      state.selectedSeats = state.selectedSeats.slice(0, nextUnits)
+    }
+    if (nextUnits === 0) state.selectedSeats = []
+    state.couponCode = ''
+    state.coupon = null
+    state.couponError = ''
+    state.agreed = false
+    state.maxStep = state.currentStep
+    render()
   }
 
   function canProceed() {
@@ -550,36 +585,77 @@ export function runBooking() {
     return Boolean(
       name &&
       kana &&
-      /^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone) &&
+      isWithinMax(name, INPUT_LIMITS.name) &&
+      isWithinMax(kana, INPUT_LIMITS.nameKana) &&
+      isWithinMax(email, INPUT_LIMITS.email) &&
+      /^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone) &&
       isValidEmail(email) &&
       email === emailConfirm
     )
   }
 
-  function applyCoupon() {
-    const code = state.couponInput.trim().toUpperCase()
+  function getCustomerErrors() {
+    const errors = {}
+    const c = state.customer
+    const name = c.name.trim()
+    const kana = c.nameKana.trim()
+    const phone = getPhoneNumber()
+    const email = c.email.trim()
+    const emailConfirm = c.emailConfirm.trim()
+    if (name && !isWithinMax(name, INPUT_LIMITS.name)) errors.name = '40文字以内で入力してください。'
+    if (kana && !isWithinMax(kana, INPUT_LIMITS.nameKana)) errors.nameKana = '60文字以内で入力してください。'
+    if (phone && !/^[0-9]{10,11}$/.test(phone)) errors.tel = '10〜11桁の数字で入力してください。'
+    if (email && !isValidEmail(email)) errors.email = 'メールアドレスの形式が正しくありません。'
+    if (email && !isWithinMax(email, INPUT_LIMITS.email)) errors.email = '254文字以内で入力してください。'
+    if (emailConfirm && email && email !== emailConfirm) errors.emailConfirm = 'メールアドレスが一致していません。'
+    return errors
+  }
+
+  async function applyCoupon() {
+    const code = normalizeCouponInput(state.couponInput)
     if (!code) {
       state.couponError = 'クーポンコードを入力してください。'
       state.couponCode = ''
+      state.coupon = null
+      render()
       return
     }
 
-    const coupon = COUPONS[code]
-    if (!coupon) {
-      state.couponError = 'このクーポンコードは利用できません。'
-      state.couponCode = ''
-      return
-    }
-
-    if (!coupon.isAvailable(state)) {
-      state.couponError = 'この上映回または枚数では利用条件を満たしていません。'
-      state.couponCode = ''
-      return
-    }
-
-    state.couponCode = code
-    state.couponInput = code
+    state.couponApplying = true
     state.couponError = ''
+    render()
+
+    try {
+      const result = await requestJSON('/api/reservations/coupon', {
+        method: 'POST',
+        body: JSON.stringify({
+          movieId: String(state.movie.id),
+          screen: String(state.screen),
+          start: state.slot?.start || '',
+          end: state.slot?.end || '',
+          date: state.date || '',
+          seats: state.selectedSeats,
+          tickets: state.tickets,
+          couponCode: code,
+        }),
+      })
+      state.couponCode = result.code || code
+      state.couponInput = result.code || code
+      state.coupon = {
+        code: result.code || code,
+        label: result.name || 'クーポン',
+        description: result.description || '割引を適用しました。',
+        discount: Number(result.discount) || 0,
+      }
+      state.couponError = ''
+    } catch (error) {
+      state.couponCode = ''
+      state.coupon = null
+      state.couponError = getRequestErrorMessage(error)
+    } finally {
+      state.couponApplying = false
+      render()
+    }
   }
 
   async function refreshAvailability() {
@@ -672,7 +748,7 @@ export function runBooking() {
     const surcharge = screenSurcharge ? screenSurcharge.total : 0
     const subtotal = ticketSubtotal + surcharge
     const coupon = getAppliedCoupon()
-    const discount = coupon ? Math.min(subtotal, coupon.discount(state)) : 0
+    const discount = coupon ? Math.min(subtotal, Number(coupon.discount) || 0) : 0
     return {
       ticketSubtotal,
       surcharge,
@@ -750,9 +826,8 @@ export function runBooking() {
 
   function getAppliedCoupon() {
     if (!state.couponCode) return null
-    const coupon = COUPONS[state.couponCode]
-    if (!coupon || !coupon.isAvailable(state)) return null
-    return coupon
+    if (!state.coupon || state.coupon.code !== state.couponCode) return null
+    return state.coupon
   }
 
   function getCustomerName() {
@@ -760,8 +835,6 @@ export function runBooking() {
   }
 
   function getPhoneNumber() {
-    const parts = [state.customer.tel1, state.customer.tel2, state.customer.tel3].map(part => String(part || '').trim())
-    if (parts.every(Boolean)) return parts.join('-')
     return state.customer.tel.trim()
   }
 
@@ -775,6 +848,14 @@ export function runBooking() {
   function syncCurrentStepAction() {
     const nextButton = stepRoot.querySelector('[data-action="next"]')
     if (nextButton) nextButton.disabled = !canProceed()
+  }
+
+  function syncCustomerErrors() {
+    const errors = getCustomerErrors()
+    stepRoot.querySelectorAll('[data-customer-error]').forEach(el => {
+      const field = el.dataset.customerError
+      el.textContent = errors[field] || ''
+    })
   }
 
   function syncAccountActions() {
@@ -830,7 +911,7 @@ export function runBooking() {
           name: state.join.name.trim(),
           nameKana: state.join.nameKana.trim(),
           email: state.join.email.trim(),
-          tel: getJoinPhoneNumber(),
+          tel: state.join.tel.trim(),
           password: state.join.password,
           mailMagazine: Boolean(state.join.mailMagazine),
         }),
@@ -917,7 +998,6 @@ export function runBooking() {
   }
 
   function fillCustomerFromMember(member) {
-    const telParts = splitPhoneNumber(member.tel)
     state.customer = {
       ...state.customer,
       name: member.name || '',
@@ -928,22 +1008,21 @@ export function runBooking() {
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
-      tel1: telParts[0] || '',
-      tel2: telParts[1] || '',
-      tel3: telParts[2] || '',
     }
   }
 
   function isLoginValid() {
     return Boolean(
       String(state.login.identifier || '').trim() &&
-      String(state.login.password || '').trim()
+      String(state.login.password || '').trim() &&
+      isWithinMax(state.login.identifier, INPUT_LIMITS.loginIdentifier) &&
+      isWithinMax(state.login.password, INPUT_LIMITS.password)
     )
   }
 
   function getJoinValidationMessage() {
     const join = state.join
-    const phone = getJoinPhoneNumber()
+    const phone = String(join.tel || '').trim()
     const email = String(join.email || '').trim()
     const emailConfirm = String(join.emailConfirm || '').trim()
     const password = String(join.password || '')
@@ -951,21 +1030,19 @@ export function runBooking() {
 
     if (!String(join.name || '').trim()) return '氏名を入力してください。'
     if (!String(join.nameKana || '').trim()) return '氏名（かな）を入力してください。'
-    if (!/^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone)) return '電話番号を3つの欄に分けて入力してください。'
+    if (!isWithinMax(join.name, INPUT_LIMITS.name)) return '氏名は40文字以内で入力してください。'
+    if (!isWithinMax(join.nameKana, INPUT_LIMITS.nameKana)) return '氏名（かな）は60文字以内で入力してください。'
+    if (!/^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone)) return '電話番号をハイフンなしで入力してください。'
     if (!isValidEmail(email)) return 'メールアドレスを正しく入力してください。'
+    if (!isWithinMax(email, INPUT_LIMITS.email)) return 'メールアドレスは254文字以内で入力してください。'
     if (email !== emailConfirm) return '確認用メールアドレスが一致していません。'
-    if (password.length < 8) return 'パスワードは8文字以上で入力してください。'
+    if (Array.from(password).length < 8) return 'パスワードは8文字以上で入力してください。'
+    if (!isWithinMax(password, INPUT_LIMITS.password)) return 'パスワードは128文字以内で入力してください。'
     if (password !== passwordConfirm) return '確認用パスワードが一致していません。'
 
     return ''
   }
 
-  function getJoinPhoneNumber() {
-    return [state.join.tel1, state.join.tel2, state.join.tel3]
-      .map(part => String(part || '').trim())
-      .filter(Boolean)
-      .join('-')
-  }
 
   function syncJoinStateFromDOM() {
     stepRoot.querySelectorAll('[data-register-field]').forEach((field) => {
@@ -975,9 +1052,9 @@ export function runBooking() {
         state.join[fieldName] = Boolean(field.checked)
         return
       }
-      state.join[fieldName] = fieldName.startsWith('tel')
-        ? String(field.value || '').replace(/\D/g, '')
-        : field.value
+      const nextValue = normalizeRegisterInput(fieldName, field.value)
+      if (field.value !== nextValue) field.value = nextValue
+      state.join[fieldName] = nextValue
     })
   }
 
@@ -1044,9 +1121,6 @@ function createJoinState() {
     nameKana: '',
     email: '',
     emailConfirm: '',
-    tel1: '',
-    tel2: '',
-    tel3: '',
     password: '',
     passwordConfirm: '',
     mailMagazine: false,
@@ -1056,7 +1130,6 @@ function createJoinState() {
 }
 
 function createCustomerState(member = null) {
-  const phoneParts = splitPhoneNumber(member?.tel || '')
   return {
     name: member?.name || '',
     nameKana: member?.nameKana || '',
@@ -1066,11 +1139,6 @@ function createCustomerState(member = null) {
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
-    tel1: phoneParts[0] || '',
-    tel2: phoneParts[1] || '',
-    tel3: phoneParts[2] || '',
-    postal: '',
-    request: '',
   }
 }
 
@@ -1126,11 +1194,6 @@ function getAuthHeaders(token) {
 
 function getRequestErrorMessage(error) {
   return error instanceof Error ? error.message : '通信に失敗しました。'
-}
-
-function splitPhoneNumber(value) {
-  const parts = String(value || '').split('-')
-  return parts.length === 3 ? parts : ['', '', '']
 }
 
 function resolveMovie(params) {
@@ -1231,27 +1294,54 @@ function getRowLabel(index) {
   return `${alphabet[Math.floor(index / alphabet.length) - 1]}${alphabet[index % alphabet.length]}`
 }
 
-function sortSeats(a, b) {
-  const left = parseSeatId(a)
-  const right = parseSeatId(b)
-  if (left.row !== right.row) return left.row.localeCompare(right.row, 'ja')
-  return left.number - right.number
-}
-
-function parseSeatId(seatId) {
-  const match = String(seatId).match(/^([A-Z]+)(\d+)$/)
-  return {
-    row: match ? match[1] : String(seatId),
-    number: match ? Number(match[2]) : 0,
-  }
-}
-
 function hashString(value) {
   return Array.from(String(value)).reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) >>> 0, 0)
 }
 
 function createConfirmationNo() {
   return `HAL-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+}
+
+function normalizeCustomerInput(field, value) {
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.tel)
+  if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
+  if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
+  if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
+  return limitString(stripControlChars(value), 100)
+}
+
+function normalizeLoginInput(field, value) {
+  if (field === 'password') return limitString(stripControlChars(value), INPUT_LIMITS.password)
+  return limitString(stripControlChars(value), INPUT_LIMITS.loginIdentifier)
+}
+
+function normalizeRegisterInput(field, value) {
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.tel)
+  if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
+  if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
+  if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
+  if (field === 'password' || field === 'passwordConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.password)
+  return limitString(stripControlChars(value), 100)
+}
+
+function normalizeCouponInput(value) {
+  return limitString(String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), INPUT_LIMITS.coupon)
+}
+
+function normalizeDigits(value, maxLength) {
+  return limitString(String(value || '').replace(/\D/g, ''), maxLength)
+}
+
+function limitString(value, maxLength) {
+  return Array.from(String(value || '')).slice(0, maxLength).join('')
+}
+
+function isWithinMax(value, maxLength) {
+  return Array.from(String(value || '')).length <= maxLength
+}
+
+function stripControlChars(value) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
 }
 
 function isValidEmail(value) {

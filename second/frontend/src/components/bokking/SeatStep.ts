@@ -46,7 +46,7 @@ export function SeatStep({
         <em>${escapeHtml(seatStatus.message)}</em>
       </div>
       <div class="seat-stage">SCREEN</div>
-      <div class="seat-map" aria-label="座席表">${seatMapHtml}</div>
+      <div class="seat-map${selectedUnits > 0 ? ' has-selection' : ''}" aria-label="座席表">${seatMapHtml}</div>
       <div class="seat-legend">
         <span><i class="legend-free"></i>選択可能</span>
         <span><i class="legend-selected"></i>選択中</span>

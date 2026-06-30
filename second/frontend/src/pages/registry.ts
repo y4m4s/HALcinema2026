@@ -6,6 +6,7 @@ import { detailPage } from './detail'
 import { homePage } from './index'
 import { newsPage } from './news'
 import { questionPage } from './question'
+import { reservationPage } from './reservation'
 import { schedulePage } from './schedule'
 import { theaterPage } from './theater'
 import { ticketsPage } from './tickets'
@@ -21,6 +22,7 @@ export const pages: Record<string, PageDefinition> = {
   "index": homePage,
   "news": newsPage,
   "question": questionPage,
+  "reservation": reservationPage,
   "schedule": schedulePage,
   "theater": theaterPage,
   "tickets": ticketsPage,

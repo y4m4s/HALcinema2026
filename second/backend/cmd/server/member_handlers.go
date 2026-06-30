@@ -12,6 +12,8 @@ func registerMemberRoutes(api *gin.RouterGroup, store *memberStore) {
 	members := api.Group("/members")
 	{
 		members.POST("/register", func(c *gin.Context) {
+			limitJSONBody(c)
+
 			var req memberRegisterRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
 				writeAPIError(c, http.StatusBadRequest, "入力内容を確認してください。")
@@ -31,6 +33,8 @@ func registerMemberRoutes(api *gin.RouterGroup, store *memberStore) {
 		})
 
 		members.POST("/login", func(c *gin.Context) {
+			limitJSONBody(c)
+
 			var req memberLoginRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
 				writeAPIError(c, http.StatusBadRequest, "入力内容を確認してください。")

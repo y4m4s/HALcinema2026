@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { escapeAttr, escapeHtml, renderStepNav } from './utils'
 
-export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
+export function CustomerStep({ state, stepNo, canProceed, isFirstStep, errors = {} }) {
   return `
     <section class="booking-step-panel booking-step-constrained">
       <div class="booking-panel-head">
@@ -16,27 +16,25 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
             label: '氏名',
             field: 'name',
             value: state.customer.name,
-            placeholder: '例）東急太郎',
+            placeholder: '例）春太郎',
+            maxlength: 40,
+            error: errors.name,
           })}
           ${renderCustomerRow({
             label: '氏名（かな）',
             field: 'nameKana',
             value: state.customer.nameKana,
-            placeholder: '例）とうきゅうたろう',
+            placeholder: '例）はるたろう',
+            maxlength: 60,
+            error: errors.nameKana,
           })}
           <div class="customer-form-row">
             <div class="customer-label">
               <span>電話番号</span>
               <strong>必須</strong>
             </div>
-            <div class="customer-control">
-              <div class="customer-tel-group">
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel1)}" data-customer-field="tel1" placeholder="例）012" maxlength="5">
-                <span>-</span>
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel2)}" data-customer-field="tel2" placeholder="例）345" maxlength="5">
-                <span>-</span>
-                <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel3)}" data-customer-field="tel3" placeholder="例）6789" maxlength="5">
-              </div>
+            <div class="customer-control">  
+              <input type="tel" inputmode="numeric" value="${escapeAttr(state.customer.tel)}" data-customer-field="tel" placeholder="例）0123456789" maxlength="15">
             </div>
           </div>
           <div class="customer-form-row customer-mail-row">
@@ -45,9 +43,11 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
               <strong>必須</strong>
             </div>
             <div class="customer-control">
-              <input type="email" value="${escapeAttr(state.customer.email)}" data-customer-field="email" placeholder="例）tokyu109cinemas@tokyu.109cinemas.net">
-              <p>確認のためにもう一度入力してください。</p>
-              <input type="email" value="${escapeAttr(state.customer.emailConfirm)}" data-customer-field="emailConfirm" placeholder="">
+              <input type="email" value="${escapeAttr(state.customer.email)}" data-customer-field="email" placeholder="例）halcinema@example.com" maxlength="254">
+              <p class="customer-field-error" data-customer-error="email">${errors.email ? escapeHtml(errors.email) : ''}</p>
+              <p class="customer-field-note">確認のためにもう一度入力してください。</p>
+              <input type="email" value="${escapeAttr(state.customer.emailConfirm)}" data-customer-field="emailConfirm" placeholder="例）halcinema@example.com" maxlength="254">
+              <p class="customer-field-error" data-customer-error="emailConfirm">${errors.emailConfirm ? escapeHtml(errors.emailConfirm) : ''}</p>
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@ export function CustomerStep({ state, stepNo, canProceed, isFirstStep }) {
   `
 }
 
-function renderCustomerRow({ label, field, value, placeholder }) {
+function renderCustomerRow({ label, field, value, placeholder, maxlength, error }) {
   return `
     <div class="customer-form-row">
       <div class="customer-label">
@@ -73,7 +73,8 @@ function renderCustomerRow({ label, field, value, placeholder }) {
         <strong>必須</strong>
       </div>
       <div class="customer-control">
-        <input type="text" value="${escapeAttr(value)}" data-customer-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}">
+        <input type="text" value="${escapeAttr(value)}" data-customer-field="${escapeAttr(field)}" placeholder="${escapeAttr(placeholder)}" maxlength="${escapeAttr(maxlength)}">
+        <p class="customer-field-error" data-customer-error="${escapeAttr(field)}">${error ? escapeHtml(error) : ''}</p>
       </div>
     </div>
   `

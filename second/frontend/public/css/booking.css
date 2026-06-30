@@ -396,9 +396,10 @@
   border: 1px solid var(--border2);
   background: var(--bg2);
   color: var(--text2);
+  cursor: pointer;
   font-family: var(--mono);
   font-size: 10px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, transform 0.15s;
 }
 
 .seat-button:hover:not(:disabled),
@@ -415,9 +416,25 @@
   cursor: default;
 }
 
-.seat-button.limit-disabled {
-  opacity: 0.34;
-  cursor: default;
+.seat-map.has-selection .seat-button:not(.selected):not(.unavailable) {
+  border-color: rgba(84, 100, 120, 0.34);
+  background: rgba(8, 13, 24, 0.68);
+  color: rgba(188, 204, 231, 0.58);
+  pointer-events: auto;
+}
+
+.seat-map.has-selection .seat-button:not(.selected):not(.unavailable):hover {
+  border-color: rgba(105, 199, 255, 0.72);
+  background: rgba(74, 159, 212, 0.18);
+  color: #fff;
+}
+
+.seat-map.has-selection .seat-button.selected {
+  border-color: rgba(105, 199, 255, 0.95);
+  background: rgba(74, 159, 212, 0.36);
+  box-shadow: 0 0 0 1px rgba(105, 199, 255, 0.34), 0 0 18px rgba(74, 159, 212, 0.38);
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .seat-selection-status {
@@ -1066,7 +1083,9 @@
 
 .account-guest-actions .btn-primary,
 .account-guest-actions .btn-ghost {
-  min-width: min(320px, 100%);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 320px;
 }
 
 .account-join-button:disabled,
@@ -1160,16 +1179,8 @@
   color: var(--text3);
 }
 
-.customer-tel-group {
-  display: grid;
-  grid-template-columns: minmax(90px, 140px) auto minmax(90px, 140px) auto minmax(90px, 140px);
-  gap: 16px;
-  align-items: center;
-}
-
-.customer-tel-group span {
+.customer-control input[type="tel"] {
   color: var(--text2);
-  text-align: center;
 }
 
 .customer-mail-row {
@@ -1196,6 +1207,26 @@
 
 .customer-notes-alert {
   color: #d4a800;
+}
+
+.customer-field-note {
+  color: #ff4a4a;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+}
+
+.customer-field-error {
+  color: #ff4a4a;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+  min-height: 0;
+  transition: opacity 0.2s;
+}
+
+.customer-field-error:empty {
+  display: none;
 }
 
 .customer-grid input,
@@ -1246,6 +1277,7 @@
   gap: 18px;
   padding: 16px;
   background: rgba(16, 33, 58, 0.9);
+  cursor: pointer;
   text-align: left;
   transition: background 0.2s, color 0.2s;
 }
@@ -1262,6 +1294,16 @@
 
 .ticket-option.disabled:hover {
   background: rgba(16, 33, 58, 0.9);
+}
+
+.ticket-option-main {
+  min-width: 0;
+}
+
+.ticket-option-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .ticket-option strong {
@@ -1299,6 +1341,45 @@
   border-color: var(--accent2);
   background: rgba(74, 159, 212, 0.16);
   color: #fff;
+}
+
+.ticket-option-controls {
+  display: grid;
+  grid-template-columns: 34px 38px 34px;
+  align-items: center;
+  border: 1px solid var(--border2);
+  background: rgba(5, 12, 22, 0.42);
+}
+
+.ticket-quantity-button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.ticket-quantity-button:hover:not(:disabled) {
+  background: rgba(74, 159, 212, 0.22);
+  color: #fff;
+}
+
+.ticket-quantity-button:disabled {
+  cursor: default;
+  color: rgba(237, 241, 247, 0.28);
+}
+
+.ticket-option .ticket-quantity-count {
+  display: block;
+  margin: 0;
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: center;
 }
 
 .ticket-pricing-notes {
@@ -1656,6 +1737,7 @@
 
   .account-panel-actions .btn-primary,
   .account-panel-actions .btn-ghost {
+    max-width: 100%;
     width: 100%;
   }
 
@@ -1720,6 +1802,15 @@
   .ticket-pricing-notes div {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .ticket-option {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .ticket-option-side {
+    justify-content: space-between;
   }
 
   .ticket-total-line {

@@ -18,23 +18,23 @@ export const MOVIES = [
     status: "now",
     screens: [1, 3],
     schedules: [
-      ["10:00", "12:48"],
-      ["13:30", "15:18"],
-      ["17:00", "18:48"],
-      ["20:30", "22:18"]
+      ["10:05", "12:31"],
+      ["13:40", "16:06"],
+      ["17:00", "19:26"],
+      ["20:25", "22:51"]
     ],
     screenSchedules: [
       {
         screen: 1,
         slots: [
           {
-            start: "10:00",
-            end: "12:48",
+            start: "10:05",
+            end: "12:31",
             status: "soldout"
           },
           {
             start: "17:00",
-            end: "18:48",
+            end: "19:26",
             status: "ok"
           }
         ]
@@ -43,13 +43,13 @@ export const MOVIES = [
         screen: 3,
         slots: [
           {
-            start: "13:30",
-            end: "15:18",
+            start: "13:40",
+            end: "16:06",
             status: "few"
           },
           {
-            start: "20:30",
-            end: "22:18",
+            start: "20:25",
+            end: "22:51",
             status: "ok"
           }
         ]
@@ -74,22 +74,22 @@ export const MOVIES = [
     status: "now",
     screens: [2, 5],
     schedules: [
-      ["11:20", "13:13"],
-      ["14:50", "16:43"],
-      ["18:30", "20:23"]
+      ["10:20", "12:18"],
+      ["15:35", "17:33"],
+      ["18:45", "20:43"]
     ],
     screenSchedules: [
       {
         screen: 2,
         slots: [
           {
-            start: "11:20",
-            end: "13:13",
+            start: "10:20",
+            end: "12:18",
             status: "soldout"
           },
           {
-            start: "18:30",
-            end: "20:23",
+            start: "18:45",
+            end: "20:43",
             status: "ok"
           }
         ]
@@ -98,8 +98,8 @@ export const MOVIES = [
         screen: 5,
         slots: [
           {
-            start: "14:50",
-            end: "16:43",
+            start: "15:35",
+            end: "17:33",
             status: "few"
           }
         ]
@@ -124,22 +124,22 @@ export const MOVIES = [
     status: "now",
     screens: [4, 6],
     schedules: [
-      ["12:00", "13:33"],
-      ["16:20", "17:53"],
-      ["20:00", "21:33"]
+      ["09:55", "11:36"],
+      ["16:35", "18:16"],
+      ["21:15", "22:56"]
     ],
     screenSchedules: [
       {
         screen: 4,
         slots: [
           {
-            start: "12:00",
-            end: "13:33",
+            start: "09:55",
+            end: "11:36",
             status: "ok"
           },
           {
-            start: "20:00",
-            end: "21:33",
+            start: "21:15",
+            end: "22:56",
             status: "ok"
           }
         ]
@@ -148,8 +148,8 @@ export const MOVIES = [
         screen: 6,
         slots: [
           {
-            start: "16:20",
-            end: "17:53",
+            start: "16:35",
+            end: "18:16",
             status: "soldout"
           }
         ]
@@ -173,24 +173,31 @@ export const MOVIES = [
     image: "https://image.tmdb.org/t/p/w500/p8vr7jVwflsSqAq91nWcOPZ2RIv.jpg",
     status: "now",
     screens: [2, 7],
-    schedules: [],
+    schedules: [
+      ["09:45", "11:32"],
+      ["11:15", "13:02"],
+      ["14:00", "15:47"],
+      ["15:20", "17:07"],
+      ["19:45", "21:32"],
+      ["20:55", "22:42"]
+    ],
     screenSchedules: [
       {
         screen: 2,
         slots: [
           {
-            start: "10:30",
-            end: "12:09",
+            start: "09:45",
+            end: "11:32",
             status: "soldout"
           },
           {
-            start: "13:00",
-            end: "14:39",
+            start: "14:00",
+            end: "15:47",
             status: "few"
           },
           {
-            start: "19:00",
-            end: "20:39",
+            start: "20:55",
+            end: "22:42",
             status: "ok"
           }
         ]
@@ -199,18 +206,18 @@ export const MOVIES = [
         screen: 7,
         slots: [
           {
-            start: "11:00",
-            end: "12:39",
+            start: "11:15",
+            end: "13:02",
             status: "ok"
           },
           {
-            start: "14:00",
-            end: "15:39",
+            start: "15:20",
+            end: "17:07",
             status: "soldout"
           },
           {
-            start: "20:00",
-            end: "21:39",
+            start: "19:45",
+            end: "21:32",
             status: "ok"
           }
         ]
@@ -234,29 +241,38 @@ export const MOVIES = [
     image: "https://image.tmdb.org/t/p/w500/7d4Gb3R1W6OByg46V5TSCNbbpUW.jpg",
     status: "now",
     screens: [3, 8],
-    schedules: [],
+    schedules: [
+      ["09:30", "11:46"],
+      ["10:40", "12:56"],
+      ["13:05", "15:21"],
+      ["14:20", "16:36"],
+      ["16:55", "19:11"],
+      ["18:05", "20:21"],
+      ["21:35", "23:51"],
+      ["21:55", "00:11"]
+    ],
     screenSchedules: [
       {
         screen: 3,
         slots: [
           {
-            start: "09:50",
-            end: "11:17",
+            start: "09:30",
+            end: "11:46",
             status: "ok"
           },
           {
-            start: "12:30",
-            end: "13:57",
+            start: "13:05",
+            end: "15:21",
             status: "soldout"
           },
           {
-            start: "16:00",
-            end: "17:27",
+            start: "16:55",
+            end: "19:11",
             status: "few"
           },
           {
-            start: "20:30",
-            end: "21:57",
+            start: "21:35",
+            end: "23:51",
             status: "ok"
           }
         ]
@@ -265,23 +281,23 @@ export const MOVIES = [
         screen: 8,
         slots: [
           {
-            start: "10:20",
-            end: "11:47",
+            start: "10:40",
+            end: "12:56",
             status: "few"
           },
           {
-            start: "13:00",
-            end: "14:27",
+            start: "14:20",
+            end: "16:36",
             status: "ok"
           },
           {
-            start: "17:30",
-            end: "18:57",
+            start: "18:05",
+            end: "20:21",
             status: "soldout"
           },
           {
-            start: "21:00",
-            end: "22:27",
+            start: "21:55",
+            end: "00:11",
             status: "ok"
           }
         ]
@@ -351,22 +367,22 @@ export const MOVIES = [
     status: "now",
     screens: [1, 4],
     schedules: [
-      ["09:40", "11:28"],
-      ["15:20", "17:08"],
-      ["21:10", "22:58"]
+      ["09:30", "11:38"],
+      ["14:10", "16:18"],
+      ["21:20", "23:28"]
     ],
     screenSchedules: [
       {
         screen: 1,
         slots: [
           {
-            start: "09:40",
-            end: "11:28",
+            start: "09:30",
+            end: "11:38",
             status: "ok"
           },
           {
-            start: "21:10",
-            end: "22:58",
+            start: "21:20",
+            end: "23:28",
             status: "few"
           }
         ]
@@ -375,8 +391,8 @@ export const MOVIES = [
         screen: 4,
         slots: [
           {
-            start: "15:20",
-            end: "17:08",
+            start: "14:10",
+            end: "16:18",
             status: "ok"
           }
         ]
@@ -401,22 +417,22 @@ export const MOVIES = [
     status: "now",
     screens: [5, 6],
     schedules: [
-      ["10:50", "12:40"],
-      ["16:40", "18:30"],
-      ["20:20", "22:10"]
+      ["11:05", "13:17"],
+      ["17:15", "19:27"],
+      ["19:50", "22:02"]
     ],
     screenSchedules: [
       {
         screen: 5,
         slots: [
           {
-            start: "10:50",
-            end: "12:40",
+            start: "11:05",
+            end: "13:17",
             status: "few"
           },
           {
-            start: "20:20",
-            end: "22:10",
+            start: "19:50",
+            end: "22:02",
             status: "ok"
           }
         ]
@@ -425,8 +441,8 @@ export const MOVIES = [
         screen: 6,
         slots: [
           {
-            start: "16:40",
-            end: "18:30",
+            start: "17:15",
+            end: "19:27",
             status: "soldout"
           }
         ]

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +20,7 @@ func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 		Name:         "Test User",
 		NameKana:     "test user",
 		Email:        "test@example.com",
-		Tel:          "090-1234-5678",
+		Tel:          "09012345678",
 		Password:     "password123",
 		MailMagazine: true,
 	}
@@ -66,4 +67,44 @@ func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 	if !errors.Is(err, errInvalidCredentials) {
 		t.Fatalf("invalid Login() error = %v, want %v", err, errInvalidCredentials)
 	}
+}
+
+func TestMemberStoreRejectsInputLimits(t *testing.T) {
+	_, err := normalizeRegisterRequest(memberRegisterRequest{
+		Name:     strings.Repeat("あ", maxPersonNameRunes+1),
+		NameKana: "てすとゆーざー",
+		Email:    "test@example.com",
+		Tel:      "09012345678",
+		Password: "password123",
+	})
+	if !isValidationError(err) {
+		t.Fatalf("oversized name error = %v, want validationError", err)
+	}
+
+	_, err = normalizeRegisterRequest(memberRegisterRequest{
+		Name:     "Test User",
+		NameKana: "てすとゆーざー",
+		Email:    "Display Name <test@example.com>",
+		Tel:      "09012345678",
+		Password: "password123",
+	})
+	if !isValidationError(err) {
+		t.Fatalf("display-name email error = %v, want validationError", err)
+	}
+
+	_, err = normalizeRegisterRequest(memberRegisterRequest{
+		Name:     "Test User",
+		NameKana: "てすとゆーざー",
+		Email:    "test@example.com",
+		Tel:      "09012345678",
+		Password: strings.Repeat("a", maxPasswordRunes+1),
+	})
+	if !isValidationError(err) {
+		t.Fatalf("oversized password error = %v, want validationError", err)
+	}
+}
+
+func isValidationError(err error) bool {
+	var target validationError
+	return errors.As(err, &target)
 }
