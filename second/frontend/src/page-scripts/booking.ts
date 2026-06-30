@@ -63,38 +63,6 @@ const PAYMENT_METHODS = [
   { id: 'konbini', label: 'コンビニ払い', note: '支払期限まで座席を仮押さえします。' },
 ]
 
-const COUPONS = {
-  LATE100: {
-    label: 'レイトショー割引',
-    description: '20:00以降の回で1席100円引き',
-    isAvailable: (state) => Number(String(state.slot?.start || '0').split(':')[0]) >= 20,
-    discount: (state) => getTicketUnitsFromState(state) * 100,
-  },
-  GROUP200: {
-    label: 'グループ割引',
-    description: '4席以上で1席200円引き',
-    isAvailable: (state) => getTicketUnitsFromState(state) >= 4,
-    discount: (state) => getTicketUnitsFromState(state) * 200,
-  },
-  HORS100: createPerSeatCoupon('ホラーコスプレ割引', '1席100円引き', 100),
-  WELC300: createPerSeatCoupon('ウェルカムクーポン', '1席300円引き', 300),
-  BDAY500: createPerSeatCoupon('誕生日クーポン', '1席500円引き', 500),
-  WEEK150: createPerSeatCoupon('平日割引', '1席150円引き', 150),
-  MEMS300: createPerSeatCoupon('会員特典', '1席300円引き', 300),
-  SUMM200: createPerSeatCoupon('夏季特別割引', '1席200円引き', 200),
-  WINT200: createPerSeatCoupon('冬季特別割引', '1席200円引き', 200),
-  HOLI150: createPerSeatCoupon('祝日割引', '1席150円引き', 150),
-}
-
-function createPerSeatCoupon(label, description, amount) {
-  return {
-    label,
-    description,
-    isAvailable: () => true,
-    discount: (state) => getTicketUnitsFromState(state) * amount,
-  }
-}
-
 export function runBooking() {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
 
@@ -130,7 +98,9 @@ export function runBooking() {
     tickets: createEmptyTickets(),
     couponInput: '',
     couponCode: '',
+    coupon: null,
     couponError: '',
+    couponApplying: false,
     payment: 'credit',
     confirmationNo: '',
     dbReservedSeats: [],
@@ -228,13 +198,13 @@ export function runBooking() {
     }
 
     if (action === 'apply-coupon') {
-      applyCoupon()
-      render()
+      void applyCoupon()
       return
     }
 
     if (action === 'remove-coupon') {
       state.couponCode = ''
+      state.coupon = null
       state.couponError = ''
       render()
       return
@@ -295,6 +265,10 @@ export function runBooking() {
       const nextValue = normalizeCouponInput(couponInput.value)
       if (couponInput.value !== nextValue) couponInput.value = nextValue
       state.couponInput = nextValue
+      if (state.couponCode && state.couponCode !== nextValue) {
+        state.couponCode = ''
+        state.coupon = null
+      }
       state.couponError = ''
     }
   }
@@ -540,6 +514,7 @@ export function runBooking() {
     if (state.selectedSeats.includes(seatId)) {
       state.selectedSeats = state.selectedSeats.filter(seat => seat !== seatId)
       state.couponCode = ''
+      state.coupon = null
       state.agreed = false
       state.maxStep = state.currentStep
       render()
@@ -554,6 +529,7 @@ export function runBooking() {
     while (nextSeats.length > seatLimit) nextSeats.shift()
     state.selectedSeats = nextSeats
     state.couponCode = ''
+    state.coupon = null
     state.agreed = false
     state.maxStep = state.currentStep
     render()
@@ -577,6 +553,7 @@ export function runBooking() {
     }
     if (nextUnits === 0) state.selectedSeats = []
     state.couponCode = ''
+    state.coupon = null
     state.couponError = ''
     state.agreed = false
     state.maxStep = state.currentStep
@@ -614,30 +591,52 @@ export function runBooking() {
     )
   }
 
-  function applyCoupon() {
+  async function applyCoupon() {
+    if (state.couponApplying) return
     const code = normalizeCouponInput(state.couponInput)
     if (!code) {
       state.couponError = 'クーポンコードを入力してください。'
       state.couponCode = ''
+      state.coupon = null
+      render()
       return
     }
 
-    const coupon = COUPONS[code]
-    if (!coupon) {
-      state.couponError = 'このクーポンコードは利用できません。'
-      state.couponCode = ''
-      return
-    }
-
-    if (!coupon.isAvailable(state)) {
-      state.couponError = 'この上映回または枚数では利用条件を満たしていません。'
-      state.couponCode = ''
-      return
-    }
-
-    state.couponCode = code
-    state.couponInput = code
+    state.couponApplying = true
     state.couponError = ''
+    render()
+
+    try {
+      const result = await requestJSON('/api/reservations/coupon', {
+        method: 'POST',
+        body: JSON.stringify({
+          movieId: String(state.movie.id),
+          screen: String(state.screen),
+          start: state.slot?.start || '',
+          end: state.slot?.end || '',
+          date: state.date || '',
+          seats: state.selectedSeats,
+          tickets: state.tickets,
+          couponCode: code,
+        }),
+      })
+      state.couponCode = result.code || code
+      state.couponInput = result.code || code
+      state.coupon = {
+        code: result.code || code,
+        label: result.name || 'クーポン',
+        description: result.description || '割引を適用しました。',
+        discount: Number(result.discount) || 0,
+      }
+      state.couponError = ''
+    } catch (error) {
+      state.couponCode = ''
+      state.coupon = null
+      state.couponError = getRequestErrorMessage(error)
+    } finally {
+      state.couponApplying = false
+      render()
+    }
   }
 
   async function refreshAvailability() {
@@ -730,7 +729,7 @@ export function runBooking() {
     const surcharge = screenSurcharge ? screenSurcharge.total : 0
     const subtotal = ticketSubtotal + surcharge
     const coupon = getAppliedCoupon()
-    const discount = coupon ? Math.min(subtotal, coupon.discount(state)) : 0
+    const discount = coupon ? Math.min(subtotal, Number(coupon.discount) || 0) : 0
     return {
       ticketSubtotal,
       surcharge,
@@ -808,9 +807,8 @@ export function runBooking() {
 
   function getAppliedCoupon() {
     if (!state.couponCode) return null
-    const coupon = COUPONS[state.couponCode]
-    if (!coupon || !coupon.isAvailable(state)) return null
-    return coupon
+    if (!state.coupon || state.coupon.code !== state.couponCode) return null
+    return state.coupon
   }
 
   function getCustomerName() {
@@ -1326,7 +1324,7 @@ function normalizeRegisterInput(field, value) {
 }
 
 function normalizeCouponInput(value) {
-  return limitString(String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''), INPUT_LIMITS.coupon)
+  return limitString(String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), INPUT_LIMITS.coupon)
 }
 
 function normalizeDigits(value, maxLength) {

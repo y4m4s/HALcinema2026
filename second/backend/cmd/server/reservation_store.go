@@ -42,6 +42,24 @@ type reservationCreateRequest struct {
 	Customer      reservationCustomer `json:"customer"`
 }
 
+type couponPreviewRequest struct {
+	MovieID    string         `json:"movieId"`
+	Screen     string         `json:"screen"`
+	Start      string         `json:"start"`
+	End        string         `json:"end"`
+	Date       string         `json:"date"`
+	Seats      []string       `json:"seats"`
+	Tickets    map[string]int `json:"tickets"`
+	CouponCode string         `json:"couponCode"`
+}
+
+type couponPreviewResponse struct {
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Discount    int    `json:"discount"`
+}
+
 type reservationCustomer struct {
 	Name     string `json:"name"`
 	NameKana string `json:"nameKana"`
@@ -133,6 +151,15 @@ type resolvedTicket struct {
 	count             int
 }
 
+type resolvedCoupon struct {
+	id             string
+	code           string
+	ruleCode       string
+	name           string
+	description    string
+	discountAmount int
+}
+
 func newReservationStore(db *sql.DB) (*reservationStore, error) {
 	store := &reservationStore{db: db}
 	if err := store.init(context.Background()); err != nil {
@@ -181,9 +208,6 @@ func (s *reservationStore) init(ctx context.Context) error {
 	if err := s.migrateScheduleDateTimeFormat(ctx); err != nil {
 		return err
 	}
-	if err := s.migrateSeatAttributes(ctx); err != nil {
-		return err
-	}
 	if err := s.migrateReservationDetails(ctx); err != nil {
 		return err
 	}
@@ -197,33 +221,28 @@ func (s *reservationStore) init(ctx context.Context) error {
 }
 
 func (s *reservationStore) migrateCouponCodeFormat(ctx context.Context) error {
-	var tableSQL string
-	err := s.db.QueryRowContext(
-		ctx,
-		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'coupons'`,
-	).Scan(&tableSQL)
+	tableSQL, err := s.tableSQL(ctx, "coupons")
+	if err != nil {
+		return err
+	}
+	columns, err := s.tableColumns(ctx, "coupons")
 	if err != nil {
 		return err
 	}
 
-	if strings.Contains(tableSQL, "GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'") {
-		if err := s.rebuildCouponsForFlexibleCodes(ctx); err != nil {
-			return err
-		}
+	needsRebuild := strings.Contains(tableSQL, "GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9]'") ||
+		!columns["rule_code"] ||
+		!columns["name"] ||
+		!columns["description"] ||
+		strings.Contains(tableSQL, "A-Z0-9_-") ||
+		!strings.Contains(tableSQL, "id GLOB 'C[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'")
+	if needsRebuild {
+		return s.rebuildCouponsForRandomCodes(ctx)
 	}
-
-	_, err = s.db.ExecContext(
-		ctx,
-		`UPDATE coupons
-		    SET code = 'GROUP200',
-		        updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-		  WHERE code = 'GRUP200'
-		    AND NOT EXISTS (SELECT 1 FROM coupons WHERE code = 'GROUP200')`,
-	)
-	return err
+	return nil
 }
 
-func (s *reservationStore) rebuildCouponsForFlexibleCodes(ctx context.Context) error {
+func (s *reservationStore) rebuildCouponsForRandomCodes(ctx context.Context) error {
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return err
@@ -243,30 +262,100 @@ func (s *reservationStore) rebuildCouponsForFlexibleCodes(ctx context.Context) e
 
 	statements := []string{
 		`DROP TABLE IF EXISTS coupons_new`,
+		`DROP TABLE IF EXISTS _coupon_id_map`,
+		`CREATE TEMP TABLE _coupon_id_map (
+			old_id TEXT PRIMARY KEY,
+			new_id TEXT NOT NULL UNIQUE
+		)`,
+		`INSERT INTO _coupon_id_map (old_id, new_id)
+		 SELECT id,
+		        CASE
+		            WHEN id GLOB 'C[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' THEN id
+		            WHEN id GLOB 'C[0-9][0-9][0-9]' THEN 'C' || printf('%010d', CAST(substr(id, 2) AS INTEGER))
+		            ELSE 'C' || printf('%010d', rn)
+		        END
+		   FROM (
+		        SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn
+		          FROM coupons
+		   )`,
 		`CREATE TABLE coupons_new (
 			id               TEXT    PRIMARY KEY,
 			code             TEXT    NOT NULL UNIQUE
 			                         CHECK (
-			                             length(code) BETWEEN 1 AND 20
+			                             length(code) BETWEEN 8 AND 20
 			                             AND code = upper(code)
-			                             AND code NOT GLOB '*[^A-Z0-9_-]*'
+			                             AND code NOT GLOB '*[^A-Z0-9]*'
 			                         ),
+			rule_code        TEXT    NOT NULL DEFAULT 'per_seat'
+			                         CHECK (rule_code IN ('per_seat', 'late_show', 'group')),
+			name             TEXT    NOT NULL DEFAULT '',
+			description      TEXT,
 			discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
 			is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
 			created_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-			updated_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+			updated_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+			CHECK (id GLOB 'C[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
 		)`,
 		`INSERT INTO coupons_new
-			(id, code, discount_amount, is_active, created_at, updated_at)
-		 SELECT id,
-		        CASE WHEN code = 'GRUP200' THEN 'GROUP200' ELSE code END,
-		        discount_amount,
-		        is_active,
-		        created_at,
-		        updated_at
-		   FROM coupons`,
+			(id, code, rule_code, name, description, discount_amount, is_active, created_at, updated_at)
+		 SELECT m.new_id,
+		        CASE
+		            WHEN c.id IN ('C001', 'C0000000001') OR c.code = 'LATE100' THEN 'Q7M4X9KD2P'
+		            WHEN c.id IN ('C002', 'C0000000002') OR c.code IN ('GROUP200', 'GRUP200') THEN 'Z8N3K6TP4A'
+		            WHEN c.id IN ('C003', 'C0000000003') OR c.code = 'HORS100' THEN 'H6R2V8XM9Q'
+		            WHEN c.id IN ('C004', 'C0000000004') OR c.code = 'WELC300' THEN 'W4C9L2NP7D'
+		            WHEN c.id IN ('C005', 'C0000000005') OR c.code = 'BDAY500' THEN 'B5D8Y3QK6M'
+		            WHEN c.id IN ('C006', 'C0000000006') OR c.code = 'WEEK150' THEN 'K3W7E5T9LA'
+		            WHEN c.id IN ('C007', 'C0000000007') OR c.code = 'MEMS300' THEN 'M9S2C6V4NX'
+		            WHEN c.id IN ('C008', 'C0000000008') OR c.code = 'SUMM200' THEN 'S2U8M4R7QP'
+		            WHEN c.id IN ('C009', 'C0000000009') OR c.code = 'WINT200' THEN 'T6W2N9R5KC'
+		            WHEN c.id IN ('C010', 'C0000000010') OR c.code = 'HOLI150' THEN 'H4L9D2V8QA'
+		            ELSE c.code
+		        END,
+		        CASE
+		            WHEN c.id IN ('C001', 'C0000000001') OR c.code = 'LATE100' THEN 'late_show'
+		            WHEN c.id IN ('C002', 'C0000000002') OR c.code IN ('GROUP200', 'GRUP200') THEN 'group'
+		            ELSE 'per_seat'
+		        END,
+		        CASE
+		            WHEN c.id IN ('C001', 'C0000000001') OR c.code = 'LATE100' THEN 'レイトショー割引'
+		            WHEN c.id IN ('C002', 'C0000000002') OR c.code IN ('GROUP200', 'GRUP200') THEN 'グループ割引'
+		            WHEN c.id IN ('C003', 'C0000000003') OR c.code = 'HORS100' THEN 'ホラーコスプレ割引'
+		            WHEN c.id IN ('C004', 'C0000000004') OR c.code = 'WELC300' THEN 'ウェルカムクーポン'
+		            WHEN c.id IN ('C005', 'C0000000005') OR c.code = 'BDAY500' THEN '誕生日クーポン'
+		            WHEN c.id IN ('C006', 'C0000000006') OR c.code = 'WEEK150' THEN '平日割引'
+		            WHEN c.id IN ('C007', 'C0000000007') OR c.code = 'MEMS300' THEN '会員特典'
+		            WHEN c.id IN ('C008', 'C0000000008') OR c.code = 'SUMM200' THEN '夏季特別割引'
+		            WHEN c.id IN ('C009', 'C0000000009') OR c.code = 'WINT200' THEN '冬季特別割引'
+		            WHEN c.id IN ('C010', 'C0000000010') OR c.code = 'HOLI150' THEN '祝日割引'
+		            ELSE ''
+		        END,
+		        CASE
+		            WHEN c.id IN ('C001', 'C0000000001') OR c.code = 'LATE100' THEN '20:00以降の回で1席100円引き'
+		            WHEN c.id IN ('C002', 'C0000000002') OR c.code IN ('GROUP200', 'GRUP200') THEN '4席以上で1席200円引き'
+		            ELSE '1席' || c.discount_amount || '円引き'
+		        END,
+		        c.discount_amount,
+		        c.is_active,
+		        c.created_at,
+		        c.updated_at
+		   FROM coupons AS c
+		   JOIN _coupon_id_map AS m ON m.old_id = c.id`,
+		`UPDATE reservations
+		    SET coupon_id = (
+		        SELECT m.new_id
+		          FROM _coupon_id_map AS m
+		         WHERE m.old_id = reservations.coupon_id
+		    )
+		  WHERE coupon_id IS NOT NULL
+		    AND EXISTS (
+		        SELECT 1
+		          FROM _coupon_id_map AS m
+		         WHERE m.old_id = reservations.coupon_id
+		    )`,
 		`DROP TABLE coupons`,
 		`ALTER TABLE coupons_new RENAME TO coupons`,
+		`DROP TABLE IF EXISTS _coupon_id_map`,
 	}
 	for _, statement := range statements {
 		if _, err := tx.ExecContext(ctx, statement); err != nil {
@@ -298,58 +387,6 @@ func (s *reservationStore) migrateScheduleDateTimeFormat(ctx context.Context) er
 		  WHERE substr(start_at, 11, 1) = ' '
 		     OR substr(end_at, 11, 1) = ' '`,
 	)
-	return err
-}
-
-func (s *reservationStore) migrateSeatAttributes(ctx context.Context) error {
-	columns, err := s.tableColumns(ctx, "seats")
-	if err != nil {
-		return err
-	}
-
-	statements := []string{}
-	if !columns["row_label"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN row_label TEXT NOT NULL DEFAULT ''`)
-	}
-	if !columns["col_no"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN col_no INTEGER NOT NULL DEFAULT 0`)
-	}
-	if !columns["seat_type"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN seat_type TEXT NOT NULL DEFAULT 'standard'`)
-	}
-	if !columns["is_wheelchair"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_wheelchair INTEGER NOT NULL DEFAULT 0`)
-	}
-	if !columns["is_premium"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0`)
-	}
-	if !columns["is_aisle"] {
-		statements = append(statements, `ALTER TABLE seats ADD COLUMN is_aisle INTEGER NOT NULL DEFAULT 0`)
-	}
-
-	for _, statement := range statements {
-		if _, err := s.db.ExecContext(ctx, statement); err != nil {
-			return err
-		}
-	}
-
-	_, err = s.db.ExecContext(
-		ctx,
-		`UPDATE seats
-		    SET row_label = CASE WHEN row_label = '' THEN upper(substr(seat_code, 1, 1)) ELSE row_label END,
-		        col_no = CASE WHEN col_no <= 0 THEN CAST(substr(seat_code, 2) AS INTEGER) ELSE col_no END,
-		        is_aisle = CASE
-		            WHEN is_aisle = 0 AND (CAST(substr(seat_code, 2) AS INTEGER) = 1) THEN 1
-		            ELSE is_aisle
-		        END
-		  WHERE row_label = ''
-		     OR col_no <= 0`,
-	)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.db.ExecContext(ctx, `CREATE INDEX IF NOT EXISTS idx_seats_screen_row_col ON seats(screen_id, row_label, col_no)`)
 	return err
 }
 
@@ -869,6 +906,59 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 	return response, nil
 }
 
+func (s *reservationStore) PreviewCoupon(ctx context.Context, req couponPreviewRequest) (couponPreviewResponse, error) {
+	createReq := normalizeReservationRequest(reservationCreateRequest{
+		MovieID:    req.MovieID,
+		Screen:     req.Screen,
+		Start:      req.Start,
+		End:        req.End,
+		Date:       req.Date,
+		Seats:      req.Seats,
+		Tickets:    req.Tickets,
+		CouponCode: req.CouponCode,
+	})
+	if createReq.MovieID == "" || createReq.Screen == "" || createReq.Start == "" {
+		return couponPreviewResponse{}, validationError("上映回を指定してください。")
+	}
+	if createReq.CouponCode == "" {
+		return couponPreviewResponse{}, validationError("クーポンコードを入力してください。")
+	}
+	if len(createReq.CouponCode) > maxCouponCodeLength || !couponCodePattern.MatchString(createReq.CouponCode) {
+		return couponPreviewResponse{}, validationError("クーポンコードを正しく入力してください。")
+	}
+
+	showtime, err := s.resolveShowtime(ctx, createReq)
+	if err != nil {
+		return couponPreviewResponse{}, err
+	}
+	tickets, err := s.resolveTickets(ctx, createReq.Tickets)
+	if err != nil {
+		return couponPreviewResponse{}, err
+	}
+
+	requiredSeatCount := 0
+	ticketSubtotal := 0
+	for _, ticket := range tickets {
+		requiredSeatCount += ticket.requiredSeatCount * ticket.count
+		ticketSubtotal += effectiveTicketPrice(ticket.code, ticket.price, createReq.Date) * ticket.count
+	}
+	seatCount := len(createReq.Seats)
+	if seatCount == 0 {
+		seatCount = requiredSeatCount
+	}
+
+	coupon, discount, err := s.resolveCouponInfo(ctx, createReq.CouponCode, showtime.startAt, seatCount, ticketSubtotal)
+	if err != nil {
+		return couponPreviewResponse{}, err
+	}
+	return couponPreviewResponse{
+		Code:        coupon.code,
+		Name:        coupon.name,
+		Description: coupon.description,
+		Discount:    discount,
+	}, nil
+}
+
 func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservationID string) ([]string, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
@@ -1263,44 +1353,51 @@ func (s *reservationStore) resolvePaymentMethod(ctx context.Context, code string
 }
 
 func (s *reservationStore) resolveCoupon(ctx context.Context, code string, startAt string, seatCount int, subtotal int) (string, int, error) {
+	coupon, discount, err := s.resolveCouponInfo(ctx, code, startAt, seatCount, subtotal)
+	if err != nil {
+		return "", 0, err
+	}
+	return coupon.id, discount, nil
+}
+
+func (s *reservationStore) resolveCouponInfo(ctx context.Context, code string, startAt string, seatCount int, subtotal int) (resolvedCoupon, int, error) {
 	code = strings.TrimSpace(strings.ToUpper(code))
 	if code == "" {
-		return "", 0, nil
+		return resolvedCoupon{}, 0, nil
 	}
 
-	var id string
-	var discountAmount int
+	var coupon resolvedCoupon
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, discount_amount
+		`SELECT id, code, rule_code, name, COALESCE(description, ''), discount_amount
 		   FROM coupons
 		  WHERE code = ?
 		    AND is_active = 1`,
 		code,
-	).Scan(&id, &discountAmount)
+	).Scan(&coupon.id, &coupon.code, &coupon.ruleCode, &coupon.name, &coupon.description, &coupon.discountAmount)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", 0, validationError("このクーポンコードは利用できません。")
+		return resolvedCoupon{}, 0, validationError("このクーポンコードは利用できません。")
 	}
 	if err != nil {
-		return "", 0, err
+		return resolvedCoupon{}, 0, err
 	}
 
-	switch code {
-	case "LATE100":
+	switch coupon.ruleCode {
+	case "late_show":
 		if showtimeHour(startAt) < 20 {
-			return "", 0, validationError("この上映回ではレイトショー割引を利用できません。")
+			return resolvedCoupon{}, 0, validationError("この上映回ではレイトショー割引を利用できません。")
 		}
-	case "GROUP200":
+	case "group":
 		if seatCount < 4 {
-			return "", 0, validationError("グループ割引は4席以上で利用できます。")
+			return resolvedCoupon{}, 0, validationError("グループ割引は4席以上で利用できます。")
 		}
 	}
 
-	discount := discountAmount * seatCount
+	discount := coupon.discountAmount * seatCount
 	if discount > subtotal {
 		discount = subtotal
 	}
-	return id, discount, nil
+	return coupon, discount, nil
 }
 
 func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID string, seats []resolvedSeat, now string) error {

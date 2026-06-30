@@ -48,40 +48,11 @@ seat_numbers(screen_id, capacity, columns, n) AS (
       FROM seat_numbers
      WHERE n < capacity
 )
-INSERT INTO seats
-    (screen_id, seat_code, row_label, col_no, seat_type, is_wheelchair, is_premium, is_aisle)
+INSERT INTO seats (screen_id, seat_code)
 SELECT
     screen_id,
-    row_label || CAST(col_no AS TEXT),
-    row_label,
-    col_no,
-    CASE
-        WHEN is_wheelchair = 1 THEN 'wheelchair'
-        WHEN is_premium = 1 THEN 'premium'
-        ELSE 'standard'
-    END,
-    is_wheelchair,
-    is_premium,
-    CASE WHEN col_no IN (1, columns) THEN 1 ELSE 0 END
-FROM (
-    SELECT
-        screen_id,
-        n,
-        columns,
-        char(65 + CAST((n - 1) / columns AS INTEGER)) AS row_label,
-        ((n - 1) % columns) + 1 AS col_no,
-        CASE
-            WHEN CAST((n - 1) / columns AS INTEGER) = 0
-             AND ((n - 1) % columns) + 1 IN (1, columns) THEN 1
-            ELSE 0
-        END AS is_wheelchair,
-        CASE
-            WHEN CAST((n - 1) / columns AS INTEGER) BETWEEN 3 AND 5
-             AND ((n - 1) % columns) + 1 BETWEEN 5 AND columns - 4 THEN 1
-            ELSE 0
-        END AS is_premium
-    FROM seat_numbers
-)
+    char(65 + CAST((n - 1) / columns AS INTEGER)) || CAST(((n - 1) % columns) + 1 AS TEXT)
+FROM seat_numbers
 ORDER BY screen_id, n;
 
 -- ============================================================
@@ -92,17 +63,17 @@ INSERT INTO payment_methods (id, code, name, display_order) VALUES
 ('PT002', 'qr',      'QR決済',           2),
 ('PT003', 'konbini', 'コンビニ払い',     3);
 
-INSERT INTO coupons (id, code, discount_amount) VALUES
-('C001', 'LATE100', 100),   -- レイトショー割引 100円引き
-('C002', 'GROUP200', 200),  -- グループ割引 200円引き
-('C003', 'HORS100', 100),   -- ホラーコスプレ割引 100円引き
-('C004', 'WELC300', 300),   -- ウェルカムクーポン 300円引き
-('C005', 'BDAY500', 500),   -- 誕生日クーポン 500円引き
-('C006', 'WEEK150', 150),   -- 平日割引 150円引き
-('C007', 'MEMS300', 300),   -- 会員特典 300円引き
-('C008', 'SUMM200', 200),   -- 夏季特別割引 200円引き
-('C009', 'WINT200', 200),   -- 冬季特別割引 200円引き
-('C010', 'HOLI150', 150);   -- 祝日割引 150円引き
+INSERT INTO coupons (id, code, rule_code, name, description, discount_amount) VALUES
+('C0000000001', 'Q7M4X9KD2P', 'late_show', 'レイトショー割引', '20:00以降の回で1席100円引き', 100),
+('C0000000002', 'Z8N3K6TP4A', 'group',     'グループ割引',     '4席以上で1席200円引き',       200),
+('C0000000003', 'H6R2V8XM9Q', 'per_seat',  'ホラーコスプレ割引', '1席100円引き',             100),
+('C0000000004', 'W4C9L2NP7D', 'per_seat',  'ウェルカムクーポン', '1席300円引き',             300),
+('C0000000005', 'B5D8Y3QK6M', 'per_seat',  '誕生日クーポン',     '1席500円引き',             500),
+('C0000000006', 'K3W7E5T9LA', 'per_seat',  '平日割引',           '1席150円引き',             150),
+('C0000000007', 'M9S2C6V4NX', 'per_seat',  '会員特典',           '1席300円引き',             300),
+('C0000000008', 'S2U8M4R7QP', 'per_seat',  '夏季特別割引',       '1席200円引き',             200),
+('C0000000009', 'T6W2N9R5KC', 'per_seat',  '冬季特別割引',       '1席200円引き',             200),
+('C0000000010', 'H4L9D2V8QA', 'per_seat',  '祝日割引',           '1席150円引き',             150);
 
 INSERT INTO ticket_types (id, code, name, price, required_seat_count, display_order, is_active) VALUES
 (1, 'pair',       'ペアチケット',       3200, 2, 1, 1),

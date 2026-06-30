@@ -61,21 +61,26 @@ CREATE TABLE member_sessions (
 
 -- ============================================================
 -- coupons: クーポン
--- xlsx: クーポンID / クーポンコード / 割引額
--- クーポンコードは画面・運用側で扱いやすいよう、大文字英数字・ハイフン・アンダースコアの20字以内。
+-- xlsx: クーポンID / クーポンコード / 割引ルール / クーポン名 / 割引額
+-- クーポンコードは利用者へ配布するランダム値。割引条件は rule_code で判定する。
 -- ============================================================
 CREATE TABLE coupons (
     id               TEXT    PRIMARY KEY,
     code             TEXT    NOT NULL UNIQUE
                              CHECK (
-                                 length(code) BETWEEN 1 AND 20
+                                 length(code) BETWEEN 8 AND 20
                                  AND code = upper(code)
-                                 AND code NOT GLOB '*[^A-Z0-9_-]*'
+                                 AND code NOT GLOB '*[^A-Z0-9]*'
                              ),
+    rule_code        TEXT    NOT NULL DEFAULT 'per_seat'
+                             CHECK (rule_code IN ('per_seat', 'late_show', 'group')),
+    name             TEXT    NOT NULL DEFAULT '',
+    description      TEXT,
     discount_amount  INTEGER NOT NULL CHECK (discount_amount >= 0),
     is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     created_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    updated_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    CHECK (id GLOB 'C[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
 );
 
 -- ============================================================
@@ -119,24 +124,16 @@ CREATE TABLE screens (
 -- ============================================================
 -- seats: 座席情報
 -- xlsx: 座席ID / スクリーンID / 座席コード
--- 座席属性・販売可否もここで管理し、スクリーン定員は有効座席数から算出する。
+-- スクリーン定員は有効座席数から算出する。
 -- ============================================================
 CREATE TABLE seats (
-    id             INTEGER PRIMARY KEY,
-    screen_id      TEXT    NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
-    seat_code      TEXT    NOT NULL,
-    row_label      TEXT    NOT NULL,
-    col_no         INTEGER NOT NULL CHECK (col_no > 0),
-    seat_type      TEXT    NOT NULL DEFAULT 'standard'
-                            CHECK (seat_type IN ('standard', 'wheelchair', 'premium')),
-    is_wheelchair  INTEGER NOT NULL DEFAULT 0 CHECK (is_wheelchair IN (0, 1)),
-    is_premium     INTEGER NOT NULL DEFAULT 0 CHECK (is_premium IN (0, 1)),
-    is_aisle       INTEGER NOT NULL DEFAULT 0 CHECK (is_aisle IN (0, 1)),
-    is_active      INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-    created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    UNIQUE (screen_id, seat_code),
-    UNIQUE (screen_id, row_label, col_no)
+    id          INTEGER PRIMARY KEY,
+    screen_id   TEXT    NOT NULL REFERENCES screens(id) ON DELETE CASCADE,
+    seat_code   TEXT    NOT NULL,
+    is_active   INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    UNIQUE (screen_id, seat_code)
 );
 
 -- ============================================================
@@ -366,7 +363,6 @@ CREATE INDEX idx_member_sessions_expires_at ON member_sessions(expires_at);
 
 CREATE INDEX idx_screens_screen_type_id ON screens(screen_type_id);
 CREATE INDEX idx_seats_screen_id ON seats(screen_id);
-CREATE INDEX idx_seats_screen_row_col ON seats(screen_id, row_label, col_no);
 CREATE INDEX idx_movies_title ON movies(title);
 CREATE INDEX idx_movie_people_person_id ON movie_people(person_id);
 CREATE INDEX idx_schedules_movie_start_at ON schedules(movie_id, start_at);

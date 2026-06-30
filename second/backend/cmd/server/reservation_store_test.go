@@ -343,6 +343,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 
 	ctx := context.Background()
 	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 4)
+	groupCouponCode := couponCodeByRule(t, memberStore.db, "group")
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
@@ -351,7 +352,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 		Date:          "5/15(金)",
 		Seats:         seats,
 		Tickets:       map[string]int{"adult": 4},
-		CouponCode:    "GROUP200",
+		CouponCode:    groupCouponCode,
 		PaymentMethod: "credit",
 		Customer: reservationCustomer{
 			Name:     "Coupon User",
@@ -373,8 +374,44 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = ?`, result.ReservationID).Scan(&couponID); err != nil {
 		t.Fatalf("coupon id query error = %v", err)
 	}
-	if couponID != "C002" {
-		t.Fatalf("coupon_id = %q, want C002", couponID)
+	if couponID != "C0000000002" {
+		t.Fatalf("coupon_id = %q, want C0000000002", couponID)
+	}
+}
+
+func TestReservationStorePreviewCoupon(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	ctx := context.Background()
+	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 4)
+	result, err := store.PreviewCoupon(ctx, couponPreviewRequest{
+		MovieID:    "1",
+		Screen:     "1",
+		Start:      "17:00",
+		End:        "19:26",
+		Date:       "5/15(金)",
+		Seats:      seats,
+		Tickets:    map[string]int{"adult": 4},
+		CouponCode: couponCodeByRule(t, memberStore.db, "group"),
+	})
+	if err != nil {
+		t.Fatalf("PreviewCoupon() error = %v", err)
+	}
+	if result.Name != "グループ割引" || result.Description == "" || result.Discount != 800 {
+		t.Fatalf("PreviewCoupon() = %+v, want group discount 800", result)
 	}
 }
 
@@ -391,11 +428,15 @@ func TestReservationStoreMigratesLegacyGroupCoupon(t *testing.T) {
 
 	forceLegacyCouponTable(t, memberStore.db)
 
+	ctx := context.Background()
+	if _, err := memberStore.db.ExecContext(ctx, `UPDATE reservations SET coupon_id = 'C002' WHERE id = 'R0000000001'`); err != nil {
+		t.Fatalf("legacy reservation coupon update error = %v", err)
+	}
+
 	if _, err := newReservationStore(memberStore.db); err != nil {
 		t.Fatalf("newReservationStore() migration error = %v", err)
 	}
 
-	ctx := context.Background()
 	var tableSQL string
 	if err := memberStore.db.QueryRowContext(ctx, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'coupons'`).Scan(&tableSQL); err != nil {
 		t.Fatalf("coupon table sql query error = %v", err)
@@ -404,15 +445,25 @@ func TestReservationStoreMigratesLegacyGroupCoupon(t *testing.T) {
 		t.Fatalf("coupon table still has legacy CHECK: %s", tableSQL)
 	}
 
-	var groupCount, legacyCount int
-	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE code = 'GROUP200'`).Scan(&groupCount); err != nil {
-		t.Fatalf("GROUP200 count query error = %v", err)
+	var groupCount, legacyCount, fixedCount int
+	var migratedCouponID string
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE id = 'C0000000002' AND rule_code = 'group' AND code = 'Z8N3K6TP4A'`).Scan(&groupCount); err != nil {
+		t.Fatalf("group coupon count query error = %v", err)
 	}
 	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE code = 'GRUP200'`).Scan(&legacyCount); err != nil {
 		t.Fatalf("GRUP200 count query error = %v", err)
 	}
-	if groupCount != 1 || legacyCount != 0 {
-		t.Fatalf("coupon migration counts: GROUP200=%d GRUP200=%d, want 1 and 0", groupCount, legacyCount)
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM coupons WHERE code = 'GROUP200'`).Scan(&fixedCount); err != nil {
+		t.Fatalf("GROUP200 count query error = %v", err)
+	}
+	if groupCount != 1 || legacyCount != 0 || fixedCount != 0 {
+		t.Fatalf("coupon migration counts: group=%d GRUP200=%d GROUP200=%d, want 1/0/0", groupCount, legacyCount, fixedCount)
+	}
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = 'R0000000001'`).Scan(&migratedCouponID); err != nil {
+		t.Fatalf("migrated reservation coupon query error = %v", err)
+	}
+	if migratedCouponID != "C0000000002" {
+		t.Fatalf("migrated reservation coupon_id = %q, want C0000000002", migratedCouponID)
 	}
 }
 
@@ -604,6 +655,23 @@ func firstFreeSeats(t *testing.T, db *sql.DB, scheduleID string, count int) []st
 	return seats
 }
 
+func couponCodeByRule(t *testing.T, db *sql.DB, ruleCode string) string {
+	t.Helper()
+	var code string
+	if err := db.QueryRow(
+		`SELECT code
+		   FROM coupons
+		  WHERE rule_code = ?
+		    AND is_active = 1
+		  ORDER BY id
+		  LIMIT 1`,
+		ruleCode,
+	).Scan(&code); err != nil {
+		t.Fatalf("couponCodeByRule(%q) error = %v", ruleCode, err)
+	}
+	return code
+}
+
 func forceLegacyCouponTable(t *testing.T, db *sql.DB) {
 	t.Helper()
 	ctx := context.Background()
@@ -637,8 +705,32 @@ func forceLegacyCouponTable(t *testing.T, db *sql.DB) {
 		)`,
 		`INSERT INTO coupons_legacy
 			(id, code, discount_amount, is_active, created_at, updated_at)
-		 SELECT id,
-		        CASE WHEN code = 'GROUP200' THEN 'GRUP200' ELSE code END,
+		 SELECT CASE id
+		            WHEN 'C0000000001' THEN 'C001'
+		            WHEN 'C0000000002' THEN 'C002'
+		            WHEN 'C0000000003' THEN 'C003'
+		            WHEN 'C0000000004' THEN 'C004'
+		            WHEN 'C0000000005' THEN 'C005'
+		            WHEN 'C0000000006' THEN 'C006'
+		            WHEN 'C0000000007' THEN 'C007'
+		            WHEN 'C0000000008' THEN 'C008'
+		            WHEN 'C0000000009' THEN 'C009'
+		            WHEN 'C0000000010' THEN 'C010'
+		            ELSE id
+		        END,
+		        CASE id
+		            WHEN 'C0000000001' THEN 'LATE100'
+		            WHEN 'C0000000002' THEN 'GRUP200'
+		            WHEN 'C0000000003' THEN 'HORS100'
+		            WHEN 'C0000000004' THEN 'WELC300'
+		            WHEN 'C0000000005' THEN 'BDAY500'
+		            WHEN 'C0000000006' THEN 'WEEK150'
+		            WHEN 'C0000000007' THEN 'MEMS300'
+		            WHEN 'C0000000008' THEN 'SUMM200'
+		            WHEN 'C0000000009' THEN 'WINT200'
+		            WHEN 'C0000000010' THEN 'HOLI150'
+		            ELSE 'TEST000'
+		        END,
 		        discount_amount,
 		        is_active,
 		        created_at,

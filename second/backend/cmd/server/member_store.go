@@ -40,7 +40,7 @@ var (
 	errInvalidCredentials = errors.New("invalid credentials")
 	errUnauthorized       = errors.New("unauthorized")
 	memberPhonePattern    = regexp.MustCompile(`^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$`)
-	couponCodePattern     = regexp.MustCompile(`^[A-Z0-9_-]+$`)
+	couponCodePattern     = regexp.MustCompile(`^[A-Z0-9]{8,20}$`)
 )
 
 type validationError string
