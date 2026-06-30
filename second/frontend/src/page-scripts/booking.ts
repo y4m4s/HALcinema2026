@@ -911,7 +911,7 @@ export function runBooking() {
           name: state.join.name.trim(),
           nameKana: state.join.nameKana.trim(),
           email: state.join.email.trim(),
-          tel: getJoinPhoneNumber(),
+          tel: state.join.tel.trim(),
           password: state.join.password,
           mailMagazine: Boolean(state.join.mailMagazine),
         }),
@@ -1022,7 +1022,7 @@ export function runBooking() {
 
   function getJoinValidationMessage() {
     const join = state.join
-    const phone = getJoinPhoneNumber()
+    const phone = String(join.tel || '').trim()
     const email = String(join.email || '').trim()
     const emailConfirm = String(join.emailConfirm || '').trim()
     const password = String(join.password || '')
