@@ -45,7 +45,7 @@ const INPUT_LIMITS = {
   name: 40,
   nameKana: 60,
   email: 254,
-  telPart: 5,
+  tel: 15,
   coupon: 20,
   loginIdentifier: 254,
   password: 128,
@@ -235,6 +235,7 @@ export function runBooking() {
       state.customer[fieldName] = nextValue
       syncCustomerDerivedValues()
       syncCurrentStepAction()
+      syncCustomerErrors()
       return
     }
 
@@ -327,6 +328,7 @@ export function runBooking() {
 
   function getNextStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'account' && state.account === 'member') {
+      if (!state.customer.tel.trim()) return getStepIndex('customer')
       return getStepIndex('payment')
     }
     return Math.min(state.currentStep + 1, FLOW_STEPS.length - 1)
@@ -334,6 +336,7 @@ export function runBooking() {
 
   function getPreviousStepIndex() {
     if (FLOW_STEPS[state.currentStep].id === 'payment' && state.account === 'member') {
+      if (!state.member?.tel) return getStepIndex('customer')
       return getStepIndex('account')
     }
     return Math.max(0, state.currentStep - 1)
@@ -426,7 +429,7 @@ export function runBooking() {
         canLogin: isLoginValid(),
       })
     }
-    if (id === 'customer') stepRoot.innerHTML = CustomerStep(shared)
+    if (id === 'customer') stepRoot.innerHTML = CustomerStep({ ...shared, errors: getCustomerErrors() })
     if (id === 'tickets') {
       stepRoot.innerHTML = TicketsStep({
         ...shared,
@@ -585,14 +588,30 @@ export function runBooking() {
       isWithinMax(name, INPUT_LIMITS.name) &&
       isWithinMax(kana, INPUT_LIMITS.nameKana) &&
       isWithinMax(email, INPUT_LIMITS.email) &&
-      /^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone) &&
+      /^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone) &&
       isValidEmail(email) &&
       email === emailConfirm
     )
   }
 
-  async function applyCoupon() {
-    if (state.couponApplying) return
+  function getCustomerErrors() {
+    const errors = {}
+    const c = state.customer
+    const name = c.name.trim()
+    const kana = c.nameKana.trim()
+    const phone = getPhoneNumber()
+    const email = c.email.trim()
+    const emailConfirm = c.emailConfirm.trim()
+    if (name && !isWithinMax(name, INPUT_LIMITS.name)) errors.name = '40文字以内で入力してください。'
+    if (kana && !isWithinMax(kana, INPUT_LIMITS.nameKana)) errors.nameKana = '60文字以内で入力してください。'
+    if (phone && !/^[0-9]{10,11}$/.test(phone)) errors.tel = '10〜11桁の数字で入力してください。'
+    if (email && !isValidEmail(email)) errors.email = 'メールアドレスの形式が正しくありません。'
+    if (email && !isWithinMax(email, INPUT_LIMITS.email)) errors.email = '254文字以内で入力してください。'
+    if (emailConfirm && email && email !== emailConfirm) errors.emailConfirm = 'メールアドレスが一致していません。'
+    return errors
+  }
+
+  function applyCoupon() {
     const code = normalizeCouponInput(state.couponInput)
     if (!code) {
       state.couponError = 'クーポンコードを入力してください。'
@@ -816,8 +835,6 @@ export function runBooking() {
   }
 
   function getPhoneNumber() {
-    const parts = [state.customer.tel1, state.customer.tel2, state.customer.tel3].map(part => String(part || '').trim())
-    if (parts.every(Boolean)) return parts.join('-')
     return state.customer.tel.trim()
   }
 
@@ -831,6 +848,14 @@ export function runBooking() {
   function syncCurrentStepAction() {
     const nextButton = stepRoot.querySelector('[data-action="next"]')
     if (nextButton) nextButton.disabled = !canProceed()
+  }
+
+  function syncCustomerErrors() {
+    const errors = getCustomerErrors()
+    stepRoot.querySelectorAll('[data-customer-error]').forEach(el => {
+      const field = el.dataset.customerError
+      el.textContent = errors[field] || ''
+    })
   }
 
   function syncAccountActions() {
@@ -973,7 +998,6 @@ export function runBooking() {
   }
 
   function fillCustomerFromMember(member) {
-    const telParts = splitPhoneNumber(member.tel)
     state.customer = {
       ...state.customer,
       name: member.name || '',
@@ -984,9 +1008,6 @@ export function runBooking() {
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
-      tel1: telParts[0] || '',
-      tel2: telParts[1] || '',
-      tel3: telParts[2] || '',
     }
   }
 
@@ -1011,7 +1032,7 @@ export function runBooking() {
     if (!String(join.nameKana || '').trim()) return '氏名（かな）を入力してください。'
     if (!isWithinMax(join.name, INPUT_LIMITS.name)) return '氏名は40文字以内で入力してください。'
     if (!isWithinMax(join.nameKana, INPUT_LIMITS.nameKana)) return '氏名（かな）は60文字以内で入力してください。'
-    if (!/^[0-9]{2,5}-[0-9]{2,5}-[0-9]{3,5}$/.test(phone)) return '電話番号を3つの欄に分けて入力してください。'
+    if (!/^[0-9]{2,5}[0-9]{2,5}[0-9]{3,5}$/.test(phone)) return '電話番号をハイフンなしで入力してください。'
     if (!isValidEmail(email)) return 'メールアドレスを正しく入力してください。'
     if (!isWithinMax(email, INPUT_LIMITS.email)) return 'メールアドレスは254文字以内で入力してください。'
     if (email !== emailConfirm) return '確認用メールアドレスが一致していません。'
@@ -1022,12 +1043,6 @@ export function runBooking() {
     return ''
   }
 
-  function getJoinPhoneNumber() {
-    return [state.join.tel1, state.join.tel2, state.join.tel3]
-      .map(part => String(part || '').trim())
-      .filter(Boolean)
-      .join('-')
-  }
 
   function syncJoinStateFromDOM() {
     stepRoot.querySelectorAll('[data-register-field]').forEach((field) => {
@@ -1106,9 +1121,6 @@ function createJoinState() {
     nameKana: '',
     email: '',
     emailConfirm: '',
-    tel1: '',
-    tel2: '',
-    tel3: '',
     password: '',
     passwordConfirm: '',
     mailMagazine: false,
@@ -1118,7 +1130,6 @@ function createJoinState() {
 }
 
 function createCustomerState(member = null) {
-  const phoneParts = splitPhoneNumber(member?.tel || '')
   return {
     name: member?.name || '',
     nameKana: member?.nameKana || '',
@@ -1128,11 +1139,6 @@ function createCustomerState(member = null) {
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
-    tel1: phoneParts[0] || '',
-    tel2: phoneParts[1] || '',
-    tel3: phoneParts[2] || '',
-    postal: '',
-    request: '',
   }
 }
 
@@ -1188,11 +1194,6 @@ function getAuthHeaders(token) {
 
 function getRequestErrorMessage(error) {
   return error instanceof Error ? error.message : '通信に失敗しました。'
-}
-
-function splitPhoneNumber(value) {
-  const parts = String(value || '').split('-')
-  return parts.length === 3 ? parts : ['', '', '']
 }
 
 function resolveMovie(params) {
@@ -1302,7 +1303,7 @@ function createConfirmationNo() {
 }
 
 function normalizeCustomerInput(field, value) {
-  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.telPart)
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.tel)
   if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
   if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
   if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
@@ -1315,7 +1316,7 @@ function normalizeLoginInput(field, value) {
 }
 
 function normalizeRegisterInput(field, value) {
-  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.telPart)
+  if (String(field || '').startsWith('tel')) return normalizeDigits(value, INPUT_LIMITS.tel)
   if (field === 'name') return limitString(stripControlChars(value), INPUT_LIMITS.name)
   if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
   if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
@@ -1340,7 +1341,7 @@ function isWithinMax(value, maxLength) {
 }
 
 function stripControlChars(value) {
-  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '')
+  return String(value || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
 }
 
 function isValidEmail(value) {

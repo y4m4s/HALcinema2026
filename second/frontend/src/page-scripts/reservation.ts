@@ -6,12 +6,17 @@ export function runReservation() {
   const form = document.getElementById('reservation-lookup-form')
   const resultRoot = document.getElementById('reservation-result')
   if (!form || !resultRoot) return
+  const shell = form.closest('.reservation-shell')
 
   form.addEventListener('input', function (event) {
     const target = event.target instanceof HTMLInputElement ? event.target : null
     if (!target) return
     if (target.name === 'reservationId') {
-      target.value = target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32)
+      let v = target.value.toUpperCase().replace(/[^R0-9]/g, '')
+      const rCount = (v.match(/R/g) || []).length
+      if (rCount > 1) v = 'R' + v.replace(/R/g, '')
+      if (v.length > 0 && !v.startsWith('R')) v = 'R' + v.replace(/R/g, '')
+      target.value = v.slice(0, 11)
     }
     if (target.name === 'email') {
       target.value = target.value.trim().slice(0, 254)
@@ -36,14 +41,22 @@ export function runReservation() {
     setLoading(true)
     resultRoot.innerHTML = ''
 
+
     try {
       const result = await requestJSON('/api/reservations/lookup', {
         method: 'POST',
         body: JSON.stringify({ reservationId, email, tel }),
       })
       renderReservation(result)
+      resultRoot.querySelector('[data-reservation-back]')?.addEventListener('click', () => {
+        resultRoot.innerHTML = ''
+        shell?.classList.remove('has-result')
+      })
+      shell?.classList.add('has-result')
+
     } catch (error) {
       renderError(error instanceof Error ? error.message : '予約情報の確認に失敗しました。')
+      shell?.classList.remove('has-result')
     } finally {
       setLoading(false)
     }
@@ -62,8 +75,11 @@ export function runReservation() {
             <span>RESERVATION</span>
             <h2>${escapeHtml(reservation.movieTitle || '-')}</h2>
           </div>
-          <strong>${escapeHtml(statusLabel(reservation.status))}</strong>
-        </div>
+          <div class="reservation-detail-actions">
+            <button type="button" class="reservation-back btn-ghost" data-reservation-back>別の予約を確認する</button>
+            <strong>${escapeHtml(statusLabel(reservation.status))}</strong>
+          </div>
+          </div>
         <div class="review-grid reservation-review-grid">
           ${reviewItem('予約番号', reservation.reservationId)}
           ${reviewItem('上映日時', `${dateLabel(reservation.date)} ${reservation.start || ''} - ${reservation.end || ''}`)}
@@ -146,9 +162,8 @@ function dateLabel(value) {
 
 function normalizeTel(value) {
   return String(value || '')
-    .replace(/[^\d-]/g, '')
-    .replace(/-{2,}/g, '-')
-    .slice(0, 17)
+    .replace(/\D/g, '')
+    .slice(0, 15)
 }
 
 async function requestJSON(path, options = {}) {

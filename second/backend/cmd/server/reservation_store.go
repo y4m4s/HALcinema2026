@@ -1495,7 +1495,7 @@ func validateReservationRequest(req reservationCreateRequest) error {
 		return validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(req.Customer.Tel) {
-		return validationError("電話番号をハイフン区切りで入力してください。")
+		return validationError("電話番号をハイフンなしで入力してください。")
 	}
 	if req.PaymentMethod == "" {
 		return validationError("支払方法を選択してください。")
@@ -1544,7 +1544,7 @@ func validateReservationLookupRequest(req reservationLookupRequest) error {
 		return validationError("メールアドレスを正しく入力してください。")
 	}
 	if !memberPhonePattern.MatchString(req.Tel) {
-		return validationError("電話番号をハイフン区切りで入力してください。")
+		return validationError("電話番号をハイフンなしで入力してください。")
 	}
 	return nil
 }

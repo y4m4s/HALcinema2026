@@ -20,7 +20,7 @@ func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 		Name:         "Test User",
 		NameKana:     "test user",
 		Email:        "test@example.com",
-		Tel:          "090-1234-5678",
+		Tel:          "09012345678",
 		Password:     "password123",
 		MailMagazine: true,
 	}
@@ -74,7 +74,7 @@ func TestMemberStoreRejectsInputLimits(t *testing.T) {
 		Name:     strings.Repeat("あ", maxPersonNameRunes+1),
 		NameKana: "てすとゆーざー",
 		Email:    "test@example.com",
-		Tel:      "090-1234-5678",
+		Tel:      "09012345678",
 		Password: "password123",
 	})
 	if !isValidationError(err) {
@@ -85,7 +85,7 @@ func TestMemberStoreRejectsInputLimits(t *testing.T) {
 		Name:     "Test User",
 		NameKana: "てすとゆーざー",
 		Email:    "Display Name <test@example.com>",
-		Tel:      "090-1234-5678",
+		Tel:      "09012345678",
 		Password: "password123",
 	})
 	if !isValidationError(err) {
@@ -96,7 +96,7 @@ func TestMemberStoreRejectsInputLimits(t *testing.T) {
 		Name:     "Test User",
 		NameKana: "てすとゆーざー",
 		Email:    "test@example.com",
-		Tel:      "090-1234-5678",
+		Tel:      "09012345678",
 		Password: strings.Repeat("a", maxPasswordRunes+1),
 	})
 	if !isValidationError(err) {
