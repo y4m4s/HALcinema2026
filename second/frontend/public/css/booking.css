@@ -936,7 +936,7 @@
 }
 
 .account-login-row input::placeholder {
-  color: var(--text3);
+  color: #546478;
 }
 
 .account-link {
@@ -1226,7 +1226,7 @@
 }
 
 .customer-control input::placeholder {
-  color: var(--text3);
+  color: #546478;
 }
 
 .customer-control input[type="tel"] {

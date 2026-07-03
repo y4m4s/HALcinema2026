@@ -3,7 +3,7 @@ PRAGMA busy_timeout = 5000;
 
 -- ============================================================
 -- HAL Cinema second schema
--- D_IA33_03_データ項目一覧.xlsx / D_IA33_04_テーブル定義書.xlsx を基にした SQLite 用DDL。
+-- 関連ファイル：D_IA33_03_データ項目一覧.xlsx / D_IA33_04_テーブル定義書.xlsx
 -- ============================================================
 
 -- ============================================================
@@ -36,20 +36,17 @@ BEGIN;
 -- ============================================================
 -- members: 会員
 -- xlsx: 会員ID / メールアドレス / パスワードハッシュ / 氏名 / 氏名かな / 電話番号 / メールマガジン希望
--- member_no / points / created_at / updated_at は second/backend の会員機能で使用。
+-- created_at は会員登録日時として second/backend の会員機能で使用。
 -- ============================================================
 CREATE TABLE members (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    member_no      TEXT    NOT NULL UNIQUE,
     email          TEXT    NOT NULL COLLATE NOCASE UNIQUE,
     password_hash  TEXT    NOT NULL,
     name           TEXT    NOT NULL,
     name_kana      TEXT    NOT NULL,
     tel            TEXT    NOT NULL,
     mail_magazine  INTEGER NOT NULL DEFAULT 0 CHECK (mail_magazine IN (0, 1)),
-    points         INTEGER NOT NULL DEFAULT 0 CHECK (points >= 0),
-    created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE member_sessions (
@@ -104,9 +101,7 @@ CREATE TABLE payment_methods (
 -- ============================================================
 CREATE TABLE screen_types (
     id         TEXT    PRIMARY KEY,
-    name       TEXT    NOT NULL UNIQUE,
-    created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    name       TEXT    NOT NULL UNIQUE
 );
 
 -- ============================================================
@@ -116,9 +111,7 @@ CREATE TABLE screen_types (
 CREATE TABLE screens (
     id              TEXT    PRIMARY KEY,
     screen_type_id  TEXT    NOT NULL REFERENCES screen_types(id) ON DELETE RESTRICT,
-    name            TEXT    NOT NULL UNIQUE,
-    created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    name            TEXT    NOT NULL UNIQUE
 );
 
 -- ============================================================
@@ -150,8 +143,8 @@ CREATE TABLE people (
 -- ============================================================
 -- movies: 作品
 -- xlsx: 作品ID / 監督 / 出演者 / タイトル / タイトルかな / 英語タイトル /
---       レーティング / 上映時間 / ポスター画像URL / キャッチコピー / あらすじ / 作成日時 / 更新日時
--- データ項目一覧の ジャンル / 言語 も作品属性として保持。
+--       レーティング / 上映時間 / ポスター画像URL / キャッチコピー / あらすじ / 上映開始日 / 作成日時 / 更新日時
+-- データ項目一覧の ジャンル も作品属性として保持。
 -- ============================================================
 CREATE TABLE movies (
     id                    TEXT    PRIMARY KEY,
@@ -166,7 +159,8 @@ CREATE TABLE movies (
     tagline               TEXT,
     synopsis              TEXT,
     genre                 TEXT,
-    language              TEXT,
+    screening_start_date  TEXT    NOT NULL
+                          CHECK (screening_start_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
     created_at            TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at            TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
@@ -188,7 +182,7 @@ CREATE TABLE movie_people (
 -- xlsx: スケジュールID / 作品ID / スクリーンID / 上映開始日時 / 上映終了日時
 -- ============================================================
 CREATE TABLE schedules (
-    id          TEXT PRIMARY KEY,
+    id          INTEGER PRIMARY KEY,
     movie_id    TEXT NOT NULL REFERENCES movies(id) ON DELETE RESTRICT,
     screen_id   TEXT NOT NULL REFERENCES screens(id) ON DELETE RESTRICT,
     start_at    TEXT NOT NULL,
@@ -241,20 +235,20 @@ CREATE TABLE ticket_types (
     price                INTEGER NOT NULL CHECK (price >= 0),
     required_seat_count  INTEGER NOT NULL DEFAULT 1 CHECK (required_seat_count > 0),
     display_order        INTEGER NOT NULL DEFAULT 999,
-    is_active            INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
-    created_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    is_active            INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 );
 
 -- ============================================================
 -- reservations: 予約
--- xlsx: 予約ID / スケジュールID / 会員ID / クーポンID / 予約ステータス / 予約日時
--- 予約IDは定義書に合わせて R + 数字10桁。
+-- xlsx: 予約ID / 予約番号 / スケジュールID / 会員ID / クーポンID / 予約ステータス / 予約作成日時
+-- id は内部参照用の整数主キー、reservation_no は画面・メール表示用の R + 数字10桁。
+-- created_at を予約日時として扱う。
 -- seat_hold_expires_at が過ぎた pending 予約は座席占有対象から外す。
 -- ============================================================
 CREATE TABLE reservations (
-    id                  TEXT    PRIMARY KEY,
-    schedule_id         TEXT    NOT NULL REFERENCES schedules(id) ON DELETE RESTRICT,
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    reservation_no      TEXT    GENERATED ALWAYS AS ('R' || printf('%010d', id)) STORED UNIQUE,
+    schedule_id         INTEGER NOT NULL REFERENCES schedules(id) ON DELETE RESTRICT,
     member_id           INTEGER REFERENCES members(id) ON DELETE RESTRICT,
     coupon_id           TEXT    REFERENCES coupons(id) ON DELETE SET NULL,
     customer_name       TEXT    NOT NULL,
@@ -263,37 +257,31 @@ CREATE TABLE reservations (
     customer_tel        TEXT    NOT NULL,
     status              TEXT    NOT NULL DEFAULT 'pending'
                              CHECK (status IN ('pending', 'confirmed', 'cancelled', 'used', 'expired')),
-    reserved_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     seat_hold_expires_at TEXT,
     created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    CHECK (id GLOB 'R[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+    updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 -- ============================================================
 -- reservation_details: 予約明細
 -- xlsx: 予約明細ID / 予約ID / チケット種別ID / 数量 / 単価 / 小計
--- 予約明細IDは定義書に合わせて RD + 数字10桁。
 -- ============================================================
 CREATE TABLE reservation_details (
-    id              TEXT    PRIMARY KEY,
-    reservation_id  TEXT    NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    reservation_id  INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     ticket_type_id  INTEGER NOT NULL REFERENCES ticket_types(id) ON DELETE RESTRICT,
     quantity        INTEGER NOT NULL CHECK (quantity > 0),
     unit_price      INTEGER NOT NULL CHECK (unit_price >= 0),
-    subtotal        INTEGER NOT NULL CHECK (subtotal >= 0),
-    created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    CHECK (id GLOB 'RD[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+    subtotal        INTEGER NOT NULL CHECK (subtotal >= 0)
 );
 
 -- ============================================================
 -- reservation_seats: 予約座席
--- xlsx: 予約明細ID / 座席ID
+-- xlsx: 予約明細ID / スケジュールID / 座席ID
 -- ============================================================
 CREATE TABLE reservation_seats (
-    reservation_detail_id  TEXT    NOT NULL REFERENCES reservation_details(id) ON DELETE CASCADE,
-    schedule_id             TEXT    NOT NULL REFERENCES schedules(id) ON DELETE RESTRICT,
+    reservation_detail_id  INTEGER NOT NULL REFERENCES reservation_details(id) ON DELETE CASCADE,
+    schedule_id            INTEGER NOT NULL REFERENCES schedules(id) ON DELETE RESTRICT,
     seat_id                INTEGER NOT NULL REFERENCES seats(id) ON DELETE RESTRICT,
     created_at             TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     PRIMARY KEY (reservation_detail_id, seat_id),
@@ -303,11 +291,10 @@ CREATE TABLE reservation_seats (
 -- ============================================================
 -- payments: 支払い
 -- xlsx: 支払いID / 予約ID / 支払い方法ID / 支払金額 / 支払いステータス / 支払い日時
--- 支払いIDは枯渇を避けるため P + 数字10桁。
 -- ============================================================
 CREATE TABLE payments (
-    id                 TEXT    PRIMARY KEY,
-    reservation_id     TEXT    NOT NULL REFERENCES reservations(id) ON DELETE RESTRICT,
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    reservation_id     INTEGER NOT NULL REFERENCES reservations(id) ON DELETE RESTRICT,
     payment_method_id  TEXT    NOT NULL REFERENCES payment_methods(id) ON DELETE RESTRICT,
     amount             INTEGER NOT NULL CHECK (amount >= 0),
     status             TEXT    NOT NULL DEFAULT 'unpaid'
@@ -315,8 +302,7 @@ CREATE TABLE payments (
     paid_at            TEXT,
     payment_due_at     TEXT,
     created_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    CHECK (id GLOB 'P[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+    updated_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 -- ============================================================
@@ -335,9 +321,7 @@ CREATE TABLE inquiries (
                           CHECK (status IN ('new', 'in_progress', 'resolved', 'closed')),
     response_body  TEXT,
     responded_at   TEXT,
-    respondent     TEXT,
-    created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    respondent     TEXT
 );
 
 -- ============================================================
@@ -368,7 +352,7 @@ CREATE INDEX idx_movie_people_person_id ON movie_people(person_id);
 CREATE INDEX idx_schedules_movie_start_at ON schedules(movie_id, start_at);
 CREATE INDEX idx_schedules_screen_start_at ON schedules(screen_id, start_at);
 
-CREATE INDEX idx_reservations_member_reserved_at ON reservations(member_id, reserved_at);
+CREATE INDEX idx_reservations_member_created_at ON reservations(member_id, created_at);
 CREATE INDEX idx_reservations_schedule_id ON reservations(schedule_id);
 CREATE INDEX idx_reservations_status_hold_expires_at ON reservations(status, seat_hold_expires_at);
 CREATE INDEX idx_reservation_details_reservation_id ON reservation_details(reservation_id);

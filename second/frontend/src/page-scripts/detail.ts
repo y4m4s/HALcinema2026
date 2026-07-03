@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES } from './data'
+import { MOVIES, SCREENS, DATES, formatScreeningStartDate, getMovieStatus } from './data'
 import { badge } from './common'
 
 export function runDetail() {
@@ -11,7 +11,7 @@ const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
     return;
   }
 
-  const isNow = movie.status === 'now';
+  const isNow = getMovieStatus(movie) === 'now';
   document.title = movie.title + ' | HAL シネマ';
 
   renderDetail(movie, isNow);
@@ -59,7 +59,7 @@ function renderMeta(movie) {
 
   const values = [
     [movie.rating, true],
-    [movie.releaseDate],
+    [formatScreeningStartDate(movie)],
     [movie.duration ? `${movie.duration}分` : '上映時間未定'],
     ...(movie.genre || []).map(g => [g]),
   ].filter(([value]) => value);
@@ -106,7 +106,7 @@ function renderFilmInfo(movie) {
     ['タイトル', movie.titleEn || movie.title],
     ['上映時間', movie.duration ? `${movie.duration}分` : '未定'],
     ['レーティング', movie.rating || '未定'],
-    ['公開日', movie.releaseDate || '未定'],
+    ['上映開始日', formatScreeningStartDate(movie) || '未定'],
     ['ジャンル', movie.genre && movie.genre.length ? movie.genre.join('・') : '未定'],
   ];
 
@@ -130,7 +130,7 @@ function renderBooking(movie, isNow) {
   if (nowBooking) nowBooking.hidden = !isNow;
 
   if (!isNow) {
-    if (comingDate) comingDate.textContent = `${movie.releaseDate || '公開日未定'} 公開予定`;
+    if (comingDate) comingDate.textContent = `${formatScreeningStartDate(movie) || '上映開始日未定'} 上映開始予定`;
     return;
   }
 

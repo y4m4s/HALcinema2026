@@ -36,7 +36,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 
 	ctx := context.Background()
 	// seed.sql の占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
-	testSeat := firstFreeSeat(t, memberStore.db, "SCH0002")
+	testSeat := firstFreeSeat(t, memberStore.db, "2")
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
@@ -73,40 +73,41 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if result.Amount != 2200 {
 		t.Fatalf("Create() amount = %d, want 2200", result.Amount)
 	}
+	reservationRowID := reservationIDByNo(t, memberStore.db, result.ReservationID)
 
 	var (
-		reservationDetailID          string
+		reservationDetailID          int64
 		detailQuantity               int
 		detailUnitPrice, detailTotal int
 	)
 	if err := memberStore.db.QueryRowContext(
 		ctx,
 		`SELECT id, quantity, unit_price, subtotal FROM reservation_details WHERE reservation_id = ?`,
-		result.ReservationID,
+		reservationRowID,
 	).Scan(&reservationDetailID, &detailQuantity, &detailUnitPrice, &detailTotal); err != nil {
 		t.Fatalf("reservation detail id query error = %v", err)
 	}
-	if !regexp.MustCompile(`^RD[0-9]{10}$`).MatchString(reservationDetailID) {
-		t.Fatalf("reservation detail id = %q, want RD + 10 digits", reservationDetailID)
+	if reservationDetailID <= 0 {
+		t.Fatalf("reservation detail id = %d, want positive integer", reservationDetailID)
 	}
 	if detailQuantity != 1 || detailUnitPrice != 1800 || detailTotal != 1800 {
 		t.Fatalf("reservation detail amount = quantity:%d unit:%d subtotal:%d, want 1/1800/1800", detailQuantity, detailUnitPrice, detailTotal)
 	}
 
-	var paymentID string
-	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM payments WHERE reservation_id = ?`, result.ReservationID).Scan(&paymentID); err != nil {
+	var paymentID int64
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM payments WHERE reservation_id = ?`, reservationRowID).Scan(&paymentID); err != nil {
 		t.Fatalf("payment id query error = %v", err)
 	}
-	if !regexp.MustCompile(`^P[0-9]{10}$`).MatchString(paymentID) {
-		t.Fatalf("payment id = %q, want P + 10 digits", paymentID)
+	if paymentID <= 0 {
+		t.Fatalf("payment id = %d, want positive integer", paymentID)
 	}
 
 	availability, err := store.Availability(ctx, req)
 	if err != nil {
 		t.Fatalf("Availability() error = %v", err)
 	}
-	if availability.ScheduleID != "SCH0002" {
-		t.Fatalf("Availability() schedule = %q, want SCH0002", availability.ScheduleID)
+	if availability.ScheduleID != "2" {
+		t.Fatalf("Availability() schedule = %q, want 2", availability.ScheduleID)
 	}
 	if !containsString(availability.ReservedSeats, testSeat) {
 		t.Fatalf("Availability() reserved seats = %#v, want to contain %s", availability.ReservedSeats, testSeat)
@@ -162,7 +163,7 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 3)
+	seats := firstFreeSeats(t, memberStore.db, "2", 3)
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
@@ -223,7 +224,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	testSeat := firstFreeSeat(t, memberStore.db, "SCH0002")
+	testSeat := firstFreeSeat(t, memberStore.db, "2")
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
@@ -237,7 +238,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 			Name:     "Hold User",
 			NameKana: "ほーるどゆーざー",
 			Email:    "hold@example.com",
-			Tel:      "090-4567-8901",
+			Tel:      "09045678901",
 		},
 	}
 
@@ -248,6 +249,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 	if result.Status != "pending" {
 		t.Fatalf("Create() status = %q, want pending", result.Status)
 	}
+	reservationRowID := reservationIDByNo(t, memberStore.db, result.ReservationID)
 
 	var reservationStatus, holdExpiresAt, paymentStatus, paymentDueAt string
 	if err := memberStore.db.QueryRowContext(
@@ -256,7 +258,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		   FROM reservations AS r
 		   JOIN payments AS p ON p.reservation_id = r.id
 		  WHERE r.id = ?`,
-		result.ReservationID,
+		reservationRowID,
 	).Scan(&reservationStatus, &holdExpiresAt, &paymentStatus, &paymentDueAt); err != nil {
 		t.Fatalf("deadline query error = %v", err)
 	}
@@ -280,7 +282,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		ctx,
 		`UPDATE reservations SET seat_hold_expires_at = ? WHERE id = ?`,
 		expiredAt,
-		result.ReservationID,
+		reservationRowID,
 	); err != nil {
 		t.Fatalf("expire reservation hold error = %v", err)
 	}
@@ -288,7 +290,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		ctx,
 		`UPDATE payments SET payment_due_at = ? WHERE reservation_id = ?`,
 		expiredAt,
-		result.ReservationID,
+		reservationRowID,
 	); err != nil {
 		t.Fatalf("expire payment due error = %v", err)
 	}
@@ -307,7 +309,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		   FROM reservations AS r
 		   JOIN payments AS p ON p.reservation_id = r.id
 		  WHERE r.id = ?`,
-		result.ReservationID,
+		reservationRowID,
 	).Scan(&reservationStatus, &paymentStatus); err != nil {
 		t.Fatalf("expired status query error = %v", err)
 	}
@@ -342,7 +344,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 4)
+	seats := firstFreeSeats(t, memberStore.db, "2", 4)
 	groupCouponCode := couponCodeByRule(t, memberStore.db, "group")
 	req := reservationCreateRequest{
 		MovieID:       "1",
@@ -358,7 +360,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 			Name:     "Coupon User",
 			NameKana: "くーぽんゆーざー",
 			Email:    "coupon@example.com",
-			Tel:      "090-3456-7890",
+			Tel:      "09034567890",
 		},
 	}
 
@@ -371,7 +373,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	}
 
 	var couponID string
-	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = ?`, result.ReservationID).Scan(&couponID); err != nil {
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = ?`, reservationIDByNo(t, memberStore.db, result.ReservationID)).Scan(&couponID); err != nil {
 		t.Fatalf("coupon id query error = %v", err)
 	}
 	if couponID != "C0000000002" {
@@ -396,7 +398,7 @@ func TestReservationStorePreviewCoupon(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "SCH0002", 4)
+	seats := firstFreeSeats(t, memberStore.db, "2", 4)
 	result, err := store.PreviewCoupon(ctx, couponPreviewRequest{
 		MovieID:    "1",
 		Screen:     "1",
@@ -429,7 +431,7 @@ func TestReservationStoreMigratesLegacyGroupCoupon(t *testing.T) {
 	forceLegacyCouponTable(t, memberStore.db)
 
 	ctx := context.Background()
-	if _, err := memberStore.db.ExecContext(ctx, `UPDATE reservations SET coupon_id = 'C002' WHERE id = 'R0000000001'`); err != nil {
+	if _, err := memberStore.db.ExecContext(ctx, `UPDATE reservations SET coupon_id = 'C002' WHERE reservation_no = 'R0000000001'`); err != nil {
 		t.Fatalf("legacy reservation coupon update error = %v", err)
 	}
 
@@ -459,7 +461,7 @@ func TestReservationStoreMigratesLegacyGroupCoupon(t *testing.T) {
 	if groupCount != 1 || legacyCount != 0 || fixedCount != 0 {
 		t.Fatalf("coupon migration counts: group=%d GRUP200=%d GROUP200=%d, want 1/0/0", groupCount, legacyCount, fixedCount)
 	}
-	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE id = 'R0000000001'`).Scan(&migratedCouponID); err != nil {
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT coupon_id FROM reservations WHERE reservation_no = 'R0000000001'`).Scan(&migratedCouponID); err != nil {
 		t.Fatalf("migrated reservation coupon query error = %v", err)
 	}
 	if migratedCouponID != "C0000000002" {
@@ -493,13 +495,13 @@ func TestReservationStoreMigratesLegacyPaymentIDs(t *testing.T) {
 		t.Fatalf("payments table still has legacy CHECK: %s", tableSQL)
 	}
 
-	var paymentID string
+	var paymentID int64
 	var dueColumnCount int
-	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM payments WHERE reservation_id = 'R0000000001'`).Scan(&paymentID); err != nil {
+	if err := memberStore.db.QueryRowContext(ctx, `SELECT id FROM payments WHERE reservation_id = 1`).Scan(&paymentID); err != nil {
 		t.Fatalf("payment id query error = %v", err)
 	}
-	if paymentID != "P0000000001" {
-		t.Fatalf("payment id = %q, want P0000000001", paymentID)
+	if paymentID != 1 {
+		t.Fatalf("payment id = %d, want 1", paymentID)
 	}
 	if err := memberStore.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM pragma_table_info('payments') WHERE name = 'payment_due_at'`).Scan(&dueColumnCount); err != nil {
 		t.Fatalf("payment_due_at column query error = %v", err)
@@ -531,7 +533,7 @@ func TestReservationRoutesCreate(t *testing.T) {
 	registerReservationRoutes(api, store, memberStore)
 
 	// 占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
-	freeSeat := firstFreeSeat(t, memberStore.db, "SCH0002")
+	freeSeat := firstFreeSeat(t, memberStore.db, "2")
 	body := fmt.Sprintf(`{
 		"movieId": "1",
 		"screen": "1",
@@ -653,6 +655,15 @@ func firstFreeSeats(t *testing.T, db *sql.DB, scheduleID string, count int) []st
 		t.Fatalf("firstFreeSeats(%q) returned %d seats, want %d", scheduleID, len(seats), count)
 	}
 	return seats
+}
+
+func reservationIDByNo(t *testing.T, db *sql.DB, reservationNo string) int64 {
+	t.Helper()
+	var id int64
+	if err := db.QueryRow(`SELECT id FROM reservations WHERE reservation_no = ?`, reservationNo).Scan(&id); err != nil {
+		t.Fatalf("reservationIDByNo(%q) error = %v", reservationNo, err)
+	}
+	return id
 }
 
 func couponCodeByRule(t *testing.T, db *sql.DB, ruleCode string) string {
