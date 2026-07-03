@@ -45,6 +45,9 @@ export async function refreshStoredMemberSession() {
       return null
     }
 
+    const currentSession = readMemberSession()
+    if (currentSession?.token !== session.token) return null
+
     const refreshed = { member: result.member, token: session.token }
     writeMemberSession(refreshed)
     return refreshed

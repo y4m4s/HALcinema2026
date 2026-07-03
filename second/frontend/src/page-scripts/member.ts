@@ -201,6 +201,7 @@ export function runMember() {
   }
 
   async function logoutMember() {
+    const logoutPromise = logoutStoredMemberSession()
     state.session = null
     state.mode = 'login'
     state.activeTab = 'profile'
@@ -209,7 +210,7 @@ export function runMember() {
     state.history = createHistoryState()
     render()
     runCommon()
-    await logoutStoredMemberSession()
+    await logoutPromise
   }
 
   function completeMemberAuth(result) {
