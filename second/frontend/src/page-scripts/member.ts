@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { runCommon } from './common'
 import {
+  getAuthHeaders,
   getRequestErrorMessage,
   logoutStoredMemberSession,
   readMemberSession,
@@ -27,8 +28,10 @@ export function runMember() {
     session: readMemberSession(),
     checking: Boolean(readMemberSession()?.token),
     mode: 'login',
+    activeTab: 'profile',
     login: createLoginState(),
     register: createRegisterState(),
+    history: createHistoryState(),
   }
 
   root.addEventListener('submit', onSubmit)
@@ -87,8 +90,18 @@ export function runMember() {
   }
 
   function onChange(event) {
-    const target = event.target instanceof HTMLInputElement ? event.target : null
+    const target = event.target instanceof Element ? event.target : null
     if (!target) return
+
+    const historyFilter = target.closest('[data-history-filter]')
+    if (historyFilter) {
+      state.history.filter = historyFilter.value || 'all'
+      state.history.loaded = false
+      void loadReservationHistory()
+      return
+    }
+
+    if (!(target instanceof HTMLInputElement)) return
     const registerField = target.closest('[data-member-register-field]')
     if (registerField && target.type === 'checkbox') {
       state.register[registerField.dataset.memberRegisterField] = Boolean(target.checked)
@@ -111,6 +124,18 @@ export function runMember() {
       state.mode = 'login'
       state.register.error = ''
       render()
+      return
+    }
+    if (action === 'show-profile') {
+      state.activeTab = 'profile'
+      render()
+      return
+    }
+    if (action === 'show-history') {
+      state.activeTab = 'history'
+      render()
+      state.history.loaded = false
+      void loadReservationHistory()
       return
     }
     if (action === 'logout') {
@@ -178,8 +203,10 @@ export function runMember() {
   async function logoutMember() {
     state.session = null
     state.mode = 'login'
+    state.activeTab = 'profile'
     state.login = createLoginState()
     state.register = createRegisterState()
+    state.history = createHistoryState()
     render()
     runCommon()
     await logoutStoredMemberSession()
@@ -196,11 +223,48 @@ export function runMember() {
 
     state.session = { member: result.member, token: result.token }
     state.mode = 'login'
+    state.activeTab = 'profile'
     state.login = createLoginState()
     state.register = createRegisterState()
+    state.history = createHistoryState()
     writeMemberSession(state.session)
     render()
     runCommon()
+  }
+
+  async function loadReservationHistory() {
+    const token = state.session?.token
+    if (state.history.loading) return
+    if (!token) {
+      state.history.items = []
+      state.history.error = 'ログイン状態を確認できません。再ログインしてください。'
+      state.history.loaded = true
+      render()
+      return
+    }
+
+    state.history.loading = true
+    state.history.error = ''
+    render()
+
+    try {
+      const params = new URLSearchParams()
+      if (state.history.filter && state.history.filter !== 'all') {
+        params.set('period', state.history.filter)
+      }
+      const path = `/api/members/reservations${params.toString() ? `?${params.toString()}` : ''}`
+      const result = await requestMemberJSON(path, {
+        headers: getAuthHeaders(token),
+      })
+      state.history.items = Array.isArray(result.reservations) ? result.reservations : []
+      state.history.loaded = true
+    } catch (error) {
+      state.history.error = getRequestErrorMessage(error)
+      state.history.loaded = true
+    } finally {
+      state.history.loading = false
+      render()
+    }
   }
 
   function render() {
@@ -305,24 +369,112 @@ export function runMember() {
   }
 
   function renderLoggedIn(member) {
+    const isHistory = state.activeTab === 'history'
+    return `
+      <section class="member-dashboard" aria-labelledby="member-current-title">
+        <div class="member-dashboard-nav" aria-label="会員メニュー">
+          <div class="member-tab-group" role="tablist" aria-label="会員ページ表示切替">
+            <button class="member-tab${!isHistory ? ' active' : ''}" type="button" data-member-action="show-profile" role="tab" aria-selected="${!isHistory}">会員情報</button>
+            <button class="member-tab${isHistory ? ' active' : ''}" type="button" data-member-action="show-history" role="tab" aria-selected="${isHistory}">履歴</button>
+          </div>
+          <button class="btn-ghost member-logout-button" type="button" data-member-action="logout">ログアウト</button>
+        </div>
+        <div class="member-dashboard-body">
+          ${isHistory ? renderHistoryView() : renderProfileView(member)}
+        </div>
+      </section>
+    `
+  }
+
+  function renderProfileView(member) {
     return `
       <section class="member-panel member-panel-wide" aria-labelledby="member-current-title">
         <div class="member-panel-head">
-          <span>LOGGED IN</span>
-          <h2 id="member-current-title">ログイン中</h2>
+          <span>PROFILE</span>
+          <h2 id="member-current-title">会員情報</h2>
         </div>
-        <div class="member-card">
-          <div><span>会員番号</span><strong>${escapeHtml(member.memberNo || '-')}</strong></div>
-          <div><span>氏名</span><strong>${escapeHtml(member.name || '-')}</strong></div>
-          <div><span>メール</span><strong>${escapeHtml(member.email || '-')}</strong></div>
-          <div><span>電話番号</span><strong>${escapeHtml(member.tel || '-')}</strong></div>
-          <div><span>ポイント</span><strong>${escapeHtml(member.points ?? 0)} pt</strong></div>
-        </div>
-        <div class="member-actions">
-          <a class="btn-primary" href="/schedule">上映スケジュールを見る</a>
-          <button class="btn-ghost" type="button" data-member-action="logout">ログアウト</button>
-        </div>
+        <dl class="member-card member-profile-list">
+          ${renderProfileRow('会員番号', member.memberNo || '-')}
+          ${renderProfileRow('氏名', member.name || '-')}
+          ${renderProfileRow('メール', member.email || '-')}
+          ${renderProfileRow('電話番号', member.tel || '-')}
+          ${renderProfileRow('ポイント', `${member.points ?? 0} pt`)}
+        </dl>
       </section>
+    `
+  }
+
+  function renderProfileRow(label, value) {
+    return `
+      <div>
+        <dt>${escapeHtml(label)}</dt>
+        <dd>${escapeHtml(value)}</dd>
+      </div>
+    `
+  }
+
+  function renderHistoryView() {
+    const history = state.history
+    return `
+      <section class="member-panel member-history-panel" aria-labelledby="member-history-title">
+        <div class="member-panel-head">
+          <span>HISTORY</span>
+          <h2 id="member-history-title">購入履歴</h2>
+        </div>
+        <div class="member-history-toolbar">
+          <label>
+            <span>予約日</span>
+            <select data-history-filter>
+              ${renderHistoryFilterOption('all', 'すべて')}
+              ${renderHistoryFilterOption('30d', '30日以内')}
+              ${renderHistoryFilterOption('90d', '90日以内')}
+              ${renderHistoryFilterOption('1y', '1年以内')}
+            </select>
+          </label>
+        </div>
+        ${history.loading ? '<p class="member-status">購入履歴を読み込んでいます。</p>' : ''}
+        ${history.error ? `<p class="account-form-error">${escapeHtml(history.error)}</p>` : ''}
+        ${!history.loading && !history.error ? renderHistoryList(history.items) : ''}
+      </section>
+    `
+  }
+
+  function renderHistoryFilterOption(value, label) {
+    return `<option value="${escapeAttr(value)}" ${state.history.filter === value ? 'selected' : ''}>${escapeHtml(label)}</option>`
+  }
+
+  function renderHistoryList(items) {
+    if (!items.length) {
+      return `
+        <div class="member-history-empty">
+          <strong>購入履歴はありません</strong>
+          <span>対象期間に会員購入した予約はまだありません。</span>
+        </div>
+      `
+    }
+
+    return `
+      <div class="member-history-list">
+        ${items.map(renderHistoryItem).join('')}
+      </div>
+    `
+  }
+
+  function renderHistoryItem(item) {
+    return `
+      <article class="member-history-item">
+        <div class="member-history-main">
+          <span>${escapeHtml(item.reservationId || '-')}</span>
+          <strong>${escapeHtml(item.movieTitle || '-')}</strong>
+          <p>${escapeHtml(formatHistoryDate(item.date, item.start, item.end))} / ${escapeHtml(item.screen || '-')}</p>
+        </div>
+        <dl class="member-history-meta">
+          <div><dt>座席</dt><dd>${escapeHtml(item.seats || '-')}</dd></div>
+          <div><dt>予約</dt><dd>${escapeHtml(statusLabel(item.status))}</dd></div>
+          <div><dt>支払</dt><dd>${escapeHtml(paymentStatusLabel(item.paymentStatus))}</dd></div>
+          <div><dt>合計</dt><dd>${formatYen(item.amount)}</dd></div>
+        </dl>
+      </article>
     `
   }
 
@@ -404,6 +556,16 @@ function createRegisterState() {
   }
 }
 
+function createHistoryState() {
+  return {
+    filter: 'all',
+    items: [],
+    loading: false,
+    loaded: false,
+    error: '',
+  }
+}
+
 function normalizeLoginInput(field, value) {
   if (field === 'password') return limitString(stripControlChars(value), INPUT_LIMITS.password)
   return limitString(stripControlChars(value), INPUT_LIMITS.loginIdentifier)
@@ -458,4 +620,36 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value)
+}
+
+function formatHistoryDate(date, start, end) {
+  const normalizedDate = date ? String(date).replace(/-/g, '/') : '-'
+  const time = start ? `${start}${end ? ` - ${end}` : ''}` : ''
+  return time ? `${normalizedDate} ${time}` : normalizedDate
+}
+
+function statusLabel(status) {
+  const labels = {
+    pending: '支払待ち',
+    confirmed: '予約確定',
+    cancelled: 'キャンセル済み',
+    used: '入場済み',
+    expired: '期限切れ',
+  }
+  return labels[status] || status || '-'
+}
+
+function paymentStatusLabel(status) {
+  const labels = {
+    unpaid: '未払い',
+    paid: '支払済み',
+    failed: '失敗',
+    refunded: '返金済み',
+    cancelled: '取消済み',
+  }
+  return labels[status] || status || '-'
+}
+
+function formatYen(value) {
+  return `${Number(value || 0).toLocaleString('ja-JP')}円`
 }
