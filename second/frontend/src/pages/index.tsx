@@ -21,12 +21,13 @@ export const homePage: PageDefinition = {
           <a href="/theater" class="nav-link" data-nav="theater"><span>劇場案内</span></a>
           <a href="/access" class="nav-link" data-nav="access"><span>交通案内</span></a>
           <a href="/tickets" class="nav-link" data-nav="tickets"><span>料金案内</span></a>
-          <a href="/question" class="nav-link" data-nav="question"><span>よくある質問</span></a>
+          <a href="/member" class="nav-link" data-nav="member"><span>会員の方へ</span></a>
         </div>
       </nav>
     </header>
   </div>
 
+  
   <div class="page page-enter">
 
     <!-- HERO -->

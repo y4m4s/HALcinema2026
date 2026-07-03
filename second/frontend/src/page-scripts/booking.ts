@@ -12,6 +12,16 @@ import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
 import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
 import { MOVIES, SCREENS, DATES } from './data'
+import {
+  getAuthHeaders,
+  getRequestErrorMessage,
+  readMemberSession,
+  removeMemberSession,
+  requestJSON,
+  requestMemberJSON,
+  writeMemberSession,
+} from './member-session'
+import { runCommon } from './common'
 
 const FLOW_STEPS = [
   { id: 'tickets', label: '券種選択', en: 'TICKET' },
@@ -40,7 +50,6 @@ const THREE_D_EXTRA_FEE = 400
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
-const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
 const INPUT_LIMITS = {
   name: 40,
   nameKana: 60,
@@ -882,7 +891,7 @@ export function runBooking() {
     render()
 
     try {
-      const result = await requestJSON('/api/members/login', {
+      const result = await requestMemberJSON('/api/members/login', {
         method: 'POST',
         body: JSON.stringify({
           identifier: state.login.identifier.trim(),
@@ -913,7 +922,7 @@ export function runBooking() {
     render()
 
     try {
-      const result = await requestJSON('/api/members/register', {
+      const result = await requestMemberJSON('/api/members/register', {
         method: 'POST',
         body: JSON.stringify({
           name: state.join.name.trim(),
@@ -936,10 +945,11 @@ export function runBooking() {
     const token = state.memberToken
     clearMemberAuth()
     render()
+    runCommon()
 
     if (!token) return
     try {
-      await requestJSON('/api/members/logout', {
+      await requestMemberJSON('/api/members/logout', {
         method: 'POST',
         headers: getAuthHeaders(token),
       })
@@ -953,10 +963,11 @@ export function runBooking() {
     if (!token) return
 
     try {
-      const result = await requestJSON('/api/members/me', {
+      const result = await requestMemberJSON('/api/members/me', {
         headers: getAuthHeaders(token),
       })
       if (result.member) {
+        if (state.memberToken !== token) return
         applyMemberSession(result.member, token)
         render()
       }
@@ -1153,60 +1164,6 @@ function createCustomerState(member = null) {
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
   }
-}
-
-function readMemberSession() {
-  try {
-    const raw = window.localStorage.getItem(MEMBER_SESSION_STORAGE_KEY)
-    if (!raw) return null
-    const session = JSON.parse(raw)
-    if (!session?.token || !session?.member) return null
-    return session
-  } catch {
-    return null
-  }
-}
-
-function writeMemberSession(session) {
-  try {
-    window.localStorage.setItem(MEMBER_SESSION_STORAGE_KEY, JSON.stringify(session))
-  } catch {
-    // Storage can be unavailable in private browsing; the current purchase still works.
-  }
-}
-
-function removeMemberSession() {
-  try {
-    window.localStorage.removeItem(MEMBER_SESSION_STORAGE_KEY)
-  } catch {
-    // Nothing to clean up when storage is unavailable.
-  }
-}
-
-async function requestJSON(path, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  }
-  const response = await fetch(path, {
-    ...options,
-    headers,
-  })
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(data.error || '通信に失敗しました。')
-  }
-  return data
-}
-
-function getAuthHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-  }
-}
-
-function getRequestErrorMessage(error) {
-  return error instanceof Error ? error.message : '通信に失敗しました。'
 }
 
 function resolveMovie(params) {
