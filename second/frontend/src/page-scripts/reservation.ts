@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { escapeHtml, formatYen } from '../components/bokking/utils'
+import { requestJSON } from './member-session'
 
 export function runReservation() {
   const form = document.getElementById('reservation-lookup-form')
@@ -164,17 +165,4 @@ function normalizeTel(value) {
   return String(value || '')
     .replace(/\D/g, '')
     .slice(0, 15)
-}
-
-async function requestJSON(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  })
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.error || '通信に失敗しました。')
-  return data
 }
