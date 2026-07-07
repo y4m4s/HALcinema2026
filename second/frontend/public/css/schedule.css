@@ -26,12 +26,12 @@
 
 .view-tab {
   flex: 1;
-  padding: 14px 0;
+  padding: 16px 0;
   text-align: center;
   background: var(--bg2);
   color: var(--text2);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.05em;
   border: none;
   cursor: pointer;
@@ -63,7 +63,7 @@
 
 .movie-tab-card {
   flex-shrink: 0;
-  width: 110px;
+  width: 124px;
   border: 1px solid var(--border);
   background: var(--bg2);
   cursor: pointer;
@@ -79,7 +79,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  bottom: 0;
+  height: auto;
   background: var(--accent2);
   opacity: 0;
   transition: opacity 0.25s;
@@ -120,7 +121,8 @@
 
 .movie-tab-poster {
   width: 100%;
-  height: 100;
+  aspect-ratio: 2 / 3;
+  height: auto;
   object-fit: cover;
   display: block;
   transition: transform 0.3s;
@@ -132,13 +134,14 @@
 
 .movie-tab-poster-ph {
   width: 100%;
-  height: 72px;
+  aspect-ratio: 2 / 3;
+  height: auto;
   background: var(--bg4);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   color: var(--text3);
 }
@@ -188,12 +191,12 @@
 .sub-tab {
   flex: 1;
   min-width: 72px;
-  padding: 12px 16px;
+  padding: 13px 18px;
   text-align: center;
   background: var(--bg2);
   color: var(--text2);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   border: none;
   cursor: pointer;
@@ -233,17 +236,17 @@
 /* ── Schedule section heading ────────────── */
 .schedule-heading {
   font-family: var(--serif);
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text);
   letter-spacing: 0.04em;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 
 /* ── Movie card ──────────────────────────── */
 .movie-card {
   border: 1px solid var(--border);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   overflow: hidden;
   animation: card-enter 0.4s ease both;
   animation-delay: var(--card-delay, 0s);
@@ -253,7 +256,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 16px 20px;
   background: var(--bg3);
   border-bottom: 1px solid var(--border);
   gap: 12px;
@@ -270,7 +273,7 @@
 
 .movie-card-title {
   font-family: var(--serif);
-  font-size: 15px;
+  font-size: 18px;
   color: var(--text);
   text-decoration: none;
   transition: color 0.2s;
@@ -285,7 +288,7 @@
 
 .movie-card-duration {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   color: var(--text2);
   white-space: nowrap;
@@ -302,11 +305,10 @@
 /* ── Movie card body ─────────────────────── */
 .movie-card-body {
   display: flex;
-  min-height: 120px;
 }
 
 .movie-thumb {
-  width: 90px;
+  width: 140px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -319,19 +321,6 @@
   width: 100%;
   overflow: hidden;
   position: relative;
-}
-
-/* ③ サムネイル下端グラデーション */
-.movie-thumb-link::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, transparent, var(--bg2));
-  z-index: 1;
-  pointer-events: none;
 }
 
 .movie-thumb-link::after {
@@ -350,6 +339,7 @@
 
 .movie-thumb img {
   width: 100%;
+  height: 100%;
   object-fit: cover;
   transition: transform 0.3s;
 }
@@ -385,39 +375,48 @@
 
 .theater-col {
   flex: 1;
-  min-width: 200px;
-  padding: 12px 14px;
+  min-width: 240px;
+  padding: 16px 18px;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
+/* 劇場列ごとにスロット数が違っても、時間カードが列の縦方向中央に来るようにする。
+   flex: 1 で見出しの下の余白を埋め、align-content / align-items で上下中央に寄せる。 */
 .slots-grid {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  align-content: center;
+  align-items: center;
+  gap: 10px;
 }
 
 .slots-grid--quad {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(2, auto);
   justify-content: center;
-  gap: 8px;
+  align-content: center;
+  gap: 10px;
 }
 
 .theater-col:last-child {
   border-right: none;
 }
 
+/* 大画面ではスクリーン情報と設備バッジを横並びにする。
+   狭い画面では下の @media (max-width: 1024px) で縦積みに切り替える。 */
 .theater-col-header {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -430,24 +429,24 @@
 .theater-col-features {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   justify-content: flex-end;
 }
 
 .feature-badge {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   color: var(--text3);
   border: 1px solid var(--border);
-  padding: 1px 6px;
+  padding: 3px 8px;
   white-space: nowrap;
   line-height: 1.6;
 }
 
 .theater-col-num {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.12em;
   color: var(--text);
   text-transform: uppercase;
@@ -455,7 +454,7 @@
 
 .theater-col-meta {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text3);
   letter-spacing: 0.02em;
 }
@@ -464,13 +463,13 @@
 .time-slot {
   border: 1px solid var(--border2);
   background: var(--bg);
-  padding: 10px 16px;
+  padding: 12px 18px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.15s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   text-align: center;
 }
 
@@ -485,7 +484,7 @@
 
 .time-slot-time {
   font-family: var(--mono);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--text);
   letter-spacing: 0.04em;
@@ -495,7 +494,7 @@
 
 .time-slot-status {
   font-family: var(--sans);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.03em;
 }
 
@@ -508,24 +507,24 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 16px;
+  padding: 12px 20px;
   background: var(--bg3);
   border-top: 1px solid var(--border);
 }
 
 .note-label {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--text3);
   border: 1px solid var(--border);
-  padding: 2px 7px;
+  padding: 3px 8px;
   flex-shrink: 0;
 }
 
 .note-text {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--text2);
 }
 
@@ -538,6 +537,11 @@
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.schedule-detail-btn {
+  font-size: 12px;
+  padding: 8px 16px;
 }
 
 /* ── ⑤ Empty state ───────────────────────── */
@@ -570,17 +574,45 @@
 }
 
 /* ── Responsive ──────────────────────────── */
-@media (max-width: 600px) {
+/* 劇場列が狭くなる画面では、設備バッジをスクリーン情報の下に縦積みして詰まりを防ぐ */
+@media (max-width: 1024px) {
+  .theater-col-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .theater-col-features {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .movie-card-body {
+    flex-direction: column;
+  }
   .movie-thumb {
-    width: 70px;
+    width: 100%;
+    max-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
   }
-
+  .theaters-grid {
+    flex-direction: column;
+    overflow-x: visible;
+  }
   .theater-col {
-    min-width: 100px;
-    padding: 10px 10px;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
   }
-
-  .time-slot-start {
-    font-size: 17px;
+  .theater-col:last-child {
+    border-bottom: none;
+  }
+}
+@media (max-width: 600px) {
+  .movie-card-title {
+    font-size: 16px;
+  }
+  .time-slot-time {
+    font-size: 15px;
   }
 }
