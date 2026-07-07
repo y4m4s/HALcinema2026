@@ -15,7 +15,6 @@ export const MOVIES = [
     cast: ["吹越満", "でんでん", "黒沢あすか", "神楽坂恵", "梶原ひかり", "渡辺哲"],
     synopsis: "死別した前妻の娘と現在の妻。その折り合いの悪い二人に挟まれながらも、主人公の社本信行は小さな熱帯魚店を営んでいた。波風の立たないよう静かに暮らす小市民的気質の社本。だが、家族の確執に向き合わない彼の態度は、ついに娘の万引きを招く。スーパーでの万引き発覚で窮地に陥る社本だったが、そんな彼を救ったのはスーパー店長と懇意のある村田だった。村田の懇願により店長は万引きを許す。さらに大型熱帯魚店を経営する村田は、娘をバイトとして雇い入れる。その親切さと人の良さそうな男に誘われて、社本と村田夫婦との交流が始まる。しばらくして、利益の大きい高級魚の取引を持ちかけられる社本。それが、村田の悪逆非道な「ビジネス」を知り、同時に引き返せなくなる顛末への引き金となった。",
     image: "https://image.tmdb.org/t/p/w500/8jzXKuuSMNYU0jSakJkdkzQcZbL.jpg",
-    status: "now",
     screens: [1, 3],
     schedules: [
       ["10:05", "12:31"],
@@ -57,7 +56,7 @@ export const MOVIES = [
     ],
     playingDays: [0, 1, 2, 3, 4, 5, 6],
     note: "R18+ 指定作品。18歳未満は入場不可です。",
-    releaseDate: "2011.01.29",
+    screeningStartDate: "2026-05-01",
     isFeature: true
   },
   {
@@ -71,7 +70,6 @@ export const MOVIES = [
     cast: ["内野聖陽", "大竹しのぶ", "西村雅彥", "田中美里", "石橋蓮司", "町田康"],
     synopsis: "第4回日本ホラー小説大賞を受賞した貴志祐介の同名小説を『39　刑法第三十九条』の森田芳光監督が映画化。保険会社に勤める若槻慎二は保険金の説明に訪れた女性の家でその女性の息子の首吊り死体に遭遇する。警察は自殺と判断し、それに基づいて保険金も支払われることになった。しかし、両親の態度に不審なものを感じた若槻は自殺に疑問を感じひとり調査を開始する。そして、夫婦の保険金をめぐる異常な行動が次第に明らかになっていく。",
     image: "https://image.tmdb.org/t/p/w500/s6JLXxlWUH2OVWKTw8XqfXPu4Cw.jpg",
-    status: "now",
     screens: [2, 5],
     schedules: [
       ["10:20", "12:18"],
@@ -107,7 +105,7 @@ export const MOVIES = [
     ],
     playingDays: [0, 1, 2, 3, 4, 5],
     note: "R15+ 指定作品。15歳未満のご入場はできません。",
-    releaseDate: "1999.11.13",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   },
   {
@@ -121,7 +119,6 @@ export const MOVIES = [
     cast: ["黒木瞳", "菅野莉央", "小口美澪", "水川あさみ", "小日向文世", "徳井優"],
     synopsis: "離婚調停中であり、娘の郁子の親権を夫邦夫と争っている淑美は生活を立て直そうと、郁子と一緒に新しいマンションに引っ越す。しかし、そこは雨漏りが酷い、水道水が不味い、上階の子供の足音がよく響くなど不具合が多く、また彼女は何か不穏なものを感じていた。  ある日、淑美は屋上で、赤い子供用バッグ（mimikoバッグ）を見つけ、それがきっかけで郁子と同じ幼稚園に通っていた少女・河合美津子が2年前から行方不明になっているのを知る。美津子は父と共に、淑美たちの真上の部屋に住んでいて、行方不明になったときには似たバッグをかけていた。  バッグは落とし物としてマンション管理人に届け、捨てられたことを確認するが、後日また屋上で同じものが見つかった。娘の郁子はバッグが気になるようで、また、見えない女の子と会話する奇行が見られるようになった。淑美は、美津子の霊が郁子を連れ去ろうとしているのではないかと恐慌に陥り、一度はマンションを出る決意する。",
     image: "https://image.tmdb.org/t/p/w500/7JpBzb3Eb2fryzzSd9q64GwcDfe.jpg",
-    status: "now",
     screens: [4, 6],
     schedules: [
       ["09:55", "11:36"],
@@ -157,7 +154,7 @@ export const MOVIES = [
     ],
     playingDays: [2, 3, 4, 5, 6],
     note: "PG12 指定作品。小学生以下は保護者の助言・指導が必要です。",
-    releaseDate: "2002.01.19",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   },
   {
@@ -171,7 +168,6 @@ export const MOVIES = [
     cast: ["松たか子", "岡田将生", "木村佳乃", "西井幸人", "藤原薫", "橋本愛"],
     synopsis: "とある中学校の1年B組、終業式後の雑然としたホームルームで、教壇に立つ担任の森口悠子が静かに語り出す。「わたしの娘が死にました。警察は事故死と判断しましたが、娘は事故で死んだのではなくこのクラスの生徒に殺されたのです」教室内は一瞬にして静まりかえり、この衝撃的な告白から物語は幕を開けた。",
     image: "https://image.tmdb.org/t/p/w500/p8vr7jVwflsSqAq91nWcOPZ2RIv.jpg",
-    status: "now",
     screens: [2, 7],
     schedules: [
       ["09:45", "11:32"],
@@ -225,7 +221,7 @@ export const MOVIES = [
     ],
     playingDays: [0, 1, 3, 4, 5],
     note: "R15+ 指定作品。15歳未満のご入場はできません。",
-    releaseDate: "2010.06.05",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   },
   {
@@ -239,7 +235,6 @@ export const MOVIES = [
     cast: ["山田裕貴", "伊藤沙莉", "染谷将太", "渡部篤郎", "佐藤二朗", "寛一郎"],
     synopsis: "物語の幕開けは、酔った勢いで自販機と店員に暴行を働き、警察に連行された一人の謎の中年男。彼は自らを「スズキタゴサク」と名乗り、霊感が働くと称して都内に仕掛けられた爆弾の存在を予告！秋葉原での爆破を皮切りに、この後一時間おきに３回爆発すると予知していく。そして、刑事たちの問いかけをのらりくらりとかわしつつ、次第に爆弾に関する謎めいた“クイズ”を出し始めるのだった・・・彼は、いったい何者なのか！？そして仕掛けられた“爆弾”の正体とは！？",
     image: "https://image.tmdb.org/t/p/w500/7d4Gb3R1W6OByg46V5TSCNbbpUW.jpg",
-    status: "now",
     screens: [3, 8],
     schedules: [
       ["09:30", "11:46"],
@@ -305,7 +300,7 @@ export const MOVIES = [
     ],
     playingDays: [3, 4, 5, 6],
     note: "PG12 指定作品。小学生以下は保護者の助言・指導が必要です。",
-    releaseDate: "2025.10.31",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   },
   {
@@ -319,8 +314,7 @@ export const MOVIES = [
     cast: ["間宮祥太朗", "佐藤二朗", "川栄李奈", "DJ松永", "長田成哉", "瀧本美織"],
     synopsis: "雨宮はオカルトを専門とする売れないユーチューバー。ある日、マネージャーが家の間取り図を持ってくる。一見普通の家の間取りだが、そこには不可解な点がある、とマネージャーは告げる。間取り図をじっくりと眺め始める雨宮。そこに、建築家でミステリー好きの栗原も加わり、2人は家の謎を解き明かそうとする。一方、柚月は雨宮に連絡を取り、彼がユーチューブに投稿した家について何か知っていると告げる。柚月は雨宮と栗原に加わり、家の謎を解き明かそうとするが、柚月にも秘密があるようで…。",
     image: "https://image.tmdb.org/t/p/w500/ArUTdQ84QNni5Uz0Mk54qc8wyJ.jpg",
-    status: "coming",
-    releaseDate: "2024.03.15",
+    screeningStartDate: "2026-08-01",
     isFeature: false
   },
   {
@@ -334,8 +328,7 @@ export const MOVIES = [
     cast: ["恒松祐里", "佐藤江梨子", "本田望結", "莉子", "寺坂頼我", "木原瑠生"],
     synopsis: "2004年、「はすみ」と名乗る女性が新浜松駅から乗車した遠州鉄道の電車がなかなか停車せず、ようやく「きさらぎ駅」という見知らぬ無人駅に到着する。その時の状況を「2ちゃんねる」にリアルタイム実況していたが、やがて消息不明となってしまう。",
     image: "https://image.tmdb.org/t/p/w500/fkH85I3onRvT2E2Fod4G3mjim4h.jpg",
-    status: "coming",
-    releaseDate: "2022.06.03",
+    screeningStartDate: "2026-08-08",
     isFeature: false
   },
   {
@@ -349,8 +342,7 @@ export const MOVIES = [
     cast: ["長澤まさみ", "瀬戸康史", "田中哲司", "池村碧彩", "本田都々花", "安田顕"],
     synopsis: "5歳の娘を亡くした佳恵と夫の忠彦は、骨董市で亡き娘に似た人形を迎える。新しい娘が生まれ、やがて人形と遊び始めると、一家の周囲で不可解な出来事が続発。捨てても戻ってくる人形の秘密を追ううち、家族は思いもよらない真実に近づいていく。",
     image: "https://image.tmdb.org/t/p/w500/gBCT1BbU5i0p9yj4M12Vvd2rVM2.jpg",
-    status: "coming",
-    releaseDate: "2025.06.13",
+    screeningStartDate: "2026-08-15",
     isFeature: false
   },
   {
@@ -364,7 +356,6 @@ export const MOVIES = [
     cast: ["阿部サダヲ", "水上恒司", "岩田剛典", "中山美穂", "岩井志麻子", "宮﨑優"],
     synopsis: "ある大学生・雅也のもとに届いた一通の手紙。それは世間を震撼させた稀代の連続殺人鬼・榛村からだった。「罪は認めるが、最後の事件は冤罪だ。犯人が他にいることを証明してほしい」。過去に地元のパン屋で店主をしていた頃には信頼を寄せていた榛村の願いを聞き入れ、事件を独自に調べ始めた雅也。しかし、そこには想像を超える残酷な事件の真相があった―。",
     image: "https://image.tmdb.org/t/p/w500/oMAnlf97UOyfQrFOGUE4bqPbmLo.jpg",
-    status: "now",
     screens: [1, 4],
     schedules: [
       ["09:30", "11:38"],
@@ -400,7 +391,7 @@ export const MOVIES = [
     ],
     playingDays: [0, 2, 3, 4, 5, 6],
     note: "",
-    releaseDate: "2022.05.06",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   },
   {
@@ -414,7 +405,6 @@ export const MOVIES = [
     cast: ["小栗旬", "尾野真千子", "野村周平", "丸山智己", "田畑智子", "市川実日子"],
     synopsis: "過激な描写と緊迫のストーリー展開で人気を博す巴亮介の人気サイコスリラー漫画を、これが初タッグとなる小栗旬主演×大友啓史監督により実写映画化。雨の日だけに起こる猟奇殺人事件を追う刑事の沢村久志。犯行現場に残された謎のメモや、見つけられることを前提としたかのような死体から、カエルのマスクを被った犯人像が浮かび上がる。通称・カエル男と呼ばれるようになった犯人を追い詰めていく沢村だったが、カエル男の仕組んだ残酷な罠にはまり、絶望的な状況に追い込まれてしまう。  主人公・沢村役の小栗、沢村の妻を演じる尾野真千子はじめ、野村周平、大森南朋ら豪華キャストが共演。",
     image: "https://image.tmdb.org/t/p/w500/oHy3ntbb4PmK7iDouwftaLSabVy.jpg",
-    status: "now",
     screens: [5, 6],
     schedules: [
       ["11:05", "13:17"],
@@ -450,10 +440,32 @@ export const MOVIES = [
     ],
     playingDays: [1, 2, 4, 5, 6],
     note: "",
-    releaseDate: "2016.11.12",
+    screeningStartDate: "2026-05-01",
     isFeature: false
   }
 ];
+
+function parseDateOnly(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function todayDateOnly() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+export function getMovieStatus(movie, today = todayDateOnly()) {
+  const screeningStartDate = parseDateOnly(movie?.screeningStartDate);
+  if (!screeningStartDate) return "now";
+  return screeningStartDate > today ? "coming" : "now";
+}
+
+export function formatScreeningStartDate(movie) {
+  const value = String(movie?.screeningStartDate || "");
+  return value ? value.replaceAll("-", ".") : "";
+}
 
 export const NEWS = [
   {
@@ -463,11 +475,11 @@ export const NEWS = [
     title: "HAL CINEMA MEMBERSのご案内 — 会員登録のメリットと登録方法",
     body: [
       "HAL CINEMA MEMBERSは、オンライン予約をよりスムーズに利用するための無料会員サービスです。座席予約の途中で登録すると、入力した氏名・メールアドレス・電話番号を会員情報として保存し、次回以降の予約確認や購入情報の入力を簡単にできます。",
-      "会員登録後は鑑賞ポイントの付与対象となります。ポイントはチケット購入ごとに加算され、今後のキャンペーンや会員限定特典で利用できる予定です。現在のポイント数は購入フロー内の会員情報欄で確認できます。",
+      "会員登録後は、会員限定のお知らせや予約時のお客様情報入力補助を利用できます。今後のキャンペーンや会員限定特典も、この会員情報をもとに案内する予定です。",
       "会員限定のお知らせでは、先行上映、特集上映、サービスデー、キャンペーンなどの情報を優先的に確認できます。メールマガジンを希望した場合は、登録したメールアドレス宛にも関連情報をお届けします。",
       "予約履歴は、購入した作品、上映日時、スクリーン、座席、予約番号を確認しやすくするための機能です。今後の機能拡張として、マイページから過去の予約を確認できるようにする予定です。",
       "登録方法は簡単です。座席予約フローの購入方法ステップで「入会する」を選び、氏名、氏名かな、電話番号、メールアドレス、パスワードを入力してください。登録が完了すると、そのまま会員情報を使って支払方法の選択へ進みます。",
-      "すでに会員登録済みの場合は、同じ購入方法ステップでメールアドレスまたは会員番号とパスワードを入力してログインしてください。ログイン後はお客様情報の入力を省略して購入手続きに進めます。"
+      "すでに会員登録済みの場合は、同じ購入方法ステップでメールアドレスまたは会員IDとパスワードを入力してログインしてください。ログイン後はお客様情報の入力を省略して購入手続きに進めます。"
     ]
   },
   {
@@ -569,7 +581,7 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応", "車椅子スペース 4席"]
+    features: ["IMAX®", "Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "車椅子スペース 4席"]
   },
   {
     num: 2,
@@ -577,7 +589,7 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応"]
+    features: ["Dolby Cinema", "Dolby Atmos", "4K デュアルレーザー", "RealD 3D対応"]
   },
   {
     num: 3,
@@ -585,25 +597,25 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["IMAX互換スクリーン", "RealD 3D対応", "Dolby Atmos", "4K レーザープロジェクター"]
+    features: ["4DX", "11種モーション演出", "7.1ch サラウンド", "RealD 3D対応"]
   },
   {
     num: 4,
     type: "中スクリーン",
     seats: 120,
-    features: ["Dolby Digital", "4K プロジェクター", "バリアフリー対応"]
+    features: ["プレミアムシート（本革電動）", "Dolby Atmos", "専用ラウンジ", "バリアフリー対応"]
   },
   {
     num: 5,
     type: "中スクリーン",
     seats: 120,
-    features: ["Dolby Digital", "4K プロジェクター"]
+    features: ["7.1ch サラウンド", "4K プロジェクター"]
   },
   {
     num: 6,
     type: "小スクリーン",
     seats: 70,
-    features: ["7.1ch サラウンド", "2K プロジェクター"]
+    features: ["7.1ch サラウンド", "4K プロジェクター"]
   },
   {
     num: 7,
@@ -615,7 +627,7 @@ export const SCREENS = [
     num: 8,
     type: "小スクリーン",
     seats: 70,
-    features: ["Dolby Atmos", "4K レーザープロジェクター (NEW)", "バリアフリー対応"]
+    features: ["Dolby Atmos", "4K レーザープロジェクター (NEW)", "35mmフィルム対応", "バリアフリー対応"]
   }
 ];
 

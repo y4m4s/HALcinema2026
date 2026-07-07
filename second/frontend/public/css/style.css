@@ -7,7 +7,7 @@
   --border2: rgba(45, 100, 160, 0.48);
   --text: #d0daf0;
   --text2: #96a6c0;
-  --text3: #546478;
+  --text3: #d0daf0;
   --accent: #2d6aa0;
   --accent2: #4a9fd4;
   --red: #8b1c1c;
@@ -219,6 +219,11 @@ a {
   background: linear-gradient(180deg, rgba(74, 159, 212, 0.11), rgba(74, 159, 212, 0.02));
 }
 
+.nav-link.member-logged-in {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
 .nav-link.active::after {
   content: '';
   position: absolute;
@@ -301,7 +306,7 @@ body:not(.home-page) .page > .section:first-child {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.2em;
-  color: var(--text3);
+  color: var(--text);
   text-transform: uppercase;
 }
 

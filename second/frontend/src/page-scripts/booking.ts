@@ -11,7 +11,18 @@ import { SeatStep } from '../components/bokking/SeatStep'
 import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
 import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
-import { MOVIES, SCREENS, DATES } from './data'
+
+import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
+import {
+  getAuthHeaders,
+  getRequestErrorMessage,
+  readMemberSession,
+  removeMemberSession,
+  requestJSON,
+  requestMemberJSON,
+  writeMemberSession,
+} from './member-session'
+import { runCommon } from './common'
 
 const FLOW_STEPS = [
   { id: 'tickets', label: '券種選択', en: 'TICKET' },
@@ -40,7 +51,6 @@ const THREE_D_EXTRA_FEE = 400
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
-const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
 const INPUT_LIMITS = {
   name: 40,
   nameKana: 60,
@@ -51,10 +61,13 @@ const INPUT_LIMITS = {
   password: 128,
 }
 
+const SEAT_AISLE_WIDTH = 28
 const SCREEN_SEAT_LAYOUTS = {
-  200: { rows: 10, columns: 20 },
-  120: { rows: 8, columns: 15 },
-  70: { rows: 7, columns: 10 },
+  // colBlocks: 縦通路で区切る左右ブロックの座席数（合計=columns）
+  // rowBlocks: 横通路で区切る前後ブロックの行数（合計=rows）
+  200: { rows: 10, columns: 20, colBlocks: [7, 6, 7], rowBlocks: [3, 4, 3] },
+  120: { rows: 8, columns: 15, colBlocks: [5, 5, 5], rowBlocks: [4, 4] },
+  70: { rows: 7, columns: 10, colBlocks: [5, 5], rowBlocks: [7] },
 }
 
 const PAYMENT_METHODS = [
@@ -494,8 +507,11 @@ export function runBooking() {
     if (!screen) return '<div class="booking-empty">上映回を選択すると座席表が表示されます。</div>'
     const layout = getSeatLayout(screen)
     const unavailable = getUnavailableSeats()
-    return getSeatRows(layout).map(row => {
-      const seats = row.seats.map(seatId => {
+    const aisleRowIndices = getRowAisleIndices(layout.rowBlocks)
+    const gridTemplate = buildSeatGridTemplate(layout.colBlocks)
+    return getSeatRows(layout).map((row, rowIndex) => {
+      const blocks = splitSeatsIntoBlocks(row.seats, layout.colBlocks)
+      const blockHtml = blocks.map(block => block.map(seatId => {
         const selected = state.selectedSeats.includes(seatId)
         const reserved = unavailable.has(seatId)
         const disabled = reserved
@@ -503,11 +519,13 @@ export function runBooking() {
           <button class="seat-button${selected ? ' selected' : ''}${reserved ? ' unavailable' : ''}" type="button" data-seat-id="${escapeAttr(seatId)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? 'disabled' : ''}>
             ${escapeHtml(seatId)}
           </button>`
-      }).join('')
+      }).join('')).join('<i class="seat-aisle" aria-hidden="true"></i>')
+      const rowClass = aisleRowIndices.has(rowIndex) ? 'seat-row seat-row--aisle-after' : 'seat-row'
       return `
-        <div class="seat-row" style="--seat-grid-min: ${layout.gridMinWidth}px;">
-          <span>${escapeHtml(row.label)}</span>
-          <div class="seat-row-grid" style="--seat-cols: ${layout.columns}; --seat-grid-min: ${layout.gridMinWidth}px;">${seats}</div>
+        <div class="${rowClass}" style="--seat-grid-min: ${layout.gridMinWidth}px;">
+          <span class="seat-row-label">${escapeHtml(row.label)}</span>
+          <div class="seat-row-grid" style="--seat-grid-min: ${layout.gridMinWidth}px; grid-template-columns: ${gridTemplate};">${blockHtml}</div>
+          <span class="seat-row-label">${escapeHtml(row.label)}</span>
         </div>`
     }).join('')
   }
@@ -874,7 +892,7 @@ export function runBooking() {
     render()
 
     try {
-      const result = await requestJSON('/api/members/login', {
+      const result = await requestMemberJSON('/api/members/login', {
         method: 'POST',
         body: JSON.stringify({
           identifier: state.login.identifier.trim(),
@@ -905,7 +923,7 @@ export function runBooking() {
     render()
 
     try {
-      const result = await requestJSON('/api/members/register', {
+      const result = await requestMemberJSON('/api/members/register', {
         method: 'POST',
         body: JSON.stringify({
           name: state.join.name.trim(),
@@ -928,10 +946,11 @@ export function runBooking() {
     const token = state.memberToken
     clearMemberAuth()
     render()
+    runCommon()
 
     if (!token) return
     try {
-      await requestJSON('/api/members/logout', {
+      await requestMemberJSON('/api/members/logout', {
         method: 'POST',
         headers: getAuthHeaders(token),
       })
@@ -945,10 +964,11 @@ export function runBooking() {
     if (!token) return
 
     try {
-      const result = await requestJSON('/api/members/me', {
+      const result = await requestMemberJSON('/api/members/me', {
         headers: getAuthHeaders(token),
       })
       if (result.member) {
+        if (state.memberToken !== token) return
         applyMemberSession(result.member, token)
         render()
       }
@@ -1080,10 +1100,15 @@ export function runBooking() {
   function getSeatLayout(screen = getScreen()) {
     const seatCount = Number(screen?.seats) || 96
     const preset = SCREEN_SEAT_LAYOUTS[seatCount] || createSeatLayoutByCapacity(seatCount)
+    const colBlocks = preset.colBlocks && preset.colBlocks.length ? preset.colBlocks : [preset.columns]
+    const rowBlocks = preset.rowBlocks && preset.rowBlocks.length ? preset.rowBlocks : [preset.rows]
+    const colAisles = colBlocks.length - 1
     return {
       ...preset,
       seatCount,
-      gridMinWidth: preset.columns * 36,
+      colBlocks,
+      rowBlocks,
+      gridMinWidth: preset.columns * 30 + colAisles * SEAT_AISLE_WIDTH,
     }
   }
 
@@ -1142,63 +1167,9 @@ function createCustomerState(member = null) {
   }
 }
 
-function readMemberSession() {
-  try {
-    const raw = window.localStorage.getItem(MEMBER_SESSION_STORAGE_KEY)
-    if (!raw) return null
-    const session = JSON.parse(raw)
-    if (!session?.token || !session?.member) return null
-    return session
-  } catch {
-    return null
-  }
-}
-
-function writeMemberSession(session) {
-  try {
-    window.localStorage.setItem(MEMBER_SESSION_STORAGE_KEY, JSON.stringify(session))
-  } catch {
-    // Storage can be unavailable in private browsing; the current purchase still works.
-  }
-}
-
-function removeMemberSession() {
-  try {
-    window.localStorage.removeItem(MEMBER_SESSION_STORAGE_KEY)
-  } catch {
-    // Nothing to clean up when storage is unavailable.
-  }
-}
-
-async function requestJSON(path, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  }
-  const response = await fetch(path, {
-    ...options,
-    headers,
-  })
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(data.error || '通信に失敗しました。')
-  }
-  return data
-}
-
-function getAuthHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-  }
-}
-
-function getRequestErrorMessage(error) {
-  return error instanceof Error ? error.message : '通信に失敗しました。'
-}
-
 function resolveMovie(params) {
   const requestedId = Number(params.get('movie') || params.get('id'))
-  return MOVIES.find(movie => movie.id === requestedId) || MOVIES.find(movie => movie.status === 'now') || MOVIES[0]
+  return MOVIES.find(movie => movie.id === requestedId) || MOVIES.find(movie => getMovieStatus(movie) === 'now') || MOVIES[0]
 }
 
 function resolveInitialSlot(movie, params) {
@@ -1286,6 +1257,38 @@ function getSeatRows(layout) {
       seats: Array.from({ length: seatTotal }, (_, seatIndex) => `${label}${seatIndex + 1}`),
     }
   }).filter(row => row.seats.length > 0)
+}
+
+// 縦通路で区切る列ブロックに座席を分割する（合計が席数を超えないことを保証）
+function splitSeatsIntoBlocks(seats, colBlocks) {
+  const blocks = []
+  let offset = 0
+  for (const size of colBlocks) {
+    blocks.push(seats.slice(offset, offset + size))
+    offset += size
+  }
+  if (offset < seats.length) {
+    blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(seats.slice(offset))
+  }
+  return blocks.filter(block => block.length > 0)
+}
+
+// 列ブロックを縦通路トラックで連結した grid-template-columns 文字列を組み立てる
+function buildSeatGridTemplate(colBlocks) {
+  return colBlocks
+    .map(count => `repeat(${count}, minmax(30px, 1fr))`)
+    .join(' var(--seat-aisle, 28px) ')
+}
+
+// 横通路を入れる行（各前後ブロックの最終行）の 0 始まりインデックス集合を返す
+function getRowAisleIndices(rowBlocks) {
+  const indices = new Set()
+  let acc = 0
+  for (let i = 0; i < rowBlocks.length - 1; i++) {
+    acc += rowBlocks[i]
+    indices.add(acc - 1)
+  }
+  return indices
 }
 
 function getRowLabel(index) {

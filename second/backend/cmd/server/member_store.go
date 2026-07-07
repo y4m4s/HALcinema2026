@@ -74,14 +74,27 @@ type memberAuthResponse struct {
 
 type memberResponse struct {
 	ID           int64  `json:"id"`
-	MemberNo     string `json:"memberNo"`
 	Name         string `json:"name"`
 	NameKana     string `json:"nameKana"`
 	Email        string `json:"email"`
 	Tel          string `json:"tel"`
 	MailMagazine bool   `json:"mailMagazine"`
-	Points       int    `json:"points"`
 	CreatedAt    string `json:"createdAt"`
+}
+
+type memberReservationHistoryItem struct {
+	ReservationID string `json:"reservationId"`
+	Status        string `json:"status"`
+	ReservedAt    string `json:"reservedAt"`
+	MovieTitle    string `json:"movieTitle"`
+	Date          string `json:"date"`
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	Screen        string `json:"screen"`
+	Seats         string `json:"seats"`
+	PaymentMethod string `json:"paymentMethod"`
+	PaymentStatus string `json:"paymentStatus"`
+	Amount        int    `json:"amount"`
 }
 
 type memberRecord struct {
@@ -122,16 +135,13 @@ func (s *memberStore) init(ctx context.Context) error {
 		`PRAGMA busy_timeout = 5000`,
 		`CREATE TABLE IF NOT EXISTS members (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			member_no TEXT NOT NULL UNIQUE,
 			name TEXT NOT NULL,
 			name_kana TEXT NOT NULL,
 			email TEXT NOT NULL UNIQUE COLLATE NOCASE,
 			tel TEXT NOT NULL,
 			password_hash TEXT NOT NULL,
 			mail_magazine INTEGER NOT NULL DEFAULT 0,
-			points INTEGER NOT NULL DEFAULT 0,
-			created_at TEXT NOT NULL,
-			updated_at TEXT NOT NULL
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		)`,
 		`CREATE TABLE IF NOT EXISTS member_sessions (
 			token_hash TEXT PRIMARY KEY,
@@ -150,7 +160,86 @@ func (s *memberStore) init(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return s.migrateMemberSchema(ctx)
+}
+
+func (s *memberStore) migrateMemberSchema(ctx context.Context) error {
+	columns, err := s.memberTableColumns(ctx)
+	if err != nil {
+		return err
+	}
+	if !columns["member_no"] && !columns["points"] && !columns["updated_at"] {
+		return nil
+	}
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		return err
+	}
+	defer conn.ExecContext(context.Background(), `PRAGMA foreign_keys = ON`)
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	statements := []string{
+		`DROP TABLE IF EXISTS members_new`,
+		`CREATE TABLE members_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			name_kana TEXT NOT NULL,
+			email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+			tel TEXT NOT NULL,
+			password_hash TEXT NOT NULL,
+			mail_magazine INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+		)`,
+		`INSERT INTO members_new
+			(id, name, name_kana, email, tel, password_hash, mail_magazine, created_at)
+		 SELECT id, name, name_kana, email, tel, password_hash, mail_magazine, created_at
+		   FROM members`,
+		`DROP TABLE members`,
+		`ALTER TABLE members_new RENAME TO members`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (s *memberStore) memberTableColumns(ctx context.Context) (map[string]bool, error) {
+	rows, err := s.db.QueryContext(ctx, `PRAGMA table_info(members)`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns := map[string]bool{}
+	for rows.Next() {
+		var (
+			cid        int
+			name       string
+			columnType string
+			notNull    int
+			defaultVal sql.NullString
+			pk         int
+		)
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultVal, &pk); err != nil {
+			return nil, err
+		}
+		columns[name] = true
+	}
+	return columns, rows.Err()
 }
 
 func (s *memberStore) Register(ctx context.Context, req memberRegisterRequest) (memberResponse, string, error) {
@@ -173,56 +262,44 @@ func (s *memberStore) Register(ctx context.Context, req memberRegisterRequest) (
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	for attempt := 0; attempt < 5; attempt++ {
-		memberNo, err := generateMemberNo()
-		if err != nil {
-			return memberResponse{}, "", err
-		}
-
-		result, err := s.db.ExecContext(
-			ctx,
-			`INSERT INTO members
-				(member_no, name, name_kana, email, tel, password_hash, mail_magazine, points, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-			memberNo,
-			normalized.Name,
-			normalized.NameKana,
-			normalized.Email,
-			normalized.Tel,
-			string(passwordHash),
-			boolToInt(normalized.MailMagazine),
-			now,
-			now,
-		)
-		if err != nil {
-			if isUniqueConstraintError(err) {
-				if exists, checkErr := s.emailExists(ctx, normalized.Email); checkErr == nil && exists {
-					return memberResponse{}, "", errDuplicateEmail
-				}
-				continue
+	result, err := s.db.ExecContext(
+		ctx,
+		`INSERT INTO members
+			(name, name_kana, email, tel, password_hash, mail_magazine, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		normalized.Name,
+		normalized.NameKana,
+		normalized.Email,
+		normalized.Tel,
+		string(passwordHash),
+		boolToInt(normalized.MailMagazine),
+		now,
+	)
+	if err != nil {
+		if isUniqueConstraintError(err) {
+			if exists, checkErr := s.emailExists(ctx, normalized.Email); checkErr == nil && exists {
+				return memberResponse{}, "", errDuplicateEmail
 			}
-			return memberResponse{}, "", err
 		}
-
-		id, err := result.LastInsertId()
-		if err != nil {
-			return memberResponse{}, "", err
-		}
-
-		member, err := s.memberByID(ctx, id)
-		if err != nil {
-			return memberResponse{}, "", err
-		}
-
-		token, err := s.createSession(ctx, id)
-		if err != nil {
-			return memberResponse{}, "", err
-		}
-
-		return member, token, nil
+		return memberResponse{}, "", err
 	}
 
-	return memberResponse{}, "", fmt.Errorf("failed to allocate member number")
+	id, err := result.LastInsertId()
+	if err != nil {
+		return memberResponse{}, "", err
+	}
+
+	member, err := s.memberByID(ctx, id)
+	if err != nil {
+		return memberResponse{}, "", err
+	}
+
+	token, err := s.createSession(ctx, id)
+	if err != nil {
+		return memberResponse{}, "", err
+	}
+
+	return member, token, nil
 }
 
 func (s *memberStore) Login(ctx context.Context, req memberLoginRequest) (memberResponse, string, error) {
@@ -285,6 +362,85 @@ func (s *memberStore) Logout(ctx context.Context, token string) error {
 	return err
 }
 
+func (s *memberStore) ReservationHistory(ctx context.Context, memberID int64, period string) ([]memberReservationHistoryItem, error) {
+	where := `WHERE r.member_id = ?`
+	args := []any{memberID}
+
+	if since := reservationHistorySince(period); since != "" {
+		where += ` AND r.reserved_at >= ?`
+		args = append(args, since)
+	}
+
+	query := fmt.Sprintf(
+		`SELECT r.id,
+		        r.status,
+		        r.reserved_at,
+		        m.title,
+		        sch.start_at,
+		        sch.end_at,
+		        scr.name,
+		        COALESCE((
+		          SELECT group_concat(seat_code, ' / ')
+		            FROM (
+		              SELECT st.seat_code
+		                FROM reservation_details AS rd
+		                JOIN reservation_seats AS rs ON rs.reservation_detail_id = rd.id
+		                JOIN seats AS st ON st.id = rs.seat_id
+		               WHERE rd.reservation_id = r.id
+		               ORDER BY st.seat_code
+		            )
+		        ), ''),
+		        COALESCE(pm.name, ''),
+		        COALESCE(p.status, ''),
+		        COALESCE(p.amount, 0)
+		   FROM reservations AS r
+		   JOIN schedules AS sch ON sch.id = r.schedule_id
+		   JOIN movies AS m ON m.id = sch.movie_id
+		   JOIN screens AS scr ON scr.id = sch.screen_id
+		   LEFT JOIN payments AS p ON p.reservation_id = r.id
+		   LEFT JOIN payment_methods AS pm ON pm.id = p.payment_method_id
+		   %s
+		   ORDER BY r.reserved_at DESC, r.id DESC
+		   LIMIT 50`,
+		where,
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []memberReservationHistoryItem{}
+	for rows.Next() {
+		var item memberReservationHistoryItem
+		var startAt, endAt string
+		if err := rows.Scan(
+			&item.ReservationID,
+			&item.Status,
+			&item.ReservedAt,
+			&item.MovieTitle,
+			&startAt,
+			&endAt,
+			&item.Screen,
+			&item.Seats,
+			&item.PaymentMethod,
+			&item.PaymentStatus,
+			&item.Amount,
+		); err != nil {
+			return nil, err
+		}
+		item.Date = dateFromTimestamp(startAt)
+		item.Start = clockFromTimestamp(startAt)
+		item.End = clockFromTimestamp(endAt)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (s *memberStore) emailExists(ctx context.Context, email string) (bool, error) {
 	var id int64
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM members WHERE email = ?`, email).Scan(&id)
@@ -299,19 +455,17 @@ func (s *memberStore) memberByID(ctx context.Context, id int64) (memberResponse,
 	var mailMagazine int
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, member_no, name, name_kana, email, tel, mail_magazine, points, created_at
+		`SELECT id, name, name_kana, email, tel, mail_magazine, created_at
 		 FROM members
 		 WHERE id = ?`,
 		id,
 	).Scan(
 		&member.ID,
-		&member.MemberNo,
 		&member.Name,
 		&member.NameKana,
 		&member.Email,
 		&member.Tel,
 		&mailMagazine,
-		&member.Points,
 		&member.CreatedAt,
 	)
 	if err != nil {
@@ -326,21 +480,19 @@ func (s *memberStore) memberByIdentifier(ctx context.Context, identifier string)
 	var mailMagazine int
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT id, member_no, name, name_kana, email, tel, password_hash, mail_magazine, points, created_at
+		`SELECT id, name, name_kana, email, tel, password_hash, mail_magazine, created_at
 		 FROM members
-		 WHERE lower(email) = ? OR lower(member_no) = ?`,
+		 WHERE lower(email) = ? OR CAST(id AS TEXT) = ?`,
 		identifier,
 		identifier,
 	).Scan(
 		&member.ID,
-		&member.MemberNo,
 		&member.Name,
 		&member.NameKana,
 		&member.Email,
 		&member.Tel,
 		&member.passwordHash,
 		&mailMagazine,
-		&member.Points,
 		&member.CreatedAt,
 	)
 	if err != nil {
@@ -356,7 +508,7 @@ func (s *memberStore) memberBySessionToken(ctx context.Context, token string) (m
 	now := time.Now().UTC().Format(time.RFC3339)
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT m.id, m.member_no, m.name, m.name_kana, m.email, m.tel, m.mail_magazine, m.points, m.created_at
+		`SELECT m.id, m.name, m.name_kana, m.email, m.tel, m.mail_magazine, m.created_at
 		 FROM member_sessions AS s
 		 JOIN members AS m ON m.id = s.member_id
 		 WHERE s.token_hash = ? AND s.expires_at > ?`,
@@ -364,13 +516,11 @@ func (s *memberStore) memberBySessionToken(ctx context.Context, token string) (m
 		now,
 	).Scan(
 		&member.ID,
-		&member.MemberNo,
 		&member.Name,
 		&member.NameKana,
 		&member.Email,
 		&member.Tel,
 		&mailMagazine,
-		&member.Points,
 		&member.CreatedAt,
 	)
 	if err != nil {
@@ -451,20 +601,6 @@ func normalizeRegisterRequest(req memberRegisterRequest) (memberRegisterRequest,
 	return normalized, nil
 }
 
-func generateMemberNo() (string, error) {
-	randomPart, err := randomToken(5)
-	if err != nil {
-		return "", err
-	}
-
-	randomPart = strings.ToUpper(strings.NewReplacer("-", "", "_", "").Replace(randomPart))
-	if len(randomPart) > 8 {
-		randomPart = randomPart[:8]
-	}
-
-	return fmt.Sprintf("HC%s%s", time.Now().UTC().Format("0601"), randomPart), nil
-}
-
 func randomToken(length int) (string, error) {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
@@ -512,4 +648,18 @@ func boolToInt(value bool) int {
 		return 1
 	}
 	return 0
+}
+
+func reservationHistorySince(period string) string {
+	now := time.Now().UTC()
+	switch strings.TrimSpace(strings.ToLower(period)) {
+	case "30d":
+		return now.AddDate(0, 0, -30).Format(time.RFC3339)
+	case "90d":
+		return now.AddDate(0, 0, -90).Format(time.RFC3339)
+	case "1y":
+		return now.AddDate(-1, 0, 0).Format(time.RFC3339)
+	default:
+		return ""
+	}
 }

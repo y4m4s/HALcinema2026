@@ -63,6 +63,22 @@ func registerMemberRoutes(api *gin.RouterGroup, store *memberStore) {
 			c.JSON(http.StatusOK, gin.H{"member": member})
 		})
 
+		members.GET("/reservations", func(c *gin.Context) {
+			member, err := store.MemberByToken(c.Request.Context(), bearerToken(c))
+			if err != nil {
+				writeMemberStoreError(c, err)
+				return
+			}
+
+			items, err := store.ReservationHistory(c.Request.Context(), member.ID, c.Query("period"))
+			if err != nil {
+				writeMemberStoreError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"reservations": items})
+		})
+
 		members.POST("/logout", func(c *gin.Context) {
 			if err := store.Logout(c.Request.Context(), bearerToken(c)); err != nil {
 				writeMemberStoreError(c, err)

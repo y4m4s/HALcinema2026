@@ -1,9 +1,9 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES } from './data'
+import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
 
 export function runSchedule() {
-const nowShowing = MOVIES.filter(m => m.status === 'now');
+const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   let viewMode = 'date';
   let dateIdx = 0;
   let movieIdx = 0;

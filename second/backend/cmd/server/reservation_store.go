@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -132,7 +130,7 @@ type reservationLookupCustomer struct {
 }
 
 type resolvedShowtime struct {
-	id       string
+	id       int64
 	movieID  string
 	screenID string
 	startAt  string
@@ -457,6 +455,14 @@ func (s *reservationStore) migrateReservationDeadlines(ctx context.Context) erro
 			return err
 		}
 	}
+	reservationTimeColumn := "created_at"
+	if !reservationColumns["created_at"] && reservationColumns["reserved_at"] {
+		reservationTimeColumn = "reserved_at"
+	}
+	reservationPaymentPredicate := "r.id = payments.reservation_id"
+	if reservationColumns["reservation_no"] {
+		reservationPaymentPredicate += " OR r.reservation_no = payments.reservation_id"
+	}
 
 	paymentColumns, err := s.tableColumns(ctx, "payments")
 	if err != nil {
@@ -470,23 +476,23 @@ func (s *reservationStore) migrateReservationDeadlines(ctx context.Context) erro
 
 	if _, err := s.db.ExecContext(
 		ctx,
-		`UPDATE reservations
-		    SET seat_hold_expires_at = strftime('%Y-%m-%dT%H:%M:%SZ', reserved_at, '+30 minutes')
+		fmt.Sprintf(`UPDATE reservations
+		    SET seat_hold_expires_at = strftime('%%Y-%%m-%%dT%%H:%%M:%%SZ', %s, '+30 minutes')
 		  WHERE status = 'pending'
-		    AND (seat_hold_expires_at IS NULL OR seat_hold_expires_at = '')`,
+		    AND (seat_hold_expires_at IS NULL OR seat_hold_expires_at = '')`, reservationTimeColumn),
 	); err != nil {
 		return err
 	}
 	if _, err := s.db.ExecContext(
 		ctx,
-		`UPDATE payments
+		fmt.Sprintf(`UPDATE payments
 		    SET payment_due_at = (
 		            SELECT r.seat_hold_expires_at
 		              FROM reservations AS r
-		             WHERE r.id = payments.reservation_id
+		             WHERE %s
 		        )
 		  WHERE status = 'unpaid'
-		    AND (payment_due_at IS NULL OR payment_due_at = '')`,
+		    AND (payment_due_at IS NULL OR payment_due_at = '')`, reservationPaymentPredicate),
 	); err != nil {
 		return err
 	}
@@ -499,7 +505,7 @@ func (s *reservationStore) migratePaymentIDs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if !strings.Contains(tableSQL, "GLOB 'P[0-9][0-9][0-9]'") {
+	if !strings.Contains(tableSQL, "GLOB 'P[0-9]") && !strings.Contains(tableSQL, "id                 TEXT") {
 		return nil
 	}
 
@@ -523,8 +529,8 @@ func (s *reservationStore) migratePaymentIDs(ctx context.Context) error {
 	statements := []string{
 		`DROP TABLE IF EXISTS payments_new`,
 		`CREATE TABLE payments_new (
-			id                 TEXT    PRIMARY KEY,
-			reservation_id     TEXT    NOT NULL REFERENCES reservations(id) ON DELETE RESTRICT,
+			id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+			reservation_id     INTEGER NOT NULL REFERENCES reservations(id) ON DELETE RESTRICT,
 			payment_method_id  TEXT    NOT NULL REFERENCES payment_methods(id) ON DELETE RESTRICT,
 			amount             INTEGER NOT NULL CHECK (amount >= 0),
 			status             TEXT    NOT NULL DEFAULT 'unpaid'
@@ -532,16 +538,22 @@ func (s *reservationStore) migratePaymentIDs(ctx context.Context) error {
 			paid_at            TEXT,
 			payment_due_at     TEXT,
 			created_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-			updated_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-			CHECK (id GLOB 'P[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+			updated_at         TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 		)`,
 		`INSERT INTO payments_new
 			(id, reservation_id, payment_method_id, amount, status, paid_at, payment_due_at, created_at, updated_at)
 		 SELECT CASE
-		            WHEN id GLOB 'P[0-9][0-9][0-9]' THEN 'P' || printf('%010d', CAST(substr(id, 2) AS INTEGER))
-		            ELSE id
+		            WHEN id GLOB 'P[0-9]*' THEN CAST(substr(id, 2) AS INTEGER)
+		            WHEN id GLOB '[0-9]*' THEN CAST(id AS INTEGER)
+		            ELSE NULL
 		        END,
-		        reservation_id,
+		        COALESCE(
+		            (SELECT r.id FROM reservations AS r WHERE r.reservation_no = payments.reservation_id),
+		            CASE
+		                WHEN reservation_id GLOB '[0-9]*' THEN CAST(reservation_id AS INTEGER)
+		                ELSE NULL
+		            END
+		        ),
 		        payment_method_id,
 		        amount,
 		        status,
@@ -711,7 +723,7 @@ func (s *reservationStore) Availability(ctx context.Context, req reservationCrea
 	}
 
 	return reservationAvailabilityResponse{
-		ScheduleID:    showtime.id,
+		ScheduleID:    strconv.FormatInt(showtime.id, 10),
 		ReservedSeats: reservedSeats,
 	}, nil
 }
@@ -753,8 +765,10 @@ func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]schedul
 	items := []scheduleAvailabilityItem{}
 	for rows.Next() {
 		var (
-			id, movieID, screenID, startAt, endAt string
-			capacity, reserved                    int
+			id                 int64
+			movieID, screenID  string
+			startAt, endAt     string
+			capacity, reserved int
 		)
 		if err := rows.Scan(&id, &movieID, &screenID, &startAt, &endAt, &capacity, &reserved); err != nil {
 			return nil, err
@@ -764,7 +778,7 @@ func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]schedul
 			remaining = 0
 		}
 		items = append(items, scheduleAvailabilityItem{
-			ScheduleID: id,
+			ScheduleID: strconv.FormatInt(id, 10),
 			MovieID:    trailingInt(movieID),
 			Screen:     trailingInt(screenID),
 			Start:      clockFromTimestamp(startAt),
@@ -838,13 +852,14 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 
 	var (
 		response              reservationLookupResponse
+		reservationID         int64
 		startAt, endAt        string
 		paymentMethod, status string
 		amount                int
 	)
 	err := s.db.QueryRowContext(
 		ctx,
-		`SELECT r.id, r.status, r.customer_name, r.customer_email, r.customer_tel,
+		`SELECT r.id, r.reservation_no, r.status, r.customer_name, r.customer_email, r.customer_tel,
 		        sch.start_at, sch.end_at, m.title, scr.name,
 		        COALESCE(pm.name, ''), COALESCE(p.status, ''), COALESCE(p.amount, 0)
 		   FROM reservations AS r
@@ -853,7 +868,7 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		   JOIN screens AS scr ON scr.id = sch.screen_id
 		   LEFT JOIN payments AS p ON p.reservation_id = r.id
 		   LEFT JOIN payment_methods AS pm ON pm.id = p.payment_method_id
-		  WHERE r.id = ?
+		  WHERE r.reservation_no = ?
 		    AND lower(r.customer_email) = ?
 		    AND r.customer_tel = ?
 		  ORDER BY p.created_at DESC
@@ -862,6 +877,7 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		req.Email,
 		req.Tel,
 	).Scan(
+		&reservationID,
 		&response.ReservationID,
 		&response.Status,
 		&response.Customer.Name,
@@ -891,13 +907,13 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		Amount: amount,
 	}
 
-	seats, err := s.reservationSeatCodes(ctx, response.ReservationID)
+	seats, err := s.reservationSeatCodes(ctx, reservationID)
 	if err != nil {
 		return reservationLookupResponse{}, err
 	}
 	response.Seats = seats
 
-	tickets, err := s.reservationTickets(ctx, response.ReservationID)
+	tickets, err := s.reservationTickets(ctx, reservationID)
 	if err != nil {
 		return reservationLookupResponse{}, err
 	}
@@ -959,7 +975,7 @@ func (s *reservationStore) PreviewCoupon(ctx context.Context, req couponPreviewR
 	}, nil
 }
 
-func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservationID string) ([]string, error) {
+func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservationID int64) ([]string, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
 		`SELECT st.seat_code
@@ -989,7 +1005,7 @@ func (s *reservationStore) reservationSeatCodes(ctx context.Context, reservation
 	return seats, nil
 }
 
-func (s *reservationStore) reservationTickets(ctx context.Context, reservationID string) ([]reservationLookupTicket, error) {
+func (s *reservationStore) reservationTickets(ctx context.Context, reservationID int64) ([]reservationLookupTicket, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
 		`SELECT tt.code, tt.name, rd.quantity, rd.subtotal
@@ -1083,11 +1099,6 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		return reservationCreateResponse{}, err
 	}
 
-	reservationID, err := createNumericID(ctx, tx, "reservations", "R", 10)
-	if err != nil {
-		return reservationCreateResponse{}, err
-	}
-
 	customer := req.Customer
 	var memberID any = nil
 	if member != nil {
@@ -1113,13 +1124,12 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		seatHoldExpiresAt = nowTime.Add(reservationSeatHoldDuration).Format(time.RFC3339)
 	}
 
-	_, err = tx.ExecContext(
+	reservationResult, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO reservations
-			(id, schedule_id, member_id, coupon_id, customer_name, customer_name_kana,
-			 customer_email, customer_tel, status, reserved_at, seat_hold_expires_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		reservationID,
+			(schedule_id, member_id, coupon_id, customer_name, customer_name_kana,
+			 customer_email, customer_tel, status, seat_hold_expires_at, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		showtime.id,
 		memberID,
 		nullableString(couponID),
@@ -1128,7 +1138,6 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		customer.Email,
 		customer.Tel,
 		status,
-		now,
 		seatHoldExpiresAt,
 		now,
 		now,
@@ -1136,31 +1145,36 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 	if err != nil {
 		return reservationCreateResponse{}, err
 	}
+	reservationID, err := reservationResult.LastInsertId()
+	if err != nil {
+		return reservationCreateResponse{}, err
+	}
+	var reservationNo string
+	if err := tx.QueryRowContext(ctx, `SELECT reservation_no FROM reservations WHERE id = ?`, reservationID).Scan(&reservationNo); err != nil {
+		return reservationCreateResponse{}, err
+	}
 
 	nextSeat := 0
 	for _, ticket := range tickets {
-		detailID, err := createNumericID(ctx, tx, "reservation_details", "RD", 10)
-		if err != nil {
-			return reservationCreateResponse{}, err
-		}
 		detailSeatCount := ticket.requiredSeatCount * ticket.count
 		detailSeats := seats[nextSeat : nextSeat+detailSeatCount]
 		nextSeat += detailSeatCount
 
-		_, err = tx.ExecContext(
+		detailResult, err := tx.ExecContext(
 			ctx,
 			`INSERT INTO reservation_details
-				(id, reservation_id, ticket_type_id, quantity, unit_price, subtotal, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			detailID,
+				(reservation_id, ticket_type_id, quantity, unit_price, subtotal)
+			 VALUES (?, ?, ?, ?, ?)`,
 			reservationID,
 			ticket.id,
 			ticket.count,
 			effectiveTicketPrice(ticket.code, ticket.price, req.Date),
 			effectiveTicketPrice(ticket.code, ticket.price, req.Date)*ticket.count,
-			now,
-			now,
 		)
+		if err != nil {
+			return reservationCreateResponse{}, err
+		}
+		detailID, err := detailResult.LastInsertId()
 		if err != nil {
 			return reservationCreateResponse{}, err
 		}
@@ -1185,10 +1199,6 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		}
 	}
 
-	paymentID, err := createNumericID(ctx, tx, "payments", "P", 10)
-	if err != nil {
-		return reservationCreateResponse{}, err
-	}
 	paymentStatus := "paid"
 	var paidAt any = now
 	var paymentDueAt any = nil
@@ -1200,9 +1210,8 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 	_, err = tx.ExecContext(
 		ctx,
 		`INSERT INTO payments
-			(id, reservation_id, payment_method_id, amount, status, paid_at, payment_due_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		paymentID,
+			(reservation_id, payment_method_id, amount, status, paid_at, payment_due_at, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		reservationID,
 		paymentMethodID,
 		total,
@@ -1221,8 +1230,8 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 	}
 
 	return reservationCreateResponse{
-		ReservationID:  reservationID,
-		ConfirmationNo: reservationID,
+		ReservationID:  reservationNo,
+		ConfirmationNo: reservationNo,
 		Amount:         total,
 		Status:         status,
 	}, nil
@@ -1400,7 +1409,7 @@ func (s *reservationStore) resolveCouponInfo(ctx context.Context, code string, s
 	return coupon, discount, nil
 }
 
-func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID string, seats []resolvedSeat, now string) error {
+func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID int64, seats []resolvedSeat, now string) error {
 	for _, seat := range seats {
 		var code string
 		err := tx.QueryRowContext(
@@ -1647,56 +1656,4 @@ func nullableString(value string) any {
 		return nil
 	}
 	return value
-}
-
-// createNumericID allocates an ID of the form prefix + digitCount 桁のゼロ埋め数字
-// (例: R0000000042 / P007)。連番ではなく毎回ランダムな数字を採番し、既存IDと
-// 衝突した場合は別の値で採番し直す。桁数は schema.sql の CHECK 制約と一致させる。
-func createNumericID(ctx context.Context, tx *sql.Tx, table string, prefix string, digitCount int) (string, error) {
-	if digitCount <= 0 {
-		return "", fmt.Errorf("invalid digit count for %s", table)
-	}
-
-	limit := int64(1)
-	for i := 0; i < digitCount; i++ {
-		limit *= 10
-	}
-
-	existsQuery := fmt.Sprintf("SELECT 1 FROM %s WHERE id = ? LIMIT 1", table)
-
-	// 桁数が小さい(例: P+3桁)ほど候補が枯渇しやすいので、空き番号探索の上限を
-	// 候補数に応じて広げつつ固定上限でも頭打ちにする。
-	maxAttempts := 100
-	if limit < int64(maxAttempts) {
-		maxAttempts = int(limit)
-	}
-
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		number, err := randomNumberBelow(limit)
-		if err != nil {
-			return "", err
-		}
-		candidate := fmt.Sprintf("%s%0*d", prefix, digitCount, number)
-
-		var exists int
-		err = tx.QueryRowContext(ctx, existsQuery, candidate).Scan(&exists)
-		if errors.Is(err, sql.ErrNoRows) {
-			return candidate, nil
-		}
-		if err != nil {
-			return "", err
-		}
-		// 衝突したので別の番号で採番し直す。
-	}
-
-	return "", fmt.Errorf("could not allocate unique id for %s", table)
-}
-
-// randomNumberBelow returns a uniformly distributed integer in [0, limit).
-func randomNumberBelow(limit int64) (int64, error) {
-	number, err := rand.Int(rand.Reader, big.NewInt(limit))
-	if err != nil {
-		return 0, err
-	}
-	return number.Int64(), nil
 }
