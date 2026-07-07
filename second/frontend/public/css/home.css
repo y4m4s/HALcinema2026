@@ -11,11 +11,23 @@
   background-size: cover;
   background-position: center 20%;
   filter: brightness(0.45) saturate(0.6);
-  transition: transform 8s ease;
+  transition:
+    opacity 2.5s ease-in-out,
+    transform 0.2s ease;
 }
 
 .hero:hover .hero-bg {
   transform: scale(1.03);
+}
+
+.hero-bg-a{
+    opacity:1;
+    z-index:0;
+}
+
+.hero-bg-b{
+    opacity:0;
+    z-index:0;
 }
 
 .hero-overlay {
@@ -28,13 +40,14 @@
 
 .hero-content {
   position: relative;
-  z-index: 2;
+  z-index: 5;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: 0 80px 72px;
-  max-width: 800px;
+  max-width: 1100px;
+  transition: opacity .8s ease-in-out;
 }
 
 .hero-tag {
@@ -68,6 +81,11 @@
   margin-bottom: 24px;
 }
 
+.hero-title.small {
+  font-size: clamp(42px, 6vw, 78px);
+  line-height: 1.0;
+}
+
 .hero-meta {
   display: flex;
   gap: 20px;
@@ -91,10 +109,10 @@
 }
 
 .hero-scroll {
-  position: absolute;
+  position: relative;
   right: 48px;
   bottom: 48px;
-  z-index: 2;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
