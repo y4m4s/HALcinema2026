@@ -32,7 +32,8 @@ export const homePage: PageDefinition = {
 
     <!-- HERO -->
     <div class="hero">
-      <div class="hero-bg" id="hero-bg"></div>
+      <div class="hero-bg hero-bg-a" id="hero-bg-a"></div>
+      <div class="hero-bg hero-bg-b" id="hero-bg-b"></div>
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <div class="hero-tag">Now Showing — Feature</div>

@@ -6,24 +6,79 @@ import { badge } from './common'
 export function runHome() {
   const comingSynopsisLimit = 110;
   const homeNewsLimit = 5;
-  const featured = MOVIES.find(m => m.isFeature);
-  const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
-  const nowShowingPreview = nowShowing.slice(0, 4);
-  const coming = MOVIES.filter(m => getMovieStatus(m) === 'coming');
+  // const featured = MOVIES.find(m => m.isFeature);
+  // const nowShowingIds = [1, 3, 6, 7];
+  // const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
+  const nowShowing = MOVIES.filter(movie => movie.status === "now");
+  const featured = nowShowing[0];
+
+  const nowShowingPreview = nowShowing;
+  const coming = MOVIES.filter(m => m.status === 'coming');
 
   // Hero
-  document.getElementById('hero-bg').style.backgroundImage = `url('${featured.image}')`;
-  document.getElementById('hero-title').textContent = featured.title;
-  document.getElementById('hero-meta').innerHTML =
-    badge(featured.rating, true) +
-    badge(featured.duration + '分') +
-    badge(featured.genre.join(' / ')) +
-    badge('監督：' + featured.director);
-  document.getElementById('hero-synopsis').textContent = featured.synopsis;
-  const heroDetailLink = document.getElementById('hero-detail-link');
-  if (heroDetailLink) {
-    heroDetailLink.href = `detail.html?id=${featured.id}`;
+  // document.getElementById('hero-bg').style.backgroundImage = `url('${featured.image}')`;
+  // document.getElementById('hero-title').textContent = featured.title;
+  // document.getElementById('hero-meta').innerHTML =
+  //   badge(featured.rating, true) +
+  //   badge(featured.duration + '分') +
+  //   badge(featured.genre.join(' / ')) +
+  //   badge('監督：' + featured.director);
+  // document.getElementById('hero-synopsis').textContent = featured.synopsis;
+  // const heroDetailLink = document.getElementById('hero-detail-link');
+  // if (heroDetailLink) {
+  //   heroDetailLink.href = `detail.html?id=${featured.id}`;
+  // }
+  const heroBgA = document.getElementById("hero-bg-a");
+  const heroBgB = document.getElementById("hero-bg-b");
+  let activeBg = heroBgA;
+  let nextBg = heroBgB;
+  const heroTitle = document.getElementById("hero-title");
+  const heroMeta = document.getElementById("hero-meta");
+  const heroSynopsis = document.getElementById("hero-synopsis");
+  const heroDetailLink = document.getElementById("hero-detail-link");
+  let heroIndex = 0;
+  function updateHero(movie) {
+    const heroContent = document.querySelector(".hero-content");
+    heroContent.style.opacity = 0;
+    nextBg.style.backgroundImage = `url('${movie.image}')`;
+    nextBg.offsetHeight;
+    nextBg.style.opacity = 1;
+    activeBg.style.opacity = 0;
+    // requestAnimationFrame(() => {
+    //   nextBg.style.opacity = 1;
+    //   activeBg.style.opacity = 0;
+    // });
+    setTimeout(() => {
+      heroTitle.textContent = movie.title; 
+      heroMeta.innerHTML =
+        badge(movie.rating, true) +
+        badge(movie.duration + "分") +
+        badge(movie.genre.join(" / ")) +
+        badge("監督：" + movie.director);
+      heroSynopsis.textContent = truncateText(movie.synopsis, 200);
+      heroDetailLink.href = `detail.html?id=${movie.id}`;
+      heroContent.style.opacity = 1;
+    }, 1000/2);
+    [activeBg, nextBg] = [nextBg, activeBg];
   }
+  heroBgA.style.backgroundImage = `url('${nowShowing[0].image}')`;
+  heroBgA.style.opacity = 1;
+  heroBgB.style.opacity = 0;
+  heroTitle.textContent = nowShowing[0].title;
+  heroMeta.innerHTML =
+  badge(nowShowing[0].rating, true) +
+  badge(nowShowing[0].duration + "分") +
+  badge(nowShowing[0].genre.join(" / ")) +
+  badge("監督：" + nowShowing[0].director);
+  heroSynopsis.textContent = truncateText(nowShowing[0].synopsis, 200);
+  heroDetailLink.href = `detail.html?id=${nowShowing[0].id}`;
+  setInterval(() => {
+    heroIndex++;
+    if (heroIndex >= nowShowing.length) {
+        heroIndex = 0;
+    }
+    updateHero(nowShowing[heroIndex]);
+  }, 10000/2);
 
   // Ticker
   const tickerHTML = [...NEWS, ...NEWS].map(n =>
