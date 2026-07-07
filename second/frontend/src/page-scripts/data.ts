@@ -581,7 +581,7 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応", "車椅子スペース 4席"]
+    features: ["IMAX®", "Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "車椅子スペース 4席"]
   },
   {
     num: 2,
@@ -589,7 +589,7 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["Dolby Atmos", "4K レーザープロジェクター", "RealD 3D対応", "バリアフリー対応"]
+    features: ["Dolby Cinema", "Dolby Atmos", "4K デュアルレーザー", "RealD 3D対応"]
   },
   {
     num: 3,
@@ -597,25 +597,25 @@ export const SCREENS = [
     seats: 200,
     is3d: true,
     threeDExtraFee: 400,
-    features: ["IMAX互換スクリーン", "RealD 3D対応", "Dolby Atmos", "4K レーザープロジェクター"]
+    features: ["4DX", "11種モーション演出", "7.1ch サラウンド", "RealD 3D対応"]
   },
   {
     num: 4,
     type: "中スクリーン",
     seats: 120,
-    features: ["Dolby Digital", "4K プロジェクター", "バリアフリー対応"]
+    features: ["プレミアムシート（本革電動）", "Dolby Atmos", "専用ラウンジ", "バリアフリー対応"]
   },
   {
     num: 5,
     type: "中スクリーン",
     seats: 120,
-    features: ["Dolby Digital", "4K プロジェクター"]
+    features: ["7.1ch サラウンド", "4K プロジェクター"]
   },
   {
     num: 6,
     type: "小スクリーン",
     seats: 70,
-    features: ["7.1ch サラウンド", "2K プロジェクター"]
+    features: ["7.1ch サラウンド", "4K プロジェクター"]
   },
   {
     num: 7,
@@ -627,7 +627,7 @@ export const SCREENS = [
     num: 8,
     type: "小スクリーン",
     seats: 70,
-    features: ["Dolby Atmos", "4K レーザープロジェクター (NEW)", "バリアフリー対応"]
+    features: ["Dolby Atmos", "4K レーザープロジェクター (NEW)", "35mmフィルム対応", "バリアフリー対応"]
   }
 ];
 
