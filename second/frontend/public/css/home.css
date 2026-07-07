@@ -207,7 +207,7 @@
 .movie-card-meta {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--text3);
+  color: var(--text2);
   letter-spacing: 0.05em;
   display: flex;
   gap: 12px;
@@ -224,10 +224,10 @@
 .genre-tag {
   font-size: 10px;
   font-family: var(--mono);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border2);
   padding: 2px 7px;
   letter-spacing: 0.05em;
-  color: var(--text3);
+  color: var(--text2);
 }
 
 .movie-card-overlay {

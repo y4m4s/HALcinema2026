@@ -11,7 +11,8 @@ import { SeatStep } from '../components/bokking/SeatStep'
 import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
 import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
-import { MOVIES, SCREENS, DATES } from './data'
+
+import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -1168,7 +1169,7 @@ function createCustomerState(member = null) {
 
 function resolveMovie(params) {
   const requestedId = Number(params.get('movie') || params.get('id'))
-  return MOVIES.find(movie => movie.id === requestedId) || MOVIES.find(movie => movie.status === 'now') || MOVIES[0]
+  return MOVIES.find(movie => movie.id === requestedId) || MOVIES.find(movie => getMovieStatus(movie) === 'now') || MOVIES[0]
 }
 
 function resolveInitialSlot(movie, params) {

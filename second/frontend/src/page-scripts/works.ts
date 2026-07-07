@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, DATES } from './data'
+import { MOVIES, DATES, formatScreeningStartDate, getMovieStatus } from './data'
 
 export function runWorks() {
 function escapeHtml(str) {
@@ -24,8 +24,8 @@ function getSortedMovies() {
 
   return MOVIES.slice().sort((a, b) => {
     const statusOrder = { now: 0, coming: 1 };
-    const aStatus = statusOrder[a.status] ?? 2;
-    const bStatus = statusOrder[b.status] ?? 2;
+    const aStatus = statusOrder[getMovieStatus(a)] ?? 2;
+    const bStatus = statusOrder[getMovieStatus(b)] ?? 2;
     return aStatus - bStatus || a.id - b.id;
   });
 }
@@ -53,19 +53,20 @@ function renderFilters(movies, activeFilter) {
 function getMovieCounts(movies) {
   return {
     all: movies.length,
-    now: movies.filter((movie) => movie.status === "now").length,
-    coming: movies.filter((movie) => movie.status === "coming").length
+    now: movies.filter((movie) => getMovieStatus(movie) === "now").length,
+    coming: movies.filter((movie) => getMovieStatus(movie) === "coming").length
   };
 }
 
 function renderMovieCard(movie) {
   const title = escapeHtml(movie.title || "");
   const director = escapeHtml(movie.director || "未定");
-  const statusLabel = escapeHtml(getStatusLabel(movie.status));
-  const statusClass = movie.status === "now" ? "now" : "coming";
+  const movieStatus = getMovieStatus(movie);
+  const statusLabel = escapeHtml(getStatusLabel(movieStatus));
+  const statusClass = movieStatus === "now" ? "now" : "coming";
   const rating = escapeHtml(movie.rating || "");
   const duration = movie.duration ? `${movie.duration}分` : "上映時間未定";
-  const releaseDate = escapeHtml(movie.releaseDate || "");
+  const screeningStartDate = escapeHtml(formatScreeningStartDate(movie));
   const synopsis = escapeHtml(truncateText(movie.synopsis, 84));
   const poster = movie.image
     ? `<img src="${escapeHtml(movie.image)}" alt="${title}のポスター" class="work-card-poster">`
@@ -73,7 +74,7 @@ function renderMovieCard(movie) {
   const genres = Array.isArray(movie.genre) ? movie.genre : [];
   const detailHref = `detail.html?id=${movie.id}`;
   const bookingHref = buildBookingHref(movie);
-  const actions = movie.status === "now" && bookingHref
+  const actions = movieStatus === "now" && bookingHref
     ? `
         <div class="work-card-actions">
           <a href="${detailHref}" class="work-card-action">詳細</a>
@@ -96,7 +97,7 @@ function renderMovieCard(movie) {
         <div class="work-card-meta">
           ${rating ? `<span>${rating}</span>` : ""}
           <span>${duration}</span>
-          ${releaseDate ? `<span>${releaseDate}</span>` : ""}
+          ${screeningStartDate ? `<span>上映開始 ${screeningStartDate}</span>` : ""}
         </div>
         <h2 class="work-card-title"><a href="${detailHref}" class="work-card-title-link">${title}</a></h2>
         <div class="work-card-genres">
@@ -158,7 +159,7 @@ function renderMovies(movies, filter) {
 
   const visibleMovies = filter === "all"
     ? movies
-    : movies.filter((movie) => movie.status === filter);
+    : movies.filter((movie) => getMovieStatus(movie) === filter);
 
   movieList.innerHTML = visibleMovies.map(renderMovieCard).join("");
 }

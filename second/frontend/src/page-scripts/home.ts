@@ -1,16 +1,15 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, NEWS } from './data'
+import { MOVIES, NEWS, formatScreeningStartDate, getMovieStatus } from './data'
 import { badge } from './common'
 
 export function runHome() {
-const comingSynopsisLimit = 110;
+  const comingSynopsisLimit = 110;
   const homeNewsLimit = 5;
   const featured = MOVIES.find(m => m.isFeature);
-  const nowShowingIds = [1, 3, 6, 7];
-  const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
-  const nowShowingPreview = nowShowing;
-  const coming = MOVIES.filter(m => m.status === 'coming');
+  const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
+  const nowShowingPreview = nowShowing.slice(0, 4);
+  const coming = MOVIES.filter(m => getMovieStatus(m) === 'coming');
 
   // Hero
   document.getElementById('hero-bg').style.backgroundImage = `url('${featured.image}')`;
@@ -65,7 +64,7 @@ const comingSynopsisLimit = 110;
           : `<div class="coming-poster-placeholder">NO IMAGE</div>`}
       </div>
       <div class="coming-body">
-        <div class="coming-release">${m.releaseDate} 公開予定</div>
+        <div class="coming-release">${formatScreeningStartDate(m)} 上映開始予定</div>
         <div class="coming-title">${m.title}</div>
         <div class="coming-title-en">${m.titleEn}</div>
         <div class="coming-badges">
