@@ -72,16 +72,6 @@ export const ticketsPage: PageDefinition = {
             <td><div class="ticket-note">—</div></td>
           </tr>
           <tr>
-            <td>シニア（60歳以上）</td>
-            <td><div class="ticket-price">1,200円</div></td>
-            <td><div class="ticket-note">身分証提示</div></td>
-          </tr>
-          <tr>
-            <td>障がい者</td>
-            <td><div class="ticket-price">1,000円</div></td>
-            <td><div class="ticket-note">手帳提示、同伴者1名も同額</div></td>
-          </tr>
-          <tr>
             <td>3D 追加料金</td>
             <td><div class="ticket-price">+400円</div></td>
             <td><div class="ticket-note">対象作品のみ</div></td>
@@ -99,7 +89,6 @@ export const ticketsPage: PageDefinition = {
           NOTE — ご注意</div>
         <ul class="tickets-note-list">
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>チケットのご購入は窓口・公式サイトにて承っています。</li>
-          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>障がい者割引は、窓口でのご購入のみ適用となります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>R15+・R18+作品は年齢確認のため身分証の提示をお願いする場合があります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>3D上映は対象作品のみです。3Dメガネは無料貸出。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が1,300円となります。小学生・幼児は通常料金です。</li>

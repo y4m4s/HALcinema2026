@@ -1543,10 +1543,7 @@ func validateReservationRequest(req reservationCreateRequest) error {
 }
 
 func validateReservationLookupRequest(req reservationLookupRequest) error {
-	if req.ReservationID == "" || len(req.ReservationID) > 32 || hasControlChars(req.ReservationID) {
-		return validationError("予約番号を正しく入力してください。")
-	}
-	if !strings.HasPrefix(req.ReservationID, "R") {
+	if !validReservationNo(req.ReservationID) {
 		return validationError("予約番号を正しく入力してください。")
 	}
 	if !validEmailAddress(req.Email) {
@@ -1556,6 +1553,18 @@ func validateReservationLookupRequest(req reservationLookupRequest) error {
 		return validationError("電話番号をハイフンなしで入力してください。")
 	}
 	return nil
+}
+
+func validReservationNo(value string) bool {
+	if len(value) != 11 || hasControlChars(value) || !strings.HasPrefix(value, "R") {
+		return false
+	}
+	for _, r := range value[1:] {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeMovieID(value string) (string, error) {
@@ -1620,9 +1629,7 @@ func effectiveTicketPrice(code string, price int, dateLabel string) int {
 		return price
 	}
 	switch code {
-	case "pair":
-		return 2600
-	case "adult", "university", "student", "senior":
+	case "adult", "university", "student":
 		return 1300
 	default:
 		return price

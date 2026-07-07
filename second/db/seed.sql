@@ -76,13 +76,10 @@ INSERT INTO coupons (id, code, rule_code, name, description, discount_amount) VA
 ('C0000000010', 'H4L9D2V8QA', 'per_seat',  '祝日割引',           '1席150円引き',             150);
 
 INSERT INTO ticket_types (id, code, name, price, required_seat_count, display_order, is_active) VALUES
-(1, 'pair',       'ペアチケット',       3200, 2, 1, 1),
 (2, 'adult',      '一般',               1800, 1, 2, 1),
 (3, 'university', '大学生・専門学生',   1600, 1, 3, 1),
 (4, 'student',    '中学・高校生',       1400, 1, 4, 1),
-(5, 'child',      '小学生・幼児',       1000, 1, 5, 1),
-(6, 'senior',     'シニア',             1200, 1, 6, 1),
-(7, 'disability', '障がい者',           1000, 1, 7, 1);
+(5, 'child',      '小学生・幼児',       1000, 1, 5, 1);
 
 -- ============================================================
 -- people

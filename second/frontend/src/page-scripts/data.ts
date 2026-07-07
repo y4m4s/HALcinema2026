@@ -653,16 +653,6 @@ export const PRICES = [
     note: ""
   },
   {
-    cat: "シニア（60歳以上）",
-    price: "1,200円",
-    note: "身分証提示"
-  },
-  {
-    cat: "障がい者",
-    price: "1,000円",
-    note: "手帳提示、同伴者1名も同額"
-  },
-  {
     cat: "3D 追加料金",
     price: "+400円",
     note: "対象作品のみ"

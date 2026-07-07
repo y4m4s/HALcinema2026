@@ -82,18 +82,6 @@ export const questionPage: PageDefinition = {
         <div class="faq-item">
           <button class="faq-question" aria-expanded="false">
             <span class="faq-q-label">Q</span>
-            <span class="faq-q-text">障がい者割引はありますか？</span>
-            <span class="faq-icon"></span>
-          </button>
-          <div class="faq-answer">
-            <span class="faq-a-label">A</span>
-            <span class="faq-a-text">はい、障害者手帳をご提示いただくと、本人および介護者1名様を一般料金より割引いたします。詳細は窓口スタッフにお尋ねください。</span>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            <span class="faq-q-label">Q</span>
             <span class="faq-q-text">駐車場はありますか？</span>
             <span class="faq-icon"></span>
           </button>
