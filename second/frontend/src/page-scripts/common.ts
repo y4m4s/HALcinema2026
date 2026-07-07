@@ -1,4 +1,5 @@
 ﻿/* eslint-disable no-irregular-whitespace */
+import { readMemberSession, refreshStoredMemberSession } from './member-session'
 
 function getCurrentPage() {
   const path = location.pathname
@@ -10,6 +11,7 @@ function getCurrentPage() {
   if (path.includes('tickets')) return 'tickets'
   if (path.includes('question')) return 'question'
   if (path.includes('reservation')) return 'reservation'
+  if (path.includes('member')) return 'member'
   if (path.includes('detail')) return 'works'
   return 'home'
 }
@@ -27,6 +29,7 @@ function getPageMeta() {
   if (path.includes('access')) return { label: '交通案内' }
   if (path.includes('question')) return { label: 'よくある質問' }
   if (path.includes('reservation')) return { label: '予約確認' }
+  if (path.includes('member')) return { label: '会員の方へ' }
   if (path.includes('contact')) return { label: 'お問い合わせ' }
   if (path.includes('completed')) {
     return { label: 'お問い合わせ完了', parent: { label: 'お問い合わせ', href: '/contact' } }
@@ -36,14 +39,15 @@ function getPageMeta() {
 }
 
 function buildNavHtml() {
+  const memberSession = readMemberSession()
   const links = [
-    { id: 'works', label: '上映作品一覧', href: '/works' },
-    { id: 'schedule', label: '上映スケジュール', href: '/schedule' },
-    { id: 'theater', label: '劇場案内', href: '/theater' },
-    { id: 'access', label: '交通案内', href: '/access' },
-    { id: 'tickets', label: '料金案内', href: '/tickets' },
-    { id: 'question', label: 'よくある質問', href: '/question' },
-    { id: 'reservation', label: '予約確認', href: '/reservation' },
+    { id: 'works', label: '上映作品一覧', href: '/works', loggedIn: false },
+    { id: 'schedule', label: '上映スケジュール', href: '/schedule', loggedIn: false },
+    { id: 'theater', label: '劇場案内', href: '/theater', loggedIn: false },
+    { id: 'access', label: '交通案内', href: '/access', loggedIn: false },
+    { id: 'tickets', label: '料金案内', href: '/tickets', loggedIn: false },
+    { id: 'reservation', label: '予約確認', href: '/reservation', loggedIn: false },
+    { id: 'member', label: memberSession ? 'ログイン中' : '会員の方へ', href: '/member', loggedIn: Boolean(memberSession) },
   ]
 
   return `
@@ -56,7 +60,7 @@ function buildNavHtml() {
           ${links
             .map(
               (link) => `
-            <a href="${link.href}" class="nav-link" data-nav="${link.id}">
+            <a href="${link.href}" class="nav-link${link.loggedIn ? ' member-logged-in' : ''}" data-nav="${link.id}">
               <span>${link.label}</span>
             </a>
           `,
@@ -83,6 +87,20 @@ function renderNav() {
     } else {
       link.removeAttribute('aria-current')
     }
+  })
+}
+
+function verifyMemberNavSession() {
+  const session = readMemberSession()
+  if (!session?.token) return
+
+  void refreshStoredMemberSession().then((refreshed) => {
+    const root = document.getElementById('nav-root')
+    if (!root) return
+    const memberLink = root.querySelector('[data-nav="member"]')
+    const shouldBeLoggedIn = Boolean(refreshed)
+    const isLoggedIn = memberLink?.classList.contains('member-logged-in')
+    if (shouldBeLoggedIn !== isLoggedIn) renderNav()
   })
 }
 
@@ -183,7 +201,7 @@ export function badge(text: string | number, isRating = false) {
 
 export function runCommon() {
   renderNav()
+  verifyMemberNavSession()
   renderBreadcrumb()
   renderFooter()
 }
-

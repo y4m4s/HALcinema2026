@@ -81,6 +81,21 @@ type memberResponse struct {
 	CreatedAt    string `json:"createdAt"`
 }
 
+type memberReservationHistoryItem struct {
+	ReservationID string `json:"reservationId"`
+	Status        string `json:"status"`
+	ReservedAt    string `json:"reservedAt"`
+	MovieTitle    string `json:"movieTitle"`
+	Date          string `json:"date"`
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	Screen        string `json:"screen"`
+	Seats         string `json:"seats"`
+	PaymentMethod string `json:"paymentMethod"`
+	PaymentStatus string `json:"paymentStatus"`
+	Amount        int    `json:"amount"`
+}
+
 type memberRecord struct {
 	memberResponse
 	passwordHash string
@@ -346,6 +361,85 @@ func (s *memberStore) Logout(ctx context.Context, token string) error {
 	return err
 }
 
+func (s *memberStore) ReservationHistory(ctx context.Context, memberID int64, period string) ([]memberReservationHistoryItem, error) {
+	where := `WHERE r.member_id = ?`
+	args := []any{memberID}
+
+	if since := reservationHistorySince(period); since != "" {
+		where += ` AND r.reserved_at >= ?`
+		args = append(args, since)
+	}
+
+	query := fmt.Sprintf(
+		`SELECT r.id,
+		        r.status,
+		        r.reserved_at,
+		        m.title,
+		        sch.start_at,
+		        sch.end_at,
+		        scr.name,
+		        COALESCE((
+		          SELECT group_concat(seat_code, ' / ')
+		            FROM (
+		              SELECT st.seat_code
+		                FROM reservation_details AS rd
+		                JOIN reservation_seats AS rs ON rs.reservation_detail_id = rd.id
+		                JOIN seats AS st ON st.id = rs.seat_id
+		               WHERE rd.reservation_id = r.id
+		               ORDER BY st.seat_code
+		            )
+		        ), ''),
+		        COALESCE(pm.name, ''),
+		        COALESCE(p.status, ''),
+		        COALESCE(p.amount, 0)
+		   FROM reservations AS r
+		   JOIN schedules AS sch ON sch.id = r.schedule_id
+		   JOIN movies AS m ON m.id = sch.movie_id
+		   JOIN screens AS scr ON scr.id = sch.screen_id
+		   LEFT JOIN payments AS p ON p.reservation_id = r.id
+		   LEFT JOIN payment_methods AS pm ON pm.id = p.payment_method_id
+		   %s
+		   ORDER BY r.reserved_at DESC, r.id DESC
+		   LIMIT 50`,
+		where,
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []memberReservationHistoryItem{}
+	for rows.Next() {
+		var item memberReservationHistoryItem
+		var startAt, endAt string
+		if err := rows.Scan(
+			&item.ReservationID,
+			&item.Status,
+			&item.ReservedAt,
+			&item.MovieTitle,
+			&startAt,
+			&endAt,
+			&item.Screen,
+			&item.Seats,
+			&item.PaymentMethod,
+			&item.PaymentStatus,
+			&item.Amount,
+		); err != nil {
+			return nil, err
+		}
+		item.Date = dateFromTimestamp(startAt)
+		item.Start = clockFromTimestamp(startAt)
+		item.End = clockFromTimestamp(endAt)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (s *memberStore) emailExists(ctx context.Context, email string) (bool, error) {
 	var id int64
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM members WHERE email = ?`, email).Scan(&id)
@@ -553,4 +647,18 @@ func boolToInt(value bool) int {
 		return 1
 	}
 	return 0
+}
+
+func reservationHistorySince(period string) string {
+	now := time.Now().UTC()
+	switch strings.TrimSpace(strings.ToLower(period)) {
+	case "30d":
+		return now.AddDate(0, 0, -30).Format(time.RFC3339)
+	case "90d":
+		return now.AddDate(0, 0, -90).Format(time.RFC3339)
+	case "1y":
+		return now.AddDate(-1, 0, 0).Format(time.RFC3339)
+	default:
+		return ""
+	}
 }

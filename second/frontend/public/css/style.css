@@ -219,6 +219,11 @@ a {
   background: linear-gradient(180deg, rgba(74, 159, 212, 0.11), rgba(74, 159, 212, 0.02));
 }
 
+.nav-link.member-logged-in {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
 .nav-link.active::after {
   content: '';
   position: absolute;
