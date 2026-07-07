@@ -211,7 +211,7 @@ export const theaterPage: PageDefinition = {
             <div class="card-specs">
               <div class="spec-item">
                 <div class="spec-label">Seats</div>
-                <div class="spec-value">120</div>
+                <div class="spec-value">200</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Effects</div>
@@ -255,7 +255,7 @@ export const theaterPage: PageDefinition = {
               <div class="card-details-section">
                 <div class="card-details-section-title">座席 / 演出</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
+                  <div class="card-details-row"><dt>総席数</dt><dd>200席</dd></div>
                   <div class="card-details-row"><dt>モーション</dt><dd>11種 （前後左右上下傾斜）</dd></div>
                   <div class="card-details-row"><dt>環境演出</dt><dd>風 / 水 / 香り / 煙 / ストロボ</dd></div>
                   <div class="card-details-row"><dt>追加料金</dt><dd>+¥1,200</dd></div>
@@ -281,7 +281,7 @@ export const theaterPage: PageDefinition = {
             <div class="card-specs">
               <div class="spec-item">
                 <div class="spec-label">Seats</div>
-                <div class="spec-value">70</div>
+                <div class="spec-value">120</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Type</div>
@@ -297,13 +297,13 @@ export const theaterPage: PageDefinition = {
               <i class="fa-solid fa-chevron-down"></i>
             </button>
             <div class="card-details" hidden>
-              <p class="card-details-lead">70席限定、本革電動リクライニングと専用ラウンジが迎えるプレミアム空間。上映前の静かな昂揚感から幕が下りた後の余韻まで、恐怖を美学として味わう大人のための上映環境。</p>
+              <p class="card-details-lead">120席、本革電動リクライニングと専用ラウンジが迎えるプレミアム空間。上映前の静かな昂揚感から幕が下りた後の余韻まで、恐怖を美学として味わう大人のための上映環境。</p>
               <div class="card-details-section">
                 <div class="card-details-section-title">特徴</div>
                 <ul class="card-highlights">
                   <li>本革電動リクライニングの極上の座り心地</li>
                   <li>専用ラウンジで上映前の特別なひととき</li>
-                  <li>70席限定でゆったり鑑賞</li>
+                  <li>120席でゆったり鑑賞</li>
                   <li>大人のホラー鑑賞におすすめ</li>
                 </ul>
               </div>
@@ -324,7 +324,7 @@ export const theaterPage: PageDefinition = {
               <div class="card-details-section">
                 <div class="card-details-section-title">座席</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>総席数</dt><dd>70席</dd></div>
+                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
                   <div class="card-details-row"><dt>シート</dt><dd>本革電動リクライニング</dd></div>
                   <div class="card-details-row"><dt>シートピッチ</dt><dd>1,200mm</dd></div>
                   <div class="card-details-row"><dt>心拍センサー</dt><dd>全席標準</dd></div>
@@ -357,7 +357,7 @@ export const theaterPage: PageDefinition = {
             <div class="card-specs">
               <div class="spec-item">
                 <div class="spec-label">Seats</div>
-                <div class="spec-value">200</div>
+                <div class="spec-value">120</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Sound</div>
@@ -379,7 +379,7 @@ export const theaterPage: PageDefinition = {
                 <ul class="card-highlights">
                   <li>標準料金で本格的なサラウンド体験</li>
                   <li>心拍センサー対応でシンクロ・ホラー・ラボ可</li>
-                  <li>200席の大型ホール</li>
+                  <li>120席のホール</li>
                 </ul>
               </div>
               <div class="card-details-section">
@@ -399,7 +399,7 @@ export const theaterPage: PageDefinition = {
               <div class="card-details-section">
                 <div class="card-details-section-title">座席</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>総席数</dt><dd>200席</dd></div>
+                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
                   <div class="card-details-row"><dt>スクリーン幅</dt><dd>14m</dd></div>
                   <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
                   <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
@@ -425,7 +425,7 @@ export const theaterPage: PageDefinition = {
             <div class="card-specs">
               <div class="spec-item">
                 <div class="spec-label">Seats</div>
-                <div class="spec-value">120</div>
+                <div class="spec-value">70</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Sound</div>
@@ -441,11 +441,11 @@ export const theaterPage: PageDefinition = {
               <i class="fa-solid fa-chevron-down"></i>
             </button>
             <div class="card-details" hidden>
-              <p class="card-details-lead">スクリーンと客席の距離感が研ぎ澄まされた中規模ホール。どの座席からもスクリーンとの対話が成立する、静かな没入空間。</p>
+              <p class="card-details-lead">スクリーンと客席の距離感が研ぎ澄まされた小規模ホール。どの座席からもスクリーンとの対話が成立する、静かな没入空間。</p>
               <div class="card-details-section">
                 <div class="card-details-section-title">特徴</div>
                 <ul class="card-highlights">
-                  <li>中規模で見やすい配置</li>
+                  <li>小規模で見やすい配置</li>
                   <li>7.1ch サラウンド搭載</li>
                   <li>心拍センサー対応</li>
                 </ul>
@@ -466,7 +466,7 @@ export const theaterPage: PageDefinition = {
               <div class="card-details-section">
                 <div class="card-details-section-title">座席</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>総席数</dt><dd>120席</dd></div>
+                  <div class="card-details-row"><dt>総席数</dt><dd>70席</dd></div>
                   <div class="card-details-row"><dt>スクリーン幅</dt><dd>12m</dd></div>
                   <div class="card-details-row"><dt>シートピッチ</dt><dd>1,050mm</dd></div>
                   <div class="card-details-row"><dt>座席張地</dt><dd>ファブリック</dd></div>
@@ -483,7 +483,8 @@ export const theaterPage: PageDefinition = {
             <img src="/assets/images/screen-3.jpg" alt="">
             <div class="card-number">SCREEN 07</div>
             <div class="card-badges">
-              <span class="badge badge-standard">STANDARD</span>
+              <span class="badge badge-dolby">ATMOS</span>
+              <span class="badge badge-4dx">RENEWAL</span>
             </div>
           </div>
           <div class="card-body">
@@ -496,7 +497,7 @@ export const theaterPage: PageDefinition = {
               </div>
               <div class="spec-item">
                 <div class="spec-label">Sound</div>
-                <div class="spec-value">5.1ch</div>
+                <div class="spec-value">Atmos</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Screen</div>
@@ -508,11 +509,11 @@ export const theaterPage: PageDefinition = {
               <i class="fa-solid fa-chevron-down"></i>
             </button>
             <div class="card-details" hidden>
-              <p class="card-details-lead">深夜上映の常設ホール。5.1ch サラウンドが閉じた空間に低く響き、人が少なくなるほど研ぎ澄まされていく恐怖がある。</p>
+              <p class="card-details-lead">深夜上映の常設ホール。リニューアルで導入した Dolby Atmos が閉じた空間に低く響き、人が少なくなるほど研ぎ澄まされていく恐怖がある。</p>
               <div class="card-details-section">
                 <div class="card-details-section-title">特徴</div>
                 <ul class="card-highlights">
-                  <li>コンパクトながら本格音響</li>
+                  <li>リニューアルで Dolby Atmos を導入</li>
                   <li>通路側座席が多く出入りしやすい</li>
                   <li>深夜上映にもおすすめ</li>
                 </ul>
@@ -521,13 +522,13 @@ export const theaterPage: PageDefinition = {
                 <div class="card-details-section-title">映像</div>
                 <dl class="card-details-list">
                   <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
-                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Laser （NEW）</dd></div>
                 </dl>
               </div>
               <div class="card-details-section">
                 <div class="card-details-section-title">音響</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>構成</dt><dd>5.1ch Surround</dd></div>
+                  <div class="card-details-row"><dt>構成</dt><dd>Dolby Atmos</dd></div>
                 </dl>
               </div>
               <div class="card-details-section">
@@ -550,7 +551,8 @@ export const theaterPage: PageDefinition = {
             <img src="/assets/images/screen-8.jpg" alt="">
             <div class="card-number">SCREEN 08</div>
             <div class="card-badges">
-              <span class="badge badge-standard">STANDARD</span>
+              <span class="badge badge-dolby">ATMOS</span>
+              <span class="badge badge-4dx">RENEWAL</span>
             </div>
           </div>
           <div class="card-body">
@@ -563,7 +565,7 @@ export const theaterPage: PageDefinition = {
               </div>
               <div class="spec-item">
                 <div class="spec-label">Sound</div>
-                <div class="spec-value">5.1ch</div>
+                <div class="spec-value">Atmos</div>
               </div>
               <div class="spec-item">
                 <div class="spec-label">Screen</div>
@@ -588,14 +590,14 @@ export const theaterPage: PageDefinition = {
                 <div class="card-details-section-title">映像</div>
                 <dl class="card-details-list">
                   <div class="card-details-row"><dt>解像度</dt><dd>4K</dd></div>
-                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Projector</dd></div>
+                  <div class="card-details-row"><dt>投影方式</dt><dd>4K Laser （NEW）</dd></div>
                   <div class="card-details-row"><dt>特殊上映</dt><dd>35mm フィルム対応 （企画上映時）</dd></div>
                 </dl>
               </div>
               <div class="card-details-section">
                 <div class="card-details-section-title">音響</div>
                 <dl class="card-details-list">
-                  <div class="card-details-row"><dt>構成</dt><dd>5.1ch Surround</dd></div>
+                  <div class="card-details-row"><dt>構成</dt><dd>Dolby Atmos</dd></div>
                 </dl>
               </div>
               <div class="card-details-section">
