@@ -43,7 +43,7 @@ export const reservationPage: PageDefinition = {
           </label>
           <label>
             <span>電話番号</span>
-            <input type="tel" name="tel" autocomplete="tel" placeholder="090-1234-5678" maxlength="17" required>
+            <input type="tel" name="tel" autocomplete="tel" placeholder="09012345678" maxlength="15" required>
           </label>
           <button class="btn-primary" type="submit">予約を確認する</button>
         </form>

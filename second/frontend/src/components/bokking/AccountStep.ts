@@ -37,11 +37,11 @@ function renderLoginPanel(state, canLogin) {
         <span>MEMBER</span>
         <h3>会員の方</h3>
       </div>
-      <p class="account-lead">メールアドレス、または会員番号でログインできます。</p>
+      <p class="account-lead">メールアドレス、または会員IDでログインできます。</p>
       <div class="account-login-form">
         <label class="account-login-row">
           <span class="account-login-label">ID <em>必須</em></span>
-          <input type="text" autocomplete="username" value="${escapeAttr(login.identifier || '')}" data-login-field="identifier" placeholder="メールアドレス / 会員番号" maxlength="254" ${loading ? 'disabled' : ''}>
+          <input type="text" autocomplete="username" value="${escapeAttr(login.identifier || '')}" data-login-field="identifier" placeholder="メールアドレス / 会員ID" maxlength="254" ${loading ? 'disabled' : ''}>
         </label>
         <label class="account-login-row">
           <span class="account-login-label">パスワード <em>必須</em></span>
@@ -70,16 +70,12 @@ function renderMemberPanel(state) {
       <p class="account-lead">${escapeHtml(member.name)} 様の会員情報で購入します。</p>
       <div class="account-member-card">
         <div>
-          <span>会員番号</span>
-          <strong>${escapeHtml(member.memberNo)}</strong>
+          <span>会員ID</span>
+          <strong>${escapeHtml(member.id)}</strong>
         </div>
         <div>
           <span>メール</span>
           <strong>${escapeHtml(member.email)}</strong>
-        </div>
-        <div>
-          <span>ポイント</span>
-          <strong>${escapeHtml(member.points || 0)} pt</strong>
         </div>
       </div>
       <div class="account-panel-actions">
@@ -100,11 +96,11 @@ function renderGuestPanel(canProceed) {
       <div>
         <span class="account-promo-kicker">HAL CINEMA MEMBERS</span>
         <strong>映画をもっと快適に</strong>
-        <p>鑑賞ポイント、会員限定のお知らせ、スムーズな予約確認をまとめて利用できます。登録方法と特典の詳細はお知らせページで確認できます。</p>
+        <p>会員限定のお知らせ、スムーズな予約確認をまとめて利用できます。登録方法と特典の詳細はお知らせページで確認できます。</p>
         <span class="account-promo-link-text">詳しい案内を見る</span>
       </div>
       <ul class="account-benefit-list" aria-label="会員登録の主なメリット">
-        <li><span>POINT</span><strong>ポイント付与</strong></li>
+        <li><span>INFO</span><strong>会員限定案内</strong></li>
         <li><span>BENEFIT</span><strong>会員特典</strong></li>
         <li><span>HISTORY</span><strong>予約履歴</strong></li>
       </ul>
@@ -130,12 +126,8 @@ function renderRegisterPanel(state) {
       ${renderRegisterRow({ label: '氏名（かな）', field: 'nameKana', value: join.nameKana, placeholder: '例）とうきゅうたろう', loading })}
       <label class="account-login-row">
         <span class="account-login-label">電話番号 <em>必須</em></span>
-        <span class="account-register-tel customer-tel-group">
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel1 || '')}" data-register-field="tel1" placeholder="012" maxlength="5" ${loading ? 'disabled' : ''}>
-          <span>-</span>
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel2 || '')}" data-register-field="tel2" placeholder="345" maxlength="5" ${loading ? 'disabled' : ''}>
-          <span>-</span>
-          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel3 || '')}" data-register-field="tel3" placeholder="6789" maxlength="5" ${loading ? 'disabled' : ''}>
+        <span class="account-register-tel">
+          <input type="tel" inputmode="numeric" value="${escapeAttr(join.tel || '')}" data-register-field="tel" placeholder="0123456789" maxlength="15" ${loading ? 'disabled' : ''}>
         </span>
       </label>
       ${renderRegisterRow({ label: 'メール', field: 'email', value: join.email, placeholder: 'example@hal-cinema.test', type: 'email', autocomplete: 'email', loading })}
@@ -168,6 +160,7 @@ function renderRegisterRow({ label, field, value, placeholder, type = 'text', au
 function getRegisterFieldMaxlength(field) {
   if (field === 'name') return 40
   if (field === 'nameKana') return 60
+  if (field === 'tel') return 15
   if (field === 'email' || field === 'emailConfirm') return 254
   if (field === 'password' || field === 'passwordConfirm') return 128
   return 100

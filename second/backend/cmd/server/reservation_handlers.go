@@ -55,6 +55,24 @@ func registerReservationRoutes(api *gin.RouterGroup, reservations *reservationSt
 			c.JSON(http.StatusOK, result)
 		})
 
+		group.POST("/coupon", func(c *gin.Context) {
+			limitJSONBody(c)
+
+			var req couponPreviewRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
+				writeAPIError(c, http.StatusBadRequest, "入力内容を確認してください。")
+				return
+			}
+
+			result, err := reservations.PreviewCoupon(c.Request.Context(), req)
+			if err != nil {
+				writeReservationStoreError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, result)
+		})
+
 		group.POST("", func(c *gin.Context) {
 			limitJSONBody(c)
 
