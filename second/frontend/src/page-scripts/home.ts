@@ -9,11 +9,11 @@ export function runHome() {
   // const featured = MOVIES.find(m => m.isFeature);
   // const nowShowingIds = [1, 3, 6, 7];
   // const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
-  const nowShowing = MOVIES.filter(movie => movie.status === "now");
+  const nowShowing = MOVIES.filter(movie => getMovieStatus(movie) === "now");
   const featured = nowShowing[0];
 
   const nowShowingPreview = nowShowing;
-  const coming = MOVIES.filter(m => m.status === 'coming');
+  const coming = MOVIES.filter(m => getMovieStatus(m) === 'coming');
 
   // Hero
   // document.getElementById('hero-bg').style.backgroundImage = `url('${featured.image}')`;

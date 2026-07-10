@@ -35,7 +35,7 @@ export const reservationPage: PageDefinition = {
         <form class="reservation-lookup-form" id="reservation-lookup-form" novalidate>
           <label>
             <span>予約番号</span>
-            <input type="text" name="reservationId" autocomplete="off" placeholder="R0000000000" maxlength="32" required>
+            <input type="text" name="reservationId" autocomplete="off" placeholder="R0000000000" maxlength="11" required>
           </label>
           <label>
             <span>メールアドレス</span>

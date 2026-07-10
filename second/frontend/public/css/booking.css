@@ -367,6 +367,7 @@
   display: grid;
   gap: 8px;
   overflow-x: auto;
+  padding-top: 8px;
   padding-bottom: 8px;
 }
 
@@ -410,7 +411,7 @@
   border: 1px solid var(--border2);
   border-radius: 7px 7px 4px 4px;
   background: transparent;
-  color: var(--text2);
+  color: var(--text);
   cursor: pointer;
   font-family: var(--mono);
   font-size: 10px;
@@ -434,11 +435,11 @@
   transform: translateY(-2px) scale(1.06);
 }
 
-/* 予約済み: グレーアウト＋小さな「✕」 */
+/* 予約済み: 背景に沈み込ませて選択不可を明確にする＋小さな「✕」 */
 .seat-button.unavailable {
   position: relative;
-  border-color: rgba(84, 100, 120, 0.22);
-  background: rgba(84, 100, 120, 0.16);
+  border-color: rgba(50, 58, 72, 0.28);
+  background: rgba(6, 9, 15, 0.72);
   color: transparent;
   cursor: default;
   transform: none;
@@ -455,7 +456,7 @@
   width: 12px;
   height: 1.5px;
   border-radius: 1px;
-  background: rgba(150, 166, 192, 0.5);
+  background: var(--red);
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
@@ -464,9 +465,9 @@
 }
 
 .seat-map.has-selection .seat-button:not(.selected):not(.unavailable) {
-  border-color: rgba(84, 100, 120, 0.34);
+  border-color: rgba(105, 120, 145, 0.5);
   background: rgba(8, 13, 24, 0.68);
-  color: rgba(188, 204, 231, 0.58);
+  color: rgba(208, 218, 240, 0.85);
   pointer-events: auto;
 }
 
@@ -482,6 +483,18 @@
   box-shadow: 0 0 0 1px rgba(105, 199, 255, 0.45), 0 4px 18px rgba(74, 159, 212, 0.5);
   opacity: 1;
   transform: translateY(-2px) scale(1.06);
+}
+
+/* 選択中は、選択できない座席をさらに沈ませて選択可能な座席との対比を強める */
+.seat-map.has-selection .seat-button.unavailable {
+  border-color: rgba(40, 46, 58, 0.2);
+  background: rgba(4, 6, 10, 0.84);
+}
+
+/* 選択中は×も控えめな薄い赤にして、選択可能な座席側に視線が向くようにする */
+.seat-map.has-selection .seat-button.unavailable::before,
+.seat-map.has-selection .seat-button.unavailable::after {
+  background: rgba(139, 28, 28, 0.4);
 }
 
 .seat-selection-status {
@@ -544,7 +557,8 @@
 }
 
 .legend-unavailable {
-  background: rgba(84, 100, 120, 0.18);
+  border-color: rgba(50, 58, 72, 0.28);
+  background: rgba(6, 9, 15, 0.72);
 }
 
 .booking-help {
@@ -1642,7 +1656,8 @@
   min-width: min(420px, 100%);
   padding: 18px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  justify-items: center;
 }
 
 .complete-number span {
@@ -1657,6 +1672,60 @@
   font-family: var(--mono);
   font-size: 22px;
   letter-spacing: 0.08em;
+  line-height: 1.25;
+  min-width: 0;
+  word-break: break-all;
+}
+
+.complete-number-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.complete-copy-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: rgba(14, 30, 56, 0.48);
+  color: var(--accent2);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.complete-copy-button:hover {
+  border-color: rgba(124, 195, 255, 0.55);
+  background: rgba(74, 159, 212, 0.14);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.complete-copy-button:focus-visible {
+  outline: 2px solid rgba(124, 195, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.complete-copy-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.complete-copy-status {
+  min-height: 20px;
+  color: var(--accent2);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .complete-actions {

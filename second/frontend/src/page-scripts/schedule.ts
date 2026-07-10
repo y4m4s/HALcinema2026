@@ -222,7 +222,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
             <span class="movie-card-duration">本編 ${m.duration}分</span>
           </div>
           <div class="movie-card-header-right">
-            <a href="detail.html?id=${m.id}" class="btn-ghost" style="font-size:11px;padding:6px 12px">詳細</a>
+            <a href="detail.html?id=${m.id}" class="btn-ghost schedule-detail-btn">詳細</a>
           </div>
         </div>
         <div class="movie-card-body">
