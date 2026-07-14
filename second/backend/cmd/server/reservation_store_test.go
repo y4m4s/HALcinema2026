@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -62,7 +63,7 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 		t.Fatalf("baseline reserved seats unexpectedly contain %s: %#v", testSeat, baseline.ReservedSeats)
 	}
 
-	result, err := store.Create(ctx, req, nil)
+	result, err := store.Create(ctx, req, nil, "create-availability-0001")
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
@@ -140,9 +141,241 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 		t.Fatalf("Lookup() wrong email error = %v, want %v", err, errReservationNotFound)
 	}
 
-	_, err = store.Create(ctx, req, nil)
+	_, err = store.Create(ctx, req, nil, "create-availability-0002")
 	if !errors.Is(err, errSeatAlreadyReserved) {
 		t.Fatalf("duplicate Create() error = %v, want %v", err, errSeatAlreadyReserved)
+	}
+}
+
+func TestReservationStoreConcurrentCreateSameSeat(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	const attempts = 16
+	ctx := context.Background()
+	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         []string{testSeat},
+		Tickets:       map[string]int{"adult": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Concurrent User",
+			NameKana: "どうじよやくゆーざー",
+			Tel:      "09012345678",
+		},
+	}
+
+	start := make(chan struct{})
+	results := make(chan error, attempts)
+	var wg sync.WaitGroup
+	for i := 0; i < attempts; i++ {
+		wg.Add(1)
+		go func(attempt int) {
+			defer wg.Done()
+			concurrentReq := req
+			concurrentReq.Customer.Email = fmt.Sprintf("concurrent-%d@example.com", attempt)
+			<-start
+			_, createErr := store.Create(ctx, concurrentReq, nil, fmt.Sprintf("concurrent-seat-%04d", attempt))
+			results <- createErr
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	succeeded := 0
+	conflicted := 0
+	for createErr := range results {
+		switch {
+		case createErr == nil:
+			succeeded++
+		case errors.Is(createErr, errSeatAlreadyReserved):
+			conflicted++
+		default:
+			t.Fatalf("concurrent Create() unexpected error = %v", createErr)
+		}
+	}
+	if succeeded != 1 || conflicted != attempts-1 {
+		t.Fatalf("concurrent Create() results = success:%d conflict:%d, want 1/%d", succeeded, conflicted, attempts-1)
+	}
+
+	var reservedSeatRows int
+	if err := memberStore.db.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*)
+		   FROM reservation_seats AS rs
+		   JOIN seats AS st ON st.id = rs.seat_id
+		  WHERE rs.schedule_id = 2
+		    AND st.seat_code = ?`,
+		testSeat,
+	).Scan(&reservedSeatRows); err != nil {
+		t.Fatalf("reserved seat count error = %v", err)
+	}
+	if reservedSeatRows != 1 {
+		t.Fatalf("reserved seat rows = %d, want 1", reservedSeatRows)
+	}
+
+	var createdReservations int
+	if err := memberStore.db.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM reservations WHERE customer_email LIKE 'concurrent-%@example.com'`,
+	).Scan(&createdReservations); err != nil {
+		t.Fatalf("created reservation count error = %v", err)
+	}
+	if createdReservations != 1 {
+		t.Fatalf("created reservations = %d, want 1", createdReservations)
+	}
+}
+
+func TestReservationStoreConcurrentIdempotentRetry(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	const (
+		attempts       = 16
+		idempotencyKey = "concurrent-idempotency-retry-0001"
+	)
+	ctx := context.Background()
+	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          "5/15(金)",
+		Seats:         []string{testSeat},
+		Tickets:       map[string]int{"adult": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Idempotent User",
+			NameKana: "べきとうゆーざー",
+			Email:    "idempotent@example.com",
+			Tel:      "09012345678",
+		},
+	}
+
+	type createResult struct {
+		response reservationCreateResponse
+		err      error
+	}
+	start := make(chan struct{})
+	results := make(chan createResult, attempts)
+	var wg sync.WaitGroup
+	for i := 0; i < attempts; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			response, createErr := store.Create(ctx, req, nil, idempotencyKey)
+			results <- createResult{response: response, err: createErr}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	reservationNo := ""
+	created := 0
+	replayed := 0
+	for result := range results {
+		if result.err != nil {
+			t.Fatalf("idempotent Create() error = %v", result.err)
+		}
+		if reservationNo == "" {
+			reservationNo = result.response.ReservationID
+		}
+		if result.response.ReservationID != reservationNo {
+			t.Fatalf("idempotent reservation ID = %q, want %q", result.response.ReservationID, reservationNo)
+		}
+		if result.response.Replayed {
+			replayed++
+		} else {
+			created++
+		}
+	}
+	if created != 1 || replayed != attempts-1 {
+		t.Fatalf("idempotent results = created:%d replayed:%d, want 1/%d", created, replayed, attempts-1)
+	}
+
+	var reservationCount, idempotencyCount int
+	if err := memberStore.db.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM reservations WHERE customer_email = 'idempotent@example.com'`,
+	).Scan(&reservationCount); err != nil {
+		t.Fatalf("idempotent reservation count error = %v", err)
+	}
+	if err := memberStore.db.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM reservation_idempotency_keys WHERE idempotency_key = ?`,
+		idempotencyKey,
+	).Scan(&idempotencyCount); err != nil {
+		t.Fatalf("idempotency key count error = %v", err)
+	}
+	if reservationCount != 1 || idempotencyCount != 1 {
+		t.Fatalf("idempotent row counts = reservations:%d keys:%d, want 1/1", reservationCount, idempotencyCount)
+	}
+}
+
+func TestReservationStoreMigratesIdempotencyTable(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	if _, err := memberStore.db.Exec(`DROP TABLE reservation_idempotency_keys`); err != nil {
+		t.Fatalf("drop idempotency table error = %v", err)
+	}
+	if _, err := newReservationStore(memberStore.db); err != nil {
+		t.Fatalf("newReservationStore() idempotency migration error = %v", err)
+	}
+
+	var tableCount, indexCount int
+	if err := memberStore.db.QueryRow(
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'reservation_idempotency_keys'`,
+	).Scan(&tableCount); err != nil {
+		t.Fatalf("idempotency table count error = %v", err)
+	}
+	if err := memberStore.db.QueryRow(
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_reservation_idempotency_created_at'`,
+	).Scan(&indexCount); err != nil {
+		t.Fatalf("idempotency index count error = %v", err)
+	}
+	if tableCount != 1 || indexCount != 1 {
+		t.Fatalf("idempotency migration counts = table:%d index:%d, want 1/1", tableCount, indexCount)
 	}
 }
 
@@ -181,7 +414,7 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 		},
 	}
 
-	result, err := store.Create(ctx, req, nil)
+	result, err := store.Create(ctx, req, nil, "multiple-seats-0001")
 	if err != nil {
 		t.Fatalf("Create() multiple seats error = %v", err)
 	}
@@ -242,7 +475,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		},
 	}
 
-	result, err := store.Create(ctx, req, nil)
+	result, err := store.Create(ctx, req, nil, "konbini-hold-0001")
 	if err != nil {
 		t.Fatalf("Create() konbini error = %v", err)
 	}
@@ -318,7 +551,7 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 	}
 
 	req.PaymentMethod = "credit"
-	secondResult, err := store.Create(ctx, req, nil)
+	secondResult, err := store.Create(ctx, req, nil, "konbini-hold-0002")
 	if err != nil {
 		t.Fatalf("Create() after expired hold error = %v", err)
 	}
@@ -364,7 +597,7 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 		},
 	}
 
-	result, err := store.Create(ctx, req, nil)
+	result, err := store.Create(ctx, req, nil, "group-coupon-0001")
 	if err != nil {
 		t.Fatalf("Create() group coupon error = %v", err)
 	}
@@ -551,7 +784,8 @@ func TestReservationRoutesCreate(t *testing.T) {
 		}
 	}`, freeSeat)
 
-	response := performReservationRequest(router, body)
+	const idempotencyKey = "reservation-route-create-0001"
+	response := performReservationRequest(router, body, idempotencyKey)
 	if response.Code != http.StatusCreated {
 		t.Fatalf("POST /api/reservations status = %d, body = %s", response.Code, response.Body.String())
 	}
@@ -564,12 +798,38 @@ func TestReservationRoutesCreate(t *testing.T) {
 		t.Fatalf("reservation response = %+v", result)
 	}
 
-	duplicate := performReservationRequest(router, body)
+	replay := performReservationRequest(router, body, idempotencyKey)
+	if replay.Code != http.StatusCreated || replay.Header().Get("Idempotency-Replayed") != "true" {
+		t.Fatalf("replayed POST status = %d, header = %q, body = %s", replay.Code, replay.Header().Get("Idempotency-Replayed"), replay.Body.String())
+	}
+	var replayedResult reservationCreateResponse
+	if err := json.Unmarshal(replay.Body.Bytes(), &replayedResult); err != nil {
+		t.Fatalf("replayed response json error = %v", err)
+	}
+	if replayedResult.ReservationID != result.ReservationID || replayedResult.Amount != result.Amount || replayedResult.Status != result.Status {
+		t.Fatalf("replayed response = %+v, want %+v", replayedResult, result)
+	}
+
+	duplicate := performReservationRequest(router, body, "reservation-route-create-0002")
 	if duplicate.Code != http.StatusConflict {
 		t.Fatalf("duplicate POST status = %d, body = %s", duplicate.Code, duplicate.Body.String())
 	}
 
-	tooLarge := performReservationRequest(router, `{"movieId":"`+strings.Repeat("1", int(maxAPIJSONBodyBytes))+`"}`)
+	changedRequest := performReservationRequest(
+		router,
+		strings.Replace(body, "test@example.com", "changed@example.com", 1),
+		idempotencyKey,
+	)
+	if changedRequest.Code != http.StatusConflict {
+		t.Fatalf("changed idempotent POST status = %d, body = %s", changedRequest.Code, changedRequest.Body.String())
+	}
+
+	missingKey := performReservationRequest(router, body, "")
+	if missingKey.Code != http.StatusBadRequest {
+		t.Fatalf("missing Idempotency-Key status = %d, body = %s", missingKey.Code, missingKey.Body.String())
+	}
+
+	tooLarge := performReservationRequest(router, `{"movieId":"`+strings.Repeat("1", int(maxAPIJSONBodyBytes))+`"}`, "reservation-route-large-0001")
 	if tooLarge.Code != http.StatusBadRequest {
 		t.Fatalf("oversized POST status = %d, body = %s", tooLarge.Code, tooLarge.Body.String())
 	}
@@ -821,9 +1081,12 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func performReservationRequest(router *gin.Engine, body string) *httptest.ResponseRecorder {
+func performReservationRequest(router *gin.Engine, body string, idempotencyKey string) *httptest.ResponseRecorder {
 	request := httptest.NewRequest(http.MethodPost, "/api/reservations", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
+	if idempotencyKey != "" {
+		request.Header.Set("Idempotency-Key", idempotencyKey)
+	}
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, request)
 	return response
