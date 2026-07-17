@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,12 +23,28 @@ var (
 	errTicketTypeNotFound       = errors.New("ticket type not found")
 	errPaymentMethodNotFound    = errors.New("payment method not found")
 	errReservationNotFound      = errors.New("reservation not found")
+	errIdempotencyConflict      = errors.New("idempotency key already used with different request")
 )
 
-const reservationSeatHoldDuration = 30 * time.Minute
+const (
+	reservationSeatHoldDuration = 30 * time.Minute
+	minIdempotencyKeyLength     = 16
+	maxIdempotencyKeyLength     = 128
+)
 
 type reservationStore struct {
-	db *sql.DB
+	db              *sql.DB
+	scheduleLocksMu sync.Mutex
+	scheduleLocks   map[int64]*reservationScheduleLock
+}
+
+type reservationScheduleLock struct {
+	mu   sync.Mutex
+	refs int
+}
+
+type idempotencyQueryRower interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
 type reservationCreateRequest struct {
@@ -87,6 +107,7 @@ type reservationCreateResponse struct {
 	ConfirmationNo string `json:"confirmationNo"`
 	Amount         int    `json:"amount"`
 	Status         string `json:"status"`
+	Replayed       bool   `json:"-"`
 }
 
 type reservationLookupRequest struct {
@@ -159,7 +180,10 @@ type resolvedCoupon struct {
 }
 
 func newReservationStore(db *sql.DB) (*reservationStore, error) {
-	store := &reservationStore{db: db}
+	store := &reservationStore{
+		db:            db,
+		scheduleLocks: make(map[int64]*reservationScheduleLock),
+	}
 	if err := store.init(context.Background()); err != nil {
 		return nil, err
 	}
@@ -215,7 +239,32 @@ func (s *reservationStore) init(ctx context.Context) error {
 	if err := s.migratePaymentIDs(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateReservationIdempotency(ctx); err != nil {
+		return err
+	}
 	return s.expireStaleSeatHolds(ctx, time.Now().UTC().Format(time.RFC3339))
+}
+
+func (s *reservationStore) migrateReservationIdempotency(ctx context.Context) error {
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS reservation_idempotency_keys (
+			idempotency_key         TEXT PRIMARY KEY,
+			request_fingerprint     TEXT NOT NULL,
+			reservation_id          INTEGER UNIQUE REFERENCES reservations(id) ON DELETE RESTRICT,
+			response_reservation_no TEXT,
+			response_amount         INTEGER CHECK (response_amount IS NULL OR response_amount >= 0),
+			response_status         TEXT,
+			created_at              TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_reservation_idempotency_created_at
+			ON reservation_idempotency_keys(created_at)`,
+	}
+	for _, statement := range statements {
+		if _, err := s.db.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *reservationStore) migrateCouponCodeFormat(ctx context.Context) error {
@@ -1037,10 +1086,23 @@ func (s *reservationStore) reservationTickets(ctx context.Context, reservationID
 	return tickets, nil
 }
 
-func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequest, member *memberResponse) (reservationCreateResponse, error) {
+func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequest, member *memberResponse, idempotencyKey string) (reservationCreateResponse, error) {
 	req = normalizeReservationRequest(req)
 	if err := validateReservationRequest(req); err != nil {
 		return reservationCreateResponse{}, err
+	}
+	idempotencyKey, err := normalizeIdempotencyKey(idempotencyKey)
+	if err != nil {
+		return reservationCreateResponse{}, err
+	}
+	requestFingerprint, err := reservationRequestFingerprint(req, member)
+	if err != nil {
+		return reservationCreateResponse{}, err
+	}
+	if response, found, err := loadIdempotencyResponse(ctx, s.db, idempotencyKey, requestFingerprint); err != nil {
+		return reservationCreateResponse{}, err
+	} else if found {
+		return response, nil
 	}
 
 	showtime, err := s.resolveShowtime(ctx, req)
@@ -1083,6 +1145,12 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		total = 0
 	}
 
+	// Serialize bookings for the same showtime inside this server process. The
+	// database UNIQUE(schedule_id, seat_id) constraint remains the final guard
+	// when more than one server process writes to the same database.
+	unlockSchedule := s.lockSchedule(showtime.id)
+	defer unlockSchedule()
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return reservationCreateResponse{}, err
@@ -1091,6 +1159,14 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 
 	nowTime := time.Now().UTC()
 	now := nowTime.Format(time.RFC3339)
+	replayedResponse, claimed, err := claimIdempotencyKeyTx(ctx, tx, idempotencyKey, requestFingerprint, now)
+	if err != nil {
+		return reservationCreateResponse{}, err
+	}
+	if !claimed {
+		return replayedResponse, nil
+	}
+
 	if err := expireStaleSeatHoldsTx(ctx, tx, now); err != nil {
 		return reservationCreateResponse{}, err
 	}
@@ -1225,16 +1301,199 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		return reservationCreateResponse{}, err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return reservationCreateResponse{}, err
-	}
-
-	return reservationCreateResponse{
+	response := reservationCreateResponse{
 		ReservationID:  reservationNo,
 		ConfirmationNo: reservationNo,
 		Amount:         total,
 		Status:         status,
-	}, nil
+	}
+	if err := completeIdempotencyKeyTx(ctx, tx, idempotencyKey, requestFingerprint, reservationID, response); err != nil {
+		return reservationCreateResponse{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return reservationCreateResponse{}, err
+	}
+
+	return response, nil
+}
+
+func (s *reservationStore) lockSchedule(scheduleID int64) func() {
+	s.scheduleLocksMu.Lock()
+	if s.scheduleLocks == nil {
+		s.scheduleLocks = make(map[int64]*reservationScheduleLock)
+	}
+	lock := s.scheduleLocks[scheduleID]
+	if lock == nil {
+		lock = &reservationScheduleLock{}
+		s.scheduleLocks[scheduleID] = lock
+	}
+	lock.refs++
+	s.scheduleLocksMu.Unlock()
+
+	lock.mu.Lock()
+	return func() {
+		lock.mu.Unlock()
+
+		s.scheduleLocksMu.Lock()
+		lock.refs--
+		if lock.refs == 0 {
+			delete(s.scheduleLocks, scheduleID)
+		}
+		s.scheduleLocksMu.Unlock()
+	}
+}
+
+func normalizeIdempotencyKey(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if len(value) < minIdempotencyKeyLength || len(value) > maxIdempotencyKeyLength {
+		return "", validationError("Idempotency-Keyは16文字以上128文字以内で指定してください。")
+	}
+	for i := 0; i < len(value); i++ {
+		char := value[i]
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '-' || char == '_' || char == '.' || char == ':' {
+			continue
+		}
+		return "", validationError("Idempotency-Keyの形式が正しくありません。")
+	}
+	return value, nil
+}
+
+func reservationRequestFingerprint(req reservationCreateRequest, member *memberResponse) (string, error) {
+	memberID := int64(0)
+	if member != nil {
+		memberID = member.ID
+	}
+	payload := struct {
+		Request  reservationCreateRequest `json:"request"`
+		MemberID int64                    `json:"memberId,omitempty"`
+	}{
+		Request:  req,
+		MemberID: memberID,
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(encoded)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func loadIdempotencyResponse(
+	ctx context.Context,
+	queryer idempotencyQueryRower,
+	idempotencyKey string,
+	requestFingerprint string,
+) (reservationCreateResponse, bool, error) {
+	var (
+		storedFingerprint string
+		reservationNo     sql.NullString
+		amount            sql.NullInt64
+		status            sql.NullString
+	)
+	err := queryer.QueryRowContext(
+		ctx,
+		`SELECT request_fingerprint, response_reservation_no, response_amount, response_status
+		   FROM reservation_idempotency_keys
+		  WHERE idempotency_key = ?`,
+		idempotencyKey,
+	).Scan(&storedFingerprint, &reservationNo, &amount, &status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return reservationCreateResponse{}, false, nil
+	}
+	if err != nil {
+		return reservationCreateResponse{}, false, err
+	}
+	if storedFingerprint != requestFingerprint {
+		return reservationCreateResponse{}, false, errIdempotencyConflict
+	}
+	if !reservationNo.Valid || reservationNo.String == "" || !amount.Valid || !status.Valid || status.String == "" {
+		return reservationCreateResponse{}, false, errors.New("idempotency response is incomplete")
+	}
+	return reservationCreateResponse{
+		ReservationID:  reservationNo.String,
+		ConfirmationNo: reservationNo.String,
+		Amount:         int(amount.Int64),
+		Status:         status.String,
+		Replayed:       true,
+	}, true, nil
+}
+
+func claimIdempotencyKeyTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	idempotencyKey string,
+	requestFingerprint string,
+	now string,
+) (reservationCreateResponse, bool, error) {
+	result, err := tx.ExecContext(
+		ctx,
+		`INSERT INTO reservation_idempotency_keys
+			(idempotency_key, request_fingerprint, created_at)
+		 VALUES (?, ?, ?)
+		 ON CONFLICT(idempotency_key) DO NOTHING`,
+		idempotencyKey,
+		requestFingerprint,
+		now,
+	)
+	if err != nil {
+		return reservationCreateResponse{}, false, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return reservationCreateResponse{}, false, err
+	}
+	if rowsAffected == 1 {
+		return reservationCreateResponse{}, true, nil
+	}
+
+	response, found, err := loadIdempotencyResponse(ctx, tx, idempotencyKey, requestFingerprint)
+	if err != nil {
+		return reservationCreateResponse{}, false, err
+	}
+	if !found {
+		return reservationCreateResponse{}, false, errors.New("idempotency key exists without a response")
+	}
+	return response, false, nil
+}
+
+func completeIdempotencyKeyTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	idempotencyKey string,
+	requestFingerprint string,
+	reservationID int64,
+	response reservationCreateResponse,
+) error {
+	result, err := tx.ExecContext(
+		ctx,
+		`UPDATE reservation_idempotency_keys
+		    SET reservation_id = ?,
+		        response_reservation_no = ?,
+		        response_amount = ?,
+		        response_status = ?
+		  WHERE idempotency_key = ?
+		    AND request_fingerprint = ?
+		    AND reservation_id IS NULL`,
+		reservationID,
+		response.ReservationID,
+		response.Amount,
+		response.Status,
+		idempotencyKey,
+		requestFingerprint,
+	)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 1 {
+		return errors.New("failed to complete idempotency key")
+	}
+	return nil
 }
 
 func (s *reservationStore) resolveShowtime(ctx context.Context, req reservationCreateRequest) (resolvedShowtime, error) {
@@ -1543,10 +1802,7 @@ func validateReservationRequest(req reservationCreateRequest) error {
 }
 
 func validateReservationLookupRequest(req reservationLookupRequest) error {
-	if req.ReservationID == "" || len(req.ReservationID) > 32 || hasControlChars(req.ReservationID) {
-		return validationError("予約番号を正しく入力してください。")
-	}
-	if !strings.HasPrefix(req.ReservationID, "R") {
+	if !validReservationNo(req.ReservationID) {
 		return validationError("予約番号を正しく入力してください。")
 	}
 	if !validEmailAddress(req.Email) {
@@ -1556,6 +1812,18 @@ func validateReservationLookupRequest(req reservationLookupRequest) error {
 		return validationError("電話番号をハイフンなしで入力してください。")
 	}
 	return nil
+}
+
+func validReservationNo(value string) bool {
+	if len(value) != 11 || hasControlChars(value) || !strings.HasPrefix(value, "R") {
+		return false
+	}
+	for _, r := range value[1:] {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeMovieID(value string) (string, error) {
@@ -1620,9 +1888,7 @@ func effectiveTicketPrice(code string, price int, dateLabel string) int {
 		return price
 	}
 	switch code {
-	case "pair":
-		return 2600
-	case "adult", "university", "student", "senior":
+	case "adult", "university", "student":
 		return 1300
 	default:
 		return price

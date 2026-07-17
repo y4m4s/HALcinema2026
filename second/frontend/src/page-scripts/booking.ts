@@ -36,13 +36,10 @@ const FLOW_STEPS = [
 ]
 
 const TICKET_TYPES = [
-  { id: 'pair', label: 'ペアチケット', note: '2名分', price: 3200, seats: 2, serviceDayEligible: true },
   { id: 'adult', label: '一般', note: '大人', price: 1800, seats: 1, serviceDayEligible: true },
   { id: 'university', label: '大学生・専門学生', note: '学生証提示', price: 1600, seats: 1, serviceDayEligible: true },
   { id: 'student', label: '中学・高校生', note: '学生証提示', price: 1400, seats: 1, serviceDayEligible: true },
   { id: 'child', label: '小学生・幼児', note: '3歳以上', price: 1000, seats: 1, serviceDayEligible: false },
-  { id: 'senior', label: 'シニア', note: '60歳以上', price: 1200, seats: 1, serviceDayEligible: true },
-  { id: 'disability', label: '障がい者', note: '手帳提示 / 窓口のみ', price: 1000, seats: 1, onlineAvailable: false },
 ]
 
 const MAX_SEATS_PER_ORDER = 6
@@ -116,11 +113,15 @@ export function runBooking() {
     couponApplying: false,
     payment: 'credit',
     confirmationNo: '',
+    confirmationCopied: false,
+    confirmationCopyTimer: 0,
     dbReservedSeats: [],
     availabilityKey: '',
     availabilityLoading: false,
     submittingReservation: false,
     reservationError: '',
+    reservationIdempotencyKey: '',
+    reservationRequestSignature: '',
   }
   let renderedStep = null
   let isStepTransitioning = false
@@ -232,6 +233,56 @@ export function runBooking() {
     if (action === 'complete') {
       if (!canProceed()) return
       void completeReservation()
+      return
+    }
+    if (action === 'copy-reservation-no') {
+      void copyConfirmationNo()
+      return
+    }
+  }
+
+  async function copyConfirmationNo() {
+    if (!state.confirmationNo) return
+    const copied = await writeClipboardText(state.confirmationNo)
+    if (!copied) return
+
+    state.confirmationCopied = true
+    render()
+    if (state.confirmationCopyTimer) window.clearTimeout(state.confirmationCopyTimer)
+    state.confirmationCopyTimer = window.setTimeout(() => {
+      state.confirmationCopied = false
+      state.confirmationCopyTimer = 0
+      render()
+    }, 1600)
+  }
+
+  async function writeClipboardText(text) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text)
+        return true
+      } catch (error) {
+        // Fall through to the textarea fallback below.
+      }
+    }
+
+    let textarea = null
+    try {
+      textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.top = '0'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+      const copied = document.execCommand('copy')
+      return copied
+    } catch (error) {
+      return false
+    } finally {
+      textarea?.remove()
     }
   }
 
@@ -473,7 +524,7 @@ export function runBooking() {
     }
     if (id === 'complete') {
       if (!state.confirmationNo) state.confirmationNo = createConfirmationNo()
-      stepRoot.innerHTML = CompleteStep({ confirmationNo: state.confirmationNo })
+      stepRoot.innerHTML = CompleteStep({ confirmationNo: state.confirmationNo, copied: state.confirmationCopied })
     }
   }
 
@@ -723,26 +774,36 @@ export function runBooking() {
     render()
 
     try {
+      const reservationBody = JSON.stringify({
+        movieId: String(state.movie.id),
+        screen: String(state.screen),
+        start: state.slot?.start || '',
+        end: state.slot?.end || '',
+        date: state.date || '',
+        seats: state.selectedSeats,
+        tickets: state.tickets,
+        couponCode: state.couponCode,
+        paymentMethod: state.payment,
+        customer: {
+          name: getCustomerName(),
+          nameKana: state.customer.nameKana || state.customer.kana,
+          email: state.customer.email,
+          tel: getPhoneNumber(),
+        },
+      })
+      const requestSignature = `${state.member?.id || 'guest'}:${reservationBody}`
+      if (!state.reservationIdempotencyKey || state.reservationRequestSignature !== requestSignature) {
+        state.reservationIdempotencyKey = createIdempotencyKey()
+        state.reservationRequestSignature = requestSignature
+      }
+
       const result = await requestJSON('/api/reservations', {
         method: 'POST',
-        headers: state.memberToken ? getAuthHeaders(state.memberToken) : {},
-        body: JSON.stringify({
-          movieId: String(state.movie.id),
-          screen: String(state.screen),
-          start: state.slot?.start || '',
-          end: state.slot?.end || '',
-          date: state.date || '',
-          seats: state.selectedSeats,
-          tickets: state.tickets,
-          couponCode: state.couponCode,
-          paymentMethod: state.payment,
-          customer: {
-            name: getCustomerName(),
-            nameKana: state.customer.nameKana || state.customer.kana,
-            email: state.customer.email,
-            tel: getPhoneNumber(),
-          },
-        }),
+        headers: {
+          ...(state.memberToken ? getAuthHeaders(state.memberToken) : {}),
+          'Idempotency-Key': state.reservationIdempotencyKey,
+        },
+        body: reservationBody,
       })
 
       state.confirmationNo = result.confirmationNo || result.reservationId || createConfirmationNo()
@@ -822,7 +883,7 @@ export function runBooking() {
     if (isCurseServiceDay(state.date)) {
       notices.push({
         title: '呪いのサービスデー',
-        body: '毎月13日は中高生以上の券種が1席1,300円になります。ペアチケットは2席分として2,600円で計算します。',
+        body: '毎月13日は中高生以上の券種が1席1,300円になります。',
       })
     }
     if (screenFee) {
@@ -831,10 +892,6 @@ export function runBooking() {
         body: `${screenFee.note}のため、1席につき${formatYen(screenFee.unitPrice)}を自動加算します。`,
       })
     }
-    notices.push({
-      title: '障がい者割引',
-      body: 'オンラインでは手帳確認ができないため、この予約フローでは選択できません。劇場窓口で手帳をご提示いただいた場合に適用します。',
-    })
     return notices
   }
 
@@ -1302,7 +1359,12 @@ function hashString(value) {
 }
 
 function createConfirmationNo() {
-  return `HAL-${Date.now().toString(36).toUpperCase().slice(-6)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+  return `R${String(Date.now() % 10000000000).padStart(10, '0')}`
+}
+
+function createIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return `reservation-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function normalizeCustomerInput(field, value) {

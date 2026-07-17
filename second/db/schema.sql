@@ -13,6 +13,7 @@ DROP TRIGGER IF EXISTS trg_schedules_no_overlap_insert;
 DROP TRIGGER IF EXISTS trg_schedules_no_overlap_update;
 
 DROP TABLE IF EXISTS member_sessions;
+DROP TABLE IF EXISTS reservation_idempotency_keys;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS reservation_seats;
 DROP TABLE IF EXISTS reservation_details;
@@ -306,6 +307,20 @@ CREATE TABLE payments (
 );
 
 -- ============================================================
+-- reservation_idempotency_keys: 予約作成APIの冪等性管理
+-- 同じキー・同じリクエストの再送には、最初に確定した応答を返す。
+-- ============================================================
+CREATE TABLE reservation_idempotency_keys (
+    idempotency_key        TEXT    PRIMARY KEY,
+    request_fingerprint    TEXT    NOT NULL,
+    reservation_id         INTEGER UNIQUE REFERENCES reservations(id) ON DELETE RESTRICT,
+    response_reservation_no TEXT,
+    response_amount        INTEGER CHECK (response_amount IS NULL OR response_amount >= 0),
+    response_status        TEXT,
+    created_at             TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+-- ============================================================
 -- inquiries: 問い合わせ
 -- xlsx: お問い合わせID / 氏名 / メールアドレス / カテゴリ / メッセージ /
 --       受付日時 / ステータス / 対応内容 / 対応日時 / 対応者
@@ -359,6 +374,7 @@ CREATE INDEX idx_reservation_details_reservation_id ON reservation_details(reser
 CREATE INDEX idx_reservation_seats_schedule_id ON reservation_seats(schedule_id);
 CREATE INDEX idx_reservation_seats_seat_id ON reservation_seats(seat_id);
 CREATE INDEX idx_payments_reservation_id ON payments(reservation_id);
+CREATE INDEX idx_reservation_idempotency_created_at ON reservation_idempotency_keys(created_at);
 CREATE INDEX idx_inquiries_status_received_at ON inquiries(status, received_at);
 CREATE INDEX idx_news_published_at ON news(published_at);
 
