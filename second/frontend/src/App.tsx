@@ -109,8 +109,10 @@ function App() {
     rewriteDom(root)
     renderBreadcrumb()
     rewriteDom(root)
-    pageRunners[route.key]?.()
+    const cleanupPage = pageRunners[route.key]?.()
     rewriteDom(root)
+
+    return () => cleanupPage?.()
   }, [page, route.key, route.search])
 
   return (

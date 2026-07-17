@@ -4,6 +4,8 @@ import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
+  let disposed = false;
+  let fadeTimer = 0;
   let viewMode = 'date';
   let dateIdx = 0;
   let movieIdx = 0;
@@ -26,6 +28,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       const res = await fetch('/api/schedules/availability');
       if (!res.ok) return;
       const data = await res.json();
+      if (disposed) return;
       if (!Array.isArray(data)) return;
       availabilityByKey.clear();
       data.forEach(function (item) {
@@ -36,7 +39,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       /* オフライン等ではモック表示にフォールバック */
     }
   }
-  document.getElementById('view-tabs').addEventListener('click', function (e) {
+  const viewTabs = document.getElementById('view-tabs');
+  function onViewTabsClick(e) {
     const btn = e.target.closest('.view-tab');
     if (!btn) return;
     viewMode = btn.dataset.mode;
@@ -45,7 +49,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     renderSubTabs();
     renderHeading();
     fadeRows(renderRows);
-  });
+  }
+  viewTabs.addEventListener('click', onViewTabsClick);
 
   function render() {
     renderSubTabs();
@@ -56,7 +61,10 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   function fadeRows(callback) {
     const el = document.getElementById('schedule-rows');
     el.classList.add('rows-hidden');
-    setTimeout(function () {
+    if (fadeTimer) window.clearTimeout(fadeTimer);
+    fadeTimer = window.setTimeout(function () {
+      fadeTimer = 0;
+      if (disposed) return;
       callback();
       el.classList.remove('rows-hidden');
     }, 110);
@@ -249,4 +257,10 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
   render();
   loadAvailability();
+
+  return function cleanupSchedule() {
+    disposed = true;
+    viewTabs.removeEventListener('click', onViewTabsClick);
+    if (fadeTimer) window.clearTimeout(fadeTimer);
+  };
 }

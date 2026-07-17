@@ -1,4 +1,13 @@
 import type { PageDefinition } from '../types'
+import { formatTicketPrice, SERVICE_DAY_PRICE, TICKET_PRICE_GUIDE } from '../data/pricing'
+
+const ticketPriceRows = TICKET_PRICE_GUIDE.map((item) => `
+          <tr>
+            <td>${item.category}</td>
+            <td><div class="ticket-price">${formatTicketPrice(item.price, item.prefix)}</div></td>
+            <td><div class="ticket-note">${item.note || '—'}</div></td>
+          </tr>`).join('')
+const serviceDayPrice = formatTicketPrice(SERVICE_DAY_PRICE)
 
 export const ticketsPage: PageDefinition = {
   title: "料金案内 | HAL シネマ",
@@ -32,36 +41,7 @@ export const ticketsPage: PageDefinition = {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>一般</td>
-            <td><div class="ticket-price">1,800円</div></td>
-            <td><div class="ticket-note">—</div></td>
-          </tr>
-          <tr>
-            <td>大学生・専門学生</td>
-            <td><div class="ticket-price">1,600円</div></td>
-            <td><div class="ticket-note">学生証提示</div></td>
-          </tr>
-          <tr>
-            <td>中学・高校生</td>
-            <td><div class="ticket-price">1,400円</div></td>
-            <td><div class="ticket-note">学生証提示</div></td>
-          </tr>
-          <tr>
-            <td>小学生・幼児</td>
-            <td><div class="ticket-price">1,000円</div></td>
-            <td><div class="ticket-note">—</div></td>
-          </tr>
-          <tr>
-            <td>3D 追加料金</td>
-            <td><div class="ticket-price">+400円</div></td>
-            <td><div class="ticket-note">対象作品のみ</div></td>
-          </tr>
-          <tr>
-            <td>呪いのサービスデー（毎月13日）</td>
-            <td><div class="ticket-price">1,300円</div></td>
-            <td><div class="ticket-note">中学生以上</div></td>
-          </tr>
+          ${ticketPriceRows}
         </tbody>
       </table>
 
@@ -72,7 +52,7 @@ export const ticketsPage: PageDefinition = {
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>チケットのご購入は窓口・公式サイトにて承っています。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>R15+・R18+作品は年齢確認のため身分証の提示をお願いする場合があります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>3D上映は対象作品のみです。3Dメガネは無料貸出。</li>
-          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が1,300円となります。小学生・幼児は通常料金です。</li>
+          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が${serviceDayPrice}となります。小学生・幼児は通常料金です。</li>
         </ul>
       </div>
 
@@ -84,7 +64,7 @@ export const ticketsPage: PageDefinition = {
         <div class="coming-card">
           <div class="coming-release">毎月13日</div>
           <div class="coming-title tickets-promo-title">呪いのサービスデー</div>
-          <p class="coming-synopsis">中学生以上の券種が1,300円。13日がかかわる恐怖を、割引価格でどうぞ。</p>
+          <p class="coming-synopsis">中学生以上の券種が${serviceDayPrice}。13日がかかわる恐怖を、割引価格でどうぞ。</p>
         </div>
         <div class="coming-card">
           <div class="coming-release">最終回上映</div>

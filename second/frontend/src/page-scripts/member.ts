@@ -29,6 +29,7 @@ const HISTORY_FILTER_OPTIONS = [
 export function runMember() {
   const root = document.getElementById('member-root')
   if (!root) return
+  let disposed = false
 
   const state = {
     session: readMemberSession(),
@@ -371,6 +372,7 @@ export function runMember() {
   }
 
   function render() {
+    if (disposed) return
     if (state.checking) {
       root.innerHTML = `<div class="member-panel"><p class="member-status">会員情報を確認しています。</p></div>`
       return
@@ -659,6 +661,17 @@ export function runMember() {
     if (password !== passwordConfirm) return '確認用パスワードが一致していません。'
 
     return ''
+  }
+
+  return function cleanupMember() {
+    disposed = true
+    root.removeEventListener('submit', onSubmit)
+    root.removeEventListener('input', onInput)
+    root.removeEventListener('change', onChange)
+    root.removeEventListener('click', onClick)
+    root.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('click', onDocumentClick)
+    document.removeEventListener('focusin', onDocumentFocusIn)
   }
 }
 

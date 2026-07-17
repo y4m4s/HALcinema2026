@@ -1,4 +1,5 @@
 import type { PageDefinition } from '../types'
+import { formatTicketPriceWithSymbol, TICKET_PRICES } from '../data/pricing'
 
 export const theaterPage: PageDefinition = {
   title: "劇場案内 | HAL シネマ",
@@ -1018,19 +1019,19 @@ export const theaterPage: PageDefinition = {
           <dl class="info-rows">
             <div class="info-row">
               <dt>一般</dt>
-              <dd>¥1,800</dd>
+              <dd>${formatTicketPriceWithSymbol(TICKET_PRICES.adult)}</dd>
             </div>
             <div class="info-row">
               <dt>大学生</dt>
-              <dd>¥1,600</dd>
+              <dd>${formatTicketPriceWithSymbol(TICKET_PRICES.university)}</dd>
             </div>
             <div class="info-row">
               <dt>中学・高校生</dt>
-              <dd>¥1,400</dd>
+              <dd>${formatTicketPriceWithSymbol(TICKET_PRICES.student)}</dd>
             </div>
             <div class="info-row">
               <dt>小学生・幼児</dt>
-              <dd>¥1,000</dd>
+              <dd>${formatTicketPriceWithSymbol(TICKET_PRICES.child)}</dd>
             </div>
           </dl>
         </div>
