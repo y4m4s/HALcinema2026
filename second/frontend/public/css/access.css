@@ -33,6 +33,7 @@
   color: #96a6c0;
   margin-top: 14px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 /* 右カラム */
@@ -65,6 +66,7 @@
   line-height: 1.8;
   padding-left: 16px;
   position: relative;
+  overflow-wrap: anywhere;
 }
 
 .access-section-list li::before {
@@ -79,10 +81,56 @@
 @media (max-width: 900px) {
   .access-grid {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 36px;
   }
 
   .access-map {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 16 / 10;
+  }
+
+  .access-sidebar {
+    gap: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .access-grid {
+    gap: 30px;
+  }
+
+  .access-map {
+    aspect-ratio: 4 / 3;
+  }
+
+  .access-address {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+
+  .access-sidebar {
+    gap: 24px;
+  }
+
+  .access-section-title {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .access-section-list {
+    gap: 8px;
+  }
+
+  .access-section-list li {
+    font-size: 12px;
+    line-height: 1.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .access-grid {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

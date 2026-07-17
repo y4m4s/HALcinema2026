@@ -579,17 +579,75 @@
 }
 
 @media (max-width: 768px) {
+  .hero {
+    height: calc(100svh - var(--nav-h));
+    min-height: 520px;
+  }
+
+  .hero-bg {
+    background-position: center center;
+  }
+
+  .hero:hover .hero-bg {
+    transform: none;
+  }
+
   .hero-content {
-    padding: 0 24px 48px;
+    padding: 0 24px 42px;
+  }
+
+  .hero-tag {
+    margin-bottom: 14px;
+  }
+
+  .hero-title,
+  .hero-title.small {
+    font-size: clamp(34px, 10vw, 58px);
+    line-height: 1.05;
+    margin-bottom: 18px;
+  }
+
+  .hero-meta {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .hero-synopsis {
+    margin-bottom: 26px;
+    font-size: 13px;
+    line-height: 1.75;
   }
 
   .hero-scroll {
-    right: 24px;
-    bottom: 24px;
+    display: none;
+  }
+
+  .movies-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+    gap: 18px;
   }
 
   .access-grid {
     grid-template-columns: 1fr;
+  }
+
+  .access-info {
+    padding: 28px 24px;
+  }
+
+  .access-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .access-label {
+    min-width: 0;
+  }
+
+  .access-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .home-more-link {
@@ -612,5 +670,89 @@
   .coming-poster-wrap,
   .coming-poster-placeholder {
     min-height: 144px;
+  }
+
+  .home-page #home-news-list .news-item {
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+  }
+
+  .home-page #home-news-list .news-title {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero-content {
+    padding-right: 18px;
+    padding-bottom: 32px;
+    padding-left: 18px;
+  }
+
+  .hero-synopsis {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .hero-cta {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hero-cta .btn-primary,
+  .hero-cta .btn-ghost {
+    width: 100%;
+    padding: 12px 18px;
+    text-align: center;
+  }
+
+  .ticker-item {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .access-info {
+    padding: 24px 18px;
+  }
+
+  .coming-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 176px;
+    padding: 12px;
+  }
+
+  .coming-poster-wrap,
+  .coming-poster-placeholder {
+    min-height: 124px;
+  }
+
+  .coming-title {
+    font-size: 18px;
+  }
+
+  .coming-synopsis {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg,
+  .hero-content,
+  .ticker-inner,
+  .js-reveal-full,
+  .js-reveal-fade {
+    animation: none;
+    transition: none;
+  }
+
+  .js-reveal-full,
+  .js-reveal-fade {
+    opacity: 1;
+    transform: none;
   }
 }

@@ -9,9 +9,7 @@ export const memberPage: PageDefinition = {
     "/css/booking.css",
     "/css/member.css"
   ],
-  html: String.raw`<div id="nav-root"></div>
-
-  <main class="member-page page-enter">
+  html: String.raw`<main class="member-page page-enter">
     <section class="member-hero">
       <div class="section-header">
         <h1 class="section-title">会員の方へ</h1>
@@ -26,7 +24,5 @@ export const memberPage: PageDefinition = {
     <section class="member-shell" id="member-root" aria-live="polite">
       <div class="member-loading">会員情報を確認しています。</div>
     </section>
-  </main>
-
-  <div id="footer-root"></div>`,
+  </main>`,
 }

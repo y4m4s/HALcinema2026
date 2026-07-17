@@ -9,9 +9,7 @@ export const reservationPage: PageDefinition = {
     "/css/booking.css",
     "/css/reservation.css"
   ],
-  html: String.raw`<div id="nav-root"></div>
-
-  <main class="reservation-page page-enter">
+  html: String.raw`<main class="reservation-page page-enter">
     <section class="reservation-hero">
       <nav class="breadcrumb-nav" aria-label="パンくずリスト">
         <ol class="breadcrumb">
@@ -51,7 +49,5 @@ export const reservationPage: PageDefinition = {
       </div>
       <div class="reservation-result" id="reservation-result" aria-live="polite"></div>
     </section>
-  </main>
-
-  <div id="footer-root"></div>`,
+  </main>`,
 }

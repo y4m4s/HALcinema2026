@@ -22,7 +22,6 @@ import {
   requestMemberJSON,
   writeMemberSession,
 } from './member-session'
-import { runCommon } from './common'
 
 const FLOW_STEPS = [
   { id: 'tickets', label: '券種選択', en: 'TICKET' },
@@ -1003,7 +1002,6 @@ export function runBooking() {
     const token = state.memberToken
     clearMemberAuth()
     render()
-    runCommon()
 
     if (!token) return
     try {

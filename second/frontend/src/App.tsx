@@ -1,5 +1,6 @@
 ﻿import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { runCommon } from './page-scripts/common'
+import { Layout } from './components/Layout'
+import { renderBreadcrumb } from './page-scripts/common'
 import { pageRunners } from './page-scripts/registry'
 import { pages } from './pages/registry'
 import './App.css'
@@ -62,7 +63,8 @@ function installStyles(styles: string[]) {
 }
 
 function App() {
-  const rootRef = useRef<HTMLDivElement | null>(null)
+  const appRef = useRef<HTMLDivElement | null>(null)
+  const pageRootRef = useRef<HTMLDivElement | null>(null)
   const [route, setRoute] = useState<RouteState>(() => getRouteState())
   const page = pages[route.key] ?? pages.index
 
@@ -73,7 +75,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const root = rootRef.current
+    const root = appRef.current
     if (!root) return undefined
 
     const onClick = (event: MouseEvent) => {
@@ -95,7 +97,7 @@ function App() {
   }, [])
 
   useLayoutEffect(() => {
-    const root = rootRef.current
+    const root = pageRootRef.current
     if (!root) return
 
     document.title = page.title
@@ -105,13 +107,17 @@ function App() {
     root.innerHTML = page.html
 
     rewriteDom(root)
-    runCommon()
+    renderBreadcrumb()
     rewriteDom(root)
     pageRunners[route.key]?.()
     rewriteDom(root)
   }, [page, route.key, route.search])
 
-  return <div className="app-root" ref={rootRef} />
+  return (
+    <Layout ref={appRef} currentPage={route.key}>
+      <div className="page-root" ref={pageRootRef} />
+    </Layout>
+  )
 }
 
 export default App

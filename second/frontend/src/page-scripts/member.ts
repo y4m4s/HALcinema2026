@@ -1,6 +1,5 @@
 /* eslint-disable */
 // @ts-nocheck
-import { runCommon } from './common'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -55,7 +54,6 @@ export function runMember() {
       state.session = session
       state.checking = false
       render()
-      runCommon()
     })
   }
 
@@ -315,7 +313,6 @@ export function runMember() {
     state.history = createHistoryState()
     render()
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    runCommon()
     await logoutPromise
   }
 
@@ -336,7 +333,6 @@ export function runMember() {
     state.history = createHistoryState()
     writeMemberSession(state.session)
     render()
-    runCommon()
   }
 
   async function loadReservationHistory() {
