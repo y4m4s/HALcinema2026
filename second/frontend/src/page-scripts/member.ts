@@ -20,6 +20,13 @@ const INPUT_LIMITS = {
   password: 128,
 }
 
+const HISTORY_FILTER_OPTIONS = [
+  { value: 'all', label: 'すべての期間' },
+  { value: '30d', label: '過去30日' },
+  { value: '90d', label: '過去90日' },
+  { value: '1y', label: '過去1年' },
+]
+
 export function runMember() {
   const root = document.getElementById('member-root')
   if (!root) return
@@ -38,6 +45,9 @@ export function runMember() {
   root.addEventListener('input', onInput)
   root.addEventListener('change', onChange)
   root.addEventListener('click', onClick)
+  root.addEventListener('keydown', onKeyDown)
+  document.addEventListener('click', onDocumentClick)
+  document.addEventListener('focusin', onDocumentFocusIn)
 
   render()
   if (state.session?.token) {
@@ -93,14 +103,6 @@ export function runMember() {
     const target = event.target instanceof Element ? event.target : null
     if (!target) return
 
-    const historyFilter = target.closest('[data-history-filter]')
-    if (historyFilter) {
-      state.history.filter = historyFilter.value || 'all'
-      state.history.loaded = false
-      void loadReservationHistory()
-      return
-    }
-
     if (!(target instanceof HTMLInputElement)) return
     const registerField = target.closest('[data-member-register-field]')
     if (registerField && target.type === 'checkbox') {
@@ -113,6 +115,25 @@ export function runMember() {
   function onClick(event) {
     const target = event.target instanceof Element ? event.target : null
     if (!target) return
+
+    const historyFilterTrigger = target.closest('[data-history-filter-trigger]')
+    if (historyFilterTrigger) {
+      toggleHistoryFilter()
+      return
+    }
+
+    const historyFilterOption = target.closest('[data-history-filter-value]')
+    if (historyFilterOption) {
+      const nextFilter = historyFilterOption.dataset.historyFilterValue || 'all'
+      if (!HISTORY_FILTER_OPTIONS.some((option) => option.value === nextFilter)) return
+      closeHistoryFilter(true)
+      if (state.history.filter === nextFilter) return
+      state.history.filter = nextFilter
+      state.history.loaded = false
+      void loadReservationHistory()
+      return
+    }
+
     const action = target.closest('[data-member-action]')?.dataset.memberAction
     if (action === 'show-register') {
       state.mode = 'register'
@@ -143,6 +164,88 @@ export function runMember() {
     }
   }
 
+  function onKeyDown(event) {
+    const target = event.target instanceof Element ? event.target : null
+    if (!target) return
+
+    const historyFilterTrigger = target.closest('[data-history-filter-trigger]')
+    if (historyFilterTrigger && event.key === 'Escape' && historyFilterTrigger.getAttribute('aria-expanded') === 'true') {
+      event.preventDefault()
+      closeHistoryFilter(true)
+      return
+    }
+
+    if (historyFilterTrigger && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      openHistoryFilter(event.key === 'ArrowUp' ? 'last' : 'selected')
+      return
+    }
+
+    const currentOption = target.closest('[data-history-filter-value]')
+    if (!currentOption) return
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeHistoryFilter(true)
+      return
+    }
+
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const options = Array.from(root.querySelectorAll('[data-history-filter-value]'))
+    const currentIndex = options.indexOf(currentOption)
+    let nextIndex = currentIndex
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = options.length - 1
+    options[nextIndex]?.focus()
+  }
+
+  function onDocumentClick(event) {
+    const target = event.target instanceof Element ? event.target : null
+    if (!target?.closest('[data-history-select]')) closeHistoryFilter()
+  }
+
+  function onDocumentFocusIn(event) {
+    const target = event.target instanceof Element ? event.target : null
+    if (!target?.closest('[data-history-select]')) closeHistoryFilter()
+  }
+
+  function toggleHistoryFilter() {
+    const trigger = root.querySelector('[data-history-filter-trigger]')
+    if (trigger?.getAttribute('aria-expanded') === 'true') {
+      closeHistoryFilter()
+      return
+    }
+    openHistoryFilter()
+  }
+
+  function openHistoryFilter(focusTarget = '') {
+    const trigger = root.querySelector('[data-history-filter-trigger]')
+    const optionList = root.querySelector('[data-history-filter-list]')
+    if (!trigger || !optionList) return
+    trigger.setAttribute('aria-expanded', 'true')
+    optionList.hidden = false
+
+    if (focusTarget) {
+      const options = Array.from(optionList.querySelectorAll('[data-history-filter-value]'))
+      const option = focusTarget === 'last'
+        ? options[options.length - 1]
+        : optionList.querySelector('[aria-selected="true"]') || options[0]
+      option?.focus()
+    }
+  }
+
+  function closeHistoryFilter(restoreFocus = false) {
+    const trigger = root.querySelector('[data-history-filter-trigger]')
+    const optionList = root.querySelector('[data-history-filter-list]')
+    if (!trigger || !optionList) return
+    trigger.setAttribute('aria-expanded', 'false')
+    optionList.hidden = true
+    if (restoreFocus) trigger.focus()
+  }
+
   async function loginMember() {
     if (!isLoginValid() || state.login.loading) return
     state.login.loading = true
@@ -158,6 +261,7 @@ export function runMember() {
         }),
       })
       completeMemberAuth(result)
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     } catch (error) {
       state.login.loading = false
       state.login.error = getRequestErrorMessage(error)
@@ -193,6 +297,7 @@ export function runMember() {
         }),
       })
       completeMemberAuth(result)
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     } catch (error) {
       state.register.loading = false
       state.register.error = getRequestErrorMessage(error)
@@ -209,6 +314,7 @@ export function runMember() {
     state.register = createRegisterState()
     state.history = createHistoryState()
     render()
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     runCommon()
     await logoutPromise
   }
@@ -395,7 +501,7 @@ export function runMember() {
           <h2 id="member-current-title">会員情報</h2>
         </div>
         <dl class="member-card member-profile-list">
-          ${renderProfileRow('会員番号', member.memberNo || '-')}
+          ${renderProfileRow('会員番号', member.memberNo || member.id || '-')}
           ${renderProfileRow('氏名', member.name || '-')}
           ${renderProfileRow('メール', member.email || '-')}
           ${renderProfileRow('電話番号', member.tel || '-')}
@@ -423,15 +529,33 @@ export function runMember() {
           <h2 id="member-history-title">購入履歴</h2>
         </div>
         <div class="member-history-toolbar">
-          <label>
-            <span>予約日</span>
-            <select data-history-filter>
-              ${renderHistoryFilterOption('all', 'すべて')}
-              ${renderHistoryFilterOption('30d', '30日以内')}
-              ${renderHistoryFilterOption('90d', '90日以内')}
-              ${renderHistoryFilterOption('1y', '1年以内')}
-            </select>
-          </label>
+          <div class="member-history-filter" role="group" aria-labelledby="member-history-filter-label">
+            <span class="member-history-filter-label" id="member-history-filter-label">表示期間</span>
+            <div class="member-history-custom-select" data-history-select>
+              <button
+                class="member-history-select-trigger"
+                type="button"
+                id="member-history-filter-trigger"
+                data-history-filter-trigger
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="member-history-filter-list"
+                aria-labelledby="member-history-filter-label member-history-filter-value"
+              >
+                <span id="member-history-filter-value">${escapeHtml(getHistoryFilterLabel(state.history.filter))}</span>
+              </button>
+              <div
+                class="member-history-option-list"
+                id="member-history-filter-list"
+                data-history-filter-list
+                role="listbox"
+                aria-labelledby="member-history-filter-label"
+                hidden
+              >
+                ${renderHistoryFilterOptions()}
+              </div>
+            </div>
+          </div>
         </div>
         ${history.loading ? '<p class="member-status">購入履歴を読み込んでいます。</p>' : ''}
         ${history.error ? `<p class="account-form-error">${escapeHtml(history.error)}</p>` : ''}
@@ -440,8 +564,17 @@ export function runMember() {
     `
   }
 
-  function renderHistoryFilterOption(value, label) {
-    return `<option value="${escapeAttr(value)}" ${state.history.filter === value ? 'selected' : ''}>${escapeHtml(label)}</option>`
+  function renderHistoryFilterOptions() {
+    return HISTORY_FILTER_OPTIONS.map(({ value, label }) => `
+      <button
+        class="member-history-option"
+        type="button"
+        role="option"
+        tabindex="-1"
+        data-history-filter-value="${escapeAttr(value)}"
+        aria-selected="${state.history.filter === value}"
+      >${escapeHtml(label)}</button>
+    `).join('')
   }
 
   function renderHistoryList(items) {
@@ -565,6 +698,10 @@ function createHistoryState() {
     loaded: false,
     error: '',
   }
+}
+
+function getHistoryFilterLabel(value) {
+  return HISTORY_FILTER_OPTIONS.find((option) => option.value === value)?.label || HISTORY_FILTER_OPTIONS[0].label
 }
 
 function normalizeLoginInput(field, value) {

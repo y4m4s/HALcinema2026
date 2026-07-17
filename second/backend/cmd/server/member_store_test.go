@@ -81,6 +81,38 @@ func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 	}
 }
 
+func TestMemberStoreReservationHistoryEmpty(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	store, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer store.Close()
+
+	ctx := context.Background()
+	member, _, err := store.Register(ctx, memberRegisterRequest{
+		Name:     "No History User",
+		NameKana: "りれきなしゆーざー",
+		Email:    "no-history@example.com",
+		Tel:      "09012345678",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	items, err := store.ReservationHistory(ctx, member.ID, "all")
+	if err != nil {
+		t.Fatalf("ReservationHistory() empty error = %v", err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("ReservationHistory() empty = %#v, want non-nil empty slice", items)
+	}
+}
+
 func TestMemberStoreMigratesLegacyColumns(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "members.sqlite3")
 	db, err := sql.Open("sqlite", dbPath)

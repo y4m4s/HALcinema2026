@@ -92,12 +92,15 @@ func registerReservationRoutes(api *gin.RouterGroup, reservations *reservationSt
 				member = &resolvedMember
 			}
 
-			result, err := reservations.Create(c.Request.Context(), req, member)
+			result, err := reservations.Create(c.Request.Context(), req, member, c.GetHeader("Idempotency-Key"))
 			if err != nil {
 				writeReservationStoreError(c, err)
 				return
 			}
 
+			if result.Replayed {
+				c.Header("Idempotency-Replayed", "true")
+			}
 			c.JSON(http.StatusCreated, result)
 		})
 	}
@@ -116,6 +119,8 @@ func writeReservationStoreError(c *gin.Context, err error) {
 		writeAPIError(c, http.StatusBadRequest, "指定された座席が見つかりません。")
 	case errors.Is(err, errSeatAlreadyReserved):
 		writeAPIError(c, http.StatusConflict, "選択した座席はすでに予約されています。")
+	case errors.Is(err, errIdempotencyConflict):
+		writeAPIError(c, http.StatusConflict, "同じIdempotency-Keyが異なる予約内容で使用されています。")
 	case errors.Is(err, errTicketTypeNotFound):
 		writeAPIError(c, http.StatusBadRequest, "指定された券種が見つかりません。")
 	case errors.Is(err, errPaymentMethodNotFound):

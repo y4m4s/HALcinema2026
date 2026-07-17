@@ -120,6 +120,8 @@ export function runBooking() {
     availabilityLoading: false,
     submittingReservation: false,
     reservationError: '',
+    reservationIdempotencyKey: '',
+    reservationRequestSignature: '',
   }
   let renderedStep = null
   let isStepTransitioning = false
@@ -772,26 +774,36 @@ export function runBooking() {
     render()
 
     try {
+      const reservationBody = JSON.stringify({
+        movieId: String(state.movie.id),
+        screen: String(state.screen),
+        start: state.slot?.start || '',
+        end: state.slot?.end || '',
+        date: state.date || '',
+        seats: state.selectedSeats,
+        tickets: state.tickets,
+        couponCode: state.couponCode,
+        paymentMethod: state.payment,
+        customer: {
+          name: getCustomerName(),
+          nameKana: state.customer.nameKana || state.customer.kana,
+          email: state.customer.email,
+          tel: getPhoneNumber(),
+        },
+      })
+      const requestSignature = `${state.member?.id || 'guest'}:${reservationBody}`
+      if (!state.reservationIdempotencyKey || state.reservationRequestSignature !== requestSignature) {
+        state.reservationIdempotencyKey = createIdempotencyKey()
+        state.reservationRequestSignature = requestSignature
+      }
+
       const result = await requestJSON('/api/reservations', {
         method: 'POST',
-        headers: state.memberToken ? getAuthHeaders(state.memberToken) : {},
-        body: JSON.stringify({
-          movieId: String(state.movie.id),
-          screen: String(state.screen),
-          start: state.slot?.start || '',
-          end: state.slot?.end || '',
-          date: state.date || '',
-          seats: state.selectedSeats,
-          tickets: state.tickets,
-          couponCode: state.couponCode,
-          paymentMethod: state.payment,
-          customer: {
-            name: getCustomerName(),
-            nameKana: state.customer.nameKana || state.customer.kana,
-            email: state.customer.email,
-            tel: getPhoneNumber(),
-          },
-        }),
+        headers: {
+          ...(state.memberToken ? getAuthHeaders(state.memberToken) : {}),
+          'Idempotency-Key': state.reservationIdempotencyKey,
+        },
+        body: reservationBody,
       })
 
       state.confirmationNo = result.confirmationNo || result.reservationId || createConfirmationNo()
@@ -1348,6 +1360,11 @@ function hashString(value) {
 
 function createConfirmationNo() {
   return `R${String(Date.now() % 10000000000).padStart(10, '0')}`
+}
+
+function createIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return `reservation-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function normalizeCustomerInput(field, value) {

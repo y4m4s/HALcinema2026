@@ -367,14 +367,14 @@ func (s *memberStore) ReservationHistory(ctx context.Context, memberID int64, pe
 	args := []any{memberID}
 
 	if since := reservationHistorySince(period); since != "" {
-		where += ` AND r.reserved_at >= ?`
+		where += ` AND r.created_at >= ?`
 		args = append(args, since)
 	}
 
 	query := fmt.Sprintf(
-		`SELECT r.id,
+		`SELECT r.reservation_no,
 		        r.status,
-		        r.reserved_at,
+		        r.created_at,
 		        m.title,
 		        sch.start_at,
 		        sch.end_at,
@@ -400,7 +400,7 @@ func (s *memberStore) ReservationHistory(ctx context.Context, memberID int64, pe
 		   LEFT JOIN payments AS p ON p.reservation_id = r.id
 		   LEFT JOIN payment_methods AS pm ON pm.id = p.payment_method_id
 		   %s
-		   ORDER BY r.reserved_at DESC, r.id DESC
+		   ORDER BY r.created_at DESC, r.id DESC
 		   LIMIT 50`,
 		where,
 	)
