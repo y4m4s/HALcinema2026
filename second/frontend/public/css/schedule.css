@@ -583,17 +583,39 @@
   .theater-col-features {
     justify-content: flex-start;
   }
+  /* 横スクロール量を減らすため、劇場列の最小幅と内側余白を詰める */
+  .theater-col {
+    min-width: 200px;
+    padding: 16px;
+  }
+
+  /* 上映回を横 2 列に置くと列幅が足りず、カード内に横スクロールが出るため 1 列に積む */
+  .slots-grid,
+  .slots-grid--quad {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 @media (max-width: 760px) {
   .movie-card-body {
     flex-direction: column;
   }
+  /* 縦積みになるとサムネの高さを決める兄弟要素がなくなるため、
+     帯状の高さを明示して縦長ポスターを切り抜く */
   .movie-thumb {
     width: 100%;
-    max-height: 220px;
+    height: 180px;
+    max-height: none;
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+  .movie-thumb-link {
+    height: 100%;
+  }
+  .movie-thumb img {
+    object-position: center 30%;
   }
   .theaters-grid {
     flex-direction: column;
@@ -607,12 +629,108 @@
   .theater-col:last-child {
     border-bottom: none;
   }
+  /* 劇場列が縦積みになると見出しの行数だけ縦に伸びるため、
+     スクリーン番号の横にスクリーンサイズと席数を並べて高さを詰める。
+     幅が足りない場合は wrap で従来どおり下に折り返す */
+  .theater-col-left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+  }
+  .theater-col-meta {
+    font-size: 11px;
+  }
+  /* 劇場列が全幅になるので、上映回は列幅に応じた複数列に戻す */
+  .slots-grid,
+  .slots-grid--quad {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
 }
+
 @media (max-width: 600px) {
+  .view-tab {
+    padding: 13px 0;
+    font-size: 13px;
+  }
+
+  /* 日付タブは横スクロール前提。1画面に4件前後見える幅まで詰める */
+  .sub-tab {
+    min-width: 64px;
+    padding: 12px;
+    font-size: 11px;
+  }
+
+  .movie-tab-card {
+    width: 104px;
+  }
+
+  .schedule-heading {
+    font-size: 16px;
+    margin-bottom: 18px;
+  }
+
+  /* タイトルが省略記号だらけになるため、詳細ボタンごと縦積みにする */
+  .movie-card-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .movie-card-title-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    flex-basis: 100%;
+  }
   .movie-card-title {
     font-size: 16px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .movie-card-header-right {
+    width: 100%;
+  }
+  .schedule-detail-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theater-col {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  /* 幅が足りなければ 2 列 → 1 列へ自動で落ちる */
+  .slots-grid,
+  .slots-grid--quad {
+    gap: 8px;
+  }
+
+  .time-slot {
+    padding: 10px 6px;
   }
   .time-slot-time {
-    font-size: 15px;
+    font-size: 14px;
+  }
+  .time-slot-status {
+    font-size: 11px;
+  }
+
+  .movie-card-note {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .note-text {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .schedule-empty {
+    padding: 48px 0;
   }
 }

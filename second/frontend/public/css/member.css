@@ -529,6 +529,32 @@
   }
 }
 
+@media (max-width: 768px) {
+  /* booking.css の同幅指定より詳細度が高く打ち消してしまうため、
+     登録フォームもここで 1 カラムに揃える */
+  .member-register-panel .account-login-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    min-height: 0;
+    padding: 14px 0;
+  }
+
+  .member-register-panel .account-login-label {
+    min-height: auto;
+  }
+
+  /* 会員情報の見出し列も画面幅に合わせて狭める */
+  .member-panel-wide .member-card div {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .member-history-main strong {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 640px) {
   .member-page {
     padding: calc(var(--nav-h) + 2.5rem) 24px 64px;
@@ -538,15 +564,28 @@
     padding: 22px;
   }
 
-  .member-card div {
+  .member-card div,
+  .member-panel-wide .member-card div {
     grid-template-columns: 1fr;
     gap: 6px;
+    min-height: 0;
+    padding: 14px 16px;
   }
 
-  .member-dashboard-nav,
-  .member-tab-group {
+  .member-dashboard-nav {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  /* タブ 2 つは横並びのまま、ログアウトだけ下段に落とす */
+  .member-tab-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .member-tab {
+    min-width: 0;
+    padding: 0 8px;
   }
 
   .member-tab,
@@ -568,12 +607,58 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .member-history-meta {
-    grid-template-columns: 1fr;
+  .member-history-option-list {
+    min-width: 0;
   }
 
-  .member-history-meta div + div {
+  /* 4 項目を縦 1 列にすると間延びするので 2×2 に組み替える */
+  .member-history-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .member-history-meta div {
+    min-height: 72px;
+    padding: 12px;
+  }
+
+  .member-history-meta div:nth-child(2n + 1) {
     border-left: 0;
+  }
+
+  .member-history-meta div:nth-child(n + 3) {
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 430px) {
+  .member-page {
+    padding: calc(var(--nav-h) + 2rem) 16px 56px;
+  }
+
+  .member-hero {
+    margin-bottom: 24px;
+  }
+
+  .member-panel {
+    padding: 18px 16px;
+  }
+
+  .member-panel-head h2 {
+    font-size: 19px;
+  }
+
+  .member-switch .btn-ghost,
+  .member-actions .btn-primary,
+  .member-actions .btn-ghost {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .member-history-main {
+    padding: 16px;
+  }
+
+  .member-history-meta div {
+    padding: 12px 10px;
   }
 }
