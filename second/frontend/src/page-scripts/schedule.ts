@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, getMovieScreenSchedules, getMovieStatus } from './data'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
@@ -176,11 +176,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   }
 
   function getScreenSchedules(m) {
-    if (m.screenSchedules && m.screenSchedules.length > 0) return m.screenSchedules;
-    return m.screens.map(sc => ({
-      screen: sc,
-      slots: m.schedules.map(function (s) { return { start: s[0], end: s[1], status: 'ok' }; })
-    }));
+    return getMovieScreenSchedules(m);
   }
 
   function renderMovieCard(m, idx, dateLabel) {
