@@ -1,5 +1,13 @@
-﻿/* eslint-disable no-irregular-whitespace */
 import type { PageDefinition } from '../types'
+import { formatTicketPrice, SERVICE_DAY_PRICE, TICKET_PRICE_GUIDE } from '../data/pricing'
+
+const ticketPriceRows = TICKET_PRICE_GUIDE.map((item) => `
+          <tr>
+            <td>${item.category}</td>
+            <td><div class="ticket-price">${formatTicketPrice(item.price, item.prefix)}</div></td>
+            <td><div class="ticket-note">${item.note || '—'}</div></td>
+          </tr>`).join('')
+const serviceDayPrice = formatTicketPrice(SERVICE_DAY_PRICE)
 
 export const ticketsPage: PageDefinition = {
   title: "料金案内 | HAL シネマ",
@@ -9,25 +17,7 @@ export const ticketsPage: PageDefinition = {
   "/css/style.css",
   "/css/tickets.css"
 ],
-  html: String.raw`<div id="nav-root">
-    <header class="site-header">
-      <nav class="nav" aria-label="グローバルナビゲーション">
-        <a class="nav-logo" href="/" aria-label="HALシネマ 境界 トップへ">
-          <img class="nav-logo-img" src="/assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
-        </a>
-        <div class="nav-links">
-          <a href="/works" class="nav-link" data-nav="works"><span>上映作品一覧</span></a>
-          <a href="/schedule" class="nav-link" data-nav="schedule"><span>上映スケジュール</span></a>
-          <a href="/theater" class="nav-link" data-nav="theater"><span>劇場案内</span></a>
-          <a href="/access" class="nav-link" data-nav="access"><span>交通案内</span></a>
-          <a href="/tickets" class="nav-link" data-nav="tickets"><span>料金案内</span></a>
-          <a href="/question" class="nav-link" data-nav="question"><span>よくある質問</span></a>
-        </div>
-      </nav>
-    </header>
-  </div>
-
-  <div class="page page-enter">
+  html: String.raw`<div class="page page-enter">
     <div class="section">
 
       <nav class="breadcrumb-nav" aria-label="パンくずリスト">
@@ -51,36 +41,7 @@ export const ticketsPage: PageDefinition = {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>一般</td>
-            <td><div class="ticket-price">1,800円</div></td>
-            <td><div class="ticket-note">—</div></td>
-          </tr>
-          <tr>
-            <td>大学生・専門学生</td>
-            <td><div class="ticket-price">1,600円</div></td>
-            <td><div class="ticket-note">学生証提示</div></td>
-          </tr>
-          <tr>
-            <td>中学・高校生</td>
-            <td><div class="ticket-price">1,400円</div></td>
-            <td><div class="ticket-note">学生証提示</div></td>
-          </tr>
-          <tr>
-            <td>小学生・幼児</td>
-            <td><div class="ticket-price">1,000円</div></td>
-            <td><div class="ticket-note">—</div></td>
-          </tr>
-          <tr>
-            <td>3D 追加料金</td>
-            <td><div class="ticket-price">+400円</div></td>
-            <td><div class="ticket-note">対象作品のみ</div></td>
-          </tr>
-          <tr>
-            <td>呪いのサービスデー（毎月13日）</td>
-            <td><div class="ticket-price">1,300円</div></td>
-            <td><div class="ticket-note">中学生以上</div></td>
-          </tr>
+          ${ticketPriceRows}
         </tbody>
       </table>
 
@@ -91,7 +52,7 @@ export const ticketsPage: PageDefinition = {
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>チケットのご購入は窓口・公式サイトにて承っています。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>R15+・R18+作品は年齢確認のため身分証の提示をお願いする場合があります。</li>
           <li class="tickets-note-item"><span class="tickets-note-marker">—</span>3D上映は対象作品のみです。3Dメガネは無料貸出。</li>
-          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が1,300円となります。小学生・幼児は通常料金です。</li>
+          <li class="tickets-note-item"><span class="tickets-note-marker">—</span>呪いのサービスデー（毎月13日）は、中学生以上の券種が${serviceDayPrice}となります。小学生・幼児は通常料金です。</li>
         </ul>
       </div>
 
@@ -103,7 +64,7 @@ export const ticketsPage: PageDefinition = {
         <div class="coming-card">
           <div class="coming-release">毎月13日</div>
           <div class="coming-title tickets-promo-title">呪いのサービスデー</div>
-          <p class="coming-synopsis">中学生以上の券種が1,300円。13日がかかわる恐怖を、割引価格でどうぞ。</p>
+          <p class="coming-synopsis">中学生以上の券種が${serviceDayPrice}。13日がかかわる恐怖を、割引価格でどうぞ。</p>
         </div>
         <div class="coming-card">
           <div class="coming-release">最終回上映</div>
@@ -122,59 +83,6 @@ export const ticketsPage: PageDefinition = {
         </div> -->
       </div>
     </div>
-  </div>
-
-  <div id="footer-root">
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-watermark" aria-hidden="true">HAL CINEMA KYOKAI</div>
-        <div class="footer-main">
-          <div class="footer-brand">
-            <div class="footer-kicker">Horror Theatre</div>
-            <div class="footer-logo">
-              <img class="footer-logo-img" src="/assets/hal-cinema-kyokai-logo.svg" alt="HALシネマ 境界">
-            </div>
-            <p class="footer-tagline">
-              ホラー・ミステリー・サスペンスを中心に、深夜まで上映する都市型シアター。
-            </p>
-            <dl class="footer-meta">
-              <div>
-                <dt>ADDRESS</dt>
-                <dd>〒450-0002　愛知県名古屋市中村区名駅4-4-38</dd>
-              </div>
-              <div>
-                <dt>OPEN</dt>
-                <dd>9:00 - 翌0:30</dd>
-              </div>
-            </dl>
-          </div>
-          <div class="footer-directory">
-            <div class="footer-col">
-              <div class="footer-col-title">上映情報</div>
-              <a href="/works" class="footer-link">上映作品一覧</a>
-              <a href="/schedule" class="footer-link">上映スケジュール</a>
-              <a href="/" class="footer-link">トップ</a>
-            </div>
-            <div class="footer-col">
-              <div class="footer-col-title">劇場情報</div>
-              <a href="/theater" class="footer-link">劇場案内</a>
-              <a href="/tickets" class="footer-link">料金案内</a>
-              <a href="/access" class="footer-link">交通案内</a>
-            </div>
-            <div class="footer-col">
-              <div class="footer-col-title">サポート</div>
-              <a href="/contact" class="footer-link">お問い合わせ</a>
-              <a href="/question" class="footer-link">よくある質問</a>
-              <a href="/news" class="footer-link">お知らせ</a>
-            </div>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <span>© 2026 HALシネマ 境界. All Rights Reserved.</span>
-          <span>HORROR · MYSTERY · SUSPENSE</span>
-        </div>
-      </div>
-    </footer>
   </div>`,
 }
 

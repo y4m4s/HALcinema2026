@@ -13,6 +13,7 @@ export function runTheater() {
   var elNameEn = modal.querySelector('#screen-modal-name-en');
   var elContent = modal.querySelector('#screen-modal-content');
   var activeButton = null;
+  var positionFrame = 0;
 
   function populate(sourceCard) {
     var img = sourceCard.querySelector('.card-image img');
@@ -60,13 +61,17 @@ export function runTheater() {
     card.scrollTop = 0;
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    requestAnimationFrame(function () {
+    if (positionFrame) cancelAnimationFrame(positionFrame);
+    positionFrame = requestAnimationFrame(function () {
+      positionFrame = 0;
       card.scrollTop = 0;
       positionOnCard(sourceCard);
     });
   }
 
   function close() {
+    if (positionFrame) cancelAnimationFrame(positionFrame);
+    positionFrame = 0;
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
@@ -74,18 +79,33 @@ export function runTheater() {
     activeButton = null;
   }
 
-  document.querySelectorAll('.screen-card').forEach(function (screenCard) {
-    screenCard.addEventListener('click', function (e) {
-      e.preventDefault();
-      open(screenCard);
-    });
+  var screenCards = Array.from(document.querySelectorAll('.screen-card'));
+  function onScreenCardClick(e) {
+    e.preventDefault();
+    open(e.currentTarget);
+  }
+  screenCards.forEach(function (screenCard) {
+    screenCard.addEventListener('click', onScreenCardClick);
   });
 
-  modal.querySelectorAll('[data-modal-close]').forEach(function (el) {
+  var closeButtons = Array.from(modal.querySelectorAll('[data-modal-close]'));
+  closeButtons.forEach(function (el) {
     el.addEventListener('click', close);
   });
 
-  document.addEventListener('keydown', function (e) {
+  function onDocumentKeyDown(e) {
     if (e.key === 'Escape' && !modal.hidden) close();
-  });
+  }
+  document.addEventListener('keydown', onDocumentKeyDown);
+
+  return function cleanupTheater() {
+    screenCards.forEach(function (screenCard) {
+      screenCard.removeEventListener('click', onScreenCardClick);
+    });
+    closeButtons.forEach(function (el) {
+      el.removeEventListener('click', close);
+    });
+    document.removeEventListener('keydown', onDocumentKeyDown);
+    close();
+  };
 }

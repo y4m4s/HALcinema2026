@@ -11,6 +11,7 @@ import { SeatStep } from '../components/bokking/SeatStep'
 import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
 import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
+import { SERVICE_DAY_PRICE, THREE_D_EXTRA_FEE, TICKET_TYPES } from '../data/pricing'
 
 import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
 import {
@@ -22,7 +23,6 @@ import {
   requestMemberJSON,
   writeMemberSession,
 } from './member-session'
-import { runCommon } from './common'
 
 const FLOW_STEPS = [
   { id: 'tickets', label: '券種選択', en: 'TICKET' },
@@ -35,16 +35,7 @@ const FLOW_STEPS = [
   { id: 'complete', label: '購入完了', en: 'DONE' },
 ]
 
-const TICKET_TYPES = [
-  { id: 'adult', label: '一般', note: '大人', price: 1800, seats: 1, serviceDayEligible: true },
-  { id: 'university', label: '大学生・専門学生', note: '学生証提示', price: 1600, seats: 1, serviceDayEligible: true },
-  { id: 'student', label: '中学・高校生', note: '学生証提示', price: 1400, seats: 1, serviceDayEligible: true },
-  { id: 'child', label: '小学生・幼児', note: '3歳以上', price: 1000, seats: 1, serviceDayEligible: false },
-]
-
 const MAX_SEATS_PER_ORDER = 6
-const SERVICE_DAY_PRICE = 1300
-const THREE_D_EXTRA_FEE = 400
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
@@ -74,13 +65,40 @@ const PAYMENT_METHODS = [
 ]
 
 export function runBooking() {
+  const previousScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : null
+  const initialScrollBehavior = document.documentElement.style.scrollBehavior
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
 
   const stepRoot = document.getElementById('booking-step-root')
   const stepperRoot = document.getElementById('booking-stepper')
   const contextRoot = document.getElementById('booking-context')
 
-  if (!stepRoot || !stepperRoot || !contextRoot) return
+  if (!stepRoot || !stepperRoot || !contextRoot) {
+    if (previousScrollRestoration) history.scrollRestoration = previousScrollRestoration
+    return
+  }
+
+  let disposed = false
+  const timeoutIds = new Set()
+  const animationFrameIds = new Set()
+
+  function scheduleTimeout(callback, delay) {
+    const timeoutId = window.setTimeout(() => {
+      timeoutIds.delete(timeoutId)
+      if (!disposed) callback()
+    }, delay)
+    timeoutIds.add(timeoutId)
+    return timeoutId
+  }
+
+  function scheduleAnimationFrame(callback) {
+    const frameId = window.requestAnimationFrame(() => {
+      animationFrameIds.delete(frameId)
+      if (!disposed) callback()
+    })
+    animationFrameIds.add(frameId)
+    return frameId
+  }
 
   const params = new URLSearchParams(location.search)
   const movie = resolveMovie(params)
@@ -249,7 +267,7 @@ export function runBooking() {
     state.confirmationCopied = true
     render()
     if (state.confirmationCopyTimer) window.clearTimeout(state.confirmationCopyTimer)
-    state.confirmationCopyTimer = window.setTimeout(() => {
+    state.confirmationCopyTimer = scheduleTimeout(() => {
       state.confirmationCopied = false
       state.confirmationCopyTimer = 0
       render()
@@ -407,6 +425,7 @@ export function runBooking() {
   }
 
   function render() {
+    if (disposed) return
     const stepChanged = renderedStep !== state.currentStep
     document.title = `${FLOW_STEPS[state.currentStep].label} | 座席予約 | HAL シネマ`
     if (stepChanged && renderedStep !== null) {
@@ -424,14 +443,14 @@ export function runBooking() {
     stepRoot.classList.remove('is-entering')
     stepRoot.classList.add('is-leaving')
 
-    window.setTimeout(() => {
+    scheduleTimeout(() => {
       renderCurrentView()
       renderedStep = state.currentStep
       resetScrollTop()
       stepRoot.classList.remove('is-leaving')
       stepRoot.classList.add('is-entering')
 
-      window.setTimeout(() => {
+      scheduleTimeout(() => {
         stepRoot.classList.remove('is-entering')
         isStepTransitioning = false
       }, STEP_TRANSITION_IN_MS)
@@ -529,16 +548,16 @@ export function runBooking() {
   }
 
   function scrollToStepTop() {
-    requestAnimationFrame(resetScrollTop)
+    scheduleAnimationFrame(resetScrollTop)
   }
 
   function resetScrollTop() {
     const originalScrollBehavior = document.documentElement.style.scrollBehavior
     document.documentElement.style.scrollBehavior = 'auto'
     setScrollTopImmediate()
-    requestAnimationFrame(() => {
+    scheduleAnimationFrame(() => {
       setScrollTopImmediate()
-      window.setTimeout(() => {
+      scheduleTimeout(() => {
         setScrollTopImmediate()
         document.documentElement.style.scrollBehavior = originalScrollBehavior
       }, 80)
@@ -883,7 +902,7 @@ export function runBooking() {
     if (isCurseServiceDay(state.date)) {
       notices.push({
         title: '呪いのサービスデー',
-        body: '毎月13日は中高生以上の券種が1席1,300円になります。',
+        body: `毎月13日は中高生以上の券種が1席${formatYen(SERVICE_DAY_PRICE)}になります。`,
       })
     }
     if (screenFee) {
@@ -1003,7 +1022,6 @@ export function runBooking() {
     const token = state.memberToken
     clearMemberAuth()
     render()
-    runCommon()
 
     if (!token) return
     try {
@@ -1185,6 +1203,20 @@ export function runBooking() {
       url.searchParams.set('end', state.slot.end)
     }
     history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`)
+  }
+
+  return function cleanupBooking() {
+    disposed = true
+    stepRoot.removeEventListener('click', onClick)
+    stepRoot.removeEventListener('input', onInput)
+    stepRoot.removeEventListener('change', onChange)
+    stepperRoot.removeEventListener('click', onStepperClick)
+    timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId))
+    timeoutIds.clear()
+    animationFrameIds.forEach((frameId) => window.cancelAnimationFrame(frameId))
+    animationFrameIds.clear()
+    document.documentElement.style.scrollBehavior = initialScrollBehavior
+    if (previousScrollRestoration) history.scrollRestoration = previousScrollRestoration
   }
 }
 

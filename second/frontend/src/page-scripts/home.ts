@@ -1,16 +1,28 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, NEWS, formatScreeningStartDate, getMovieStatus } from './data'
+import { MOVIES, NEWS, formatScreeningStartDate, getMovieScreens, getMovieStatus } from './data'
 import { badge } from './common'
 
 export function runHome() {
   const comingSynopsisLimit = 110;
   const homeNewsLimit = 5;
+  const timeoutIds = new Set();
+  const cleanupHandlers = [];
+  let revealObserver = null;
+
+  function scheduleTimeout(callback, delay) {
+    const timeoutId = window.setTimeout(function () {
+      timeoutIds.delete(timeoutId);
+      callback();
+    }, delay);
+    timeoutIds.add(timeoutId);
+    return timeoutId;
+  }
   // const featured = MOVIES.find(m => m.isFeature);
   // const nowShowingIds = [1, 3, 6, 7];
   // const nowShowing = MOVIES.filter(m => nowShowingIds.includes(m.id));
   const nowShowing = MOVIES.filter(movie => getMovieStatus(movie) === "now");
-  const featured = nowShowing[0];
+  const featured = nowShowing[0] || MOVIES[0];
 
   const nowShowingPreview = nowShowing;
   const coming = MOVIES.filter(m => getMovieStatus(m) === 'coming');
@@ -36,9 +48,10 @@ export function runHome() {
   const heroMeta = document.getElementById("hero-meta");
   const heroSynopsis = document.getElementById("hero-synopsis");
   const heroDetailLink = document.getElementById("hero-detail-link");
+  const heroContent = document.querySelector(".hero-content");
   let heroIndex = 0;
   function updateHero(movie) {
-    const heroContent = document.querySelector(".hero-content");
+    if (!movie || !heroContent || !activeBg || !nextBg || !heroTitle || !heroMeta || !heroSynopsis || !heroDetailLink) return;
     heroContent.style.opacity = 0;
     nextBg.style.backgroundImage = `url('${movie.image}')`;
     nextBg.offsetHeight;
@@ -48,7 +61,7 @@ export function runHome() {
     //   nextBg.style.opacity = 1;
     //   activeBg.style.opacity = 0;
     // });
-    setTimeout(() => {
+    scheduleTimeout(() => {
       heroTitle.textContent = movie.title; 
       heroMeta.innerHTML =
         badge(movie.rating, true) +
@@ -61,18 +74,21 @@ export function runHome() {
     }, 1000/2);
     [activeBg, nextBg] = [nextBg, activeBg];
   }
-  heroBgA.style.backgroundImage = `url('${nowShowing[0].image}')`;
-  heroBgA.style.opacity = 1;
-  heroBgB.style.opacity = 0;
-  heroTitle.textContent = nowShowing[0].title;
-  heroMeta.innerHTML =
-  badge(nowShowing[0].rating, true) +
-  badge(nowShowing[0].duration + "分") +
-  badge(nowShowing[0].genre.join(" / ")) +
-  badge("監督：" + nowShowing[0].director);
-  heroSynopsis.textContent = truncateText(nowShowing[0].synopsis, 200);
-  heroDetailLink.href = `detail.html?id=${nowShowing[0].id}`;
-  setInterval(() => {
+  if (featured && heroBgA && heroBgB && heroTitle && heroMeta && heroSynopsis && heroDetailLink) {
+    heroBgA.style.backgroundImage = `url('${featured.image}')`;
+    heroBgA.style.opacity = 1;
+    heroBgB.style.opacity = 0;
+    heroTitle.textContent = featured.title;
+    heroMeta.innerHTML =
+      badge(featured.rating, true) +
+      badge(featured.duration + "分") +
+      badge(featured.genre.join(" / ")) +
+      badge("監督：" + featured.director);
+    heroSynopsis.textContent = truncateText(featured.synopsis, 200);
+    heroDetailLink.href = `detail.html?id=${featured.id}`;
+  }
+  const heroInterval = window.setInterval(() => {
+    if (!nowShowing.length) return;
     heroIndex++;
     if (heroIndex >= nowShowing.length) {
         heroIndex = 0;
@@ -101,7 +117,7 @@ export function runHome() {
         <div class="movie-card-title">${m.title}</div>
         <div class="movie-card-meta">
           <span>${m.duration}分</span>
-          <span>スクリーン ${m.screens.join('・')}</span>
+          <span>${formatScreens(m)}</span>
         </div>
         <div class="movie-card-genres">
           ${m.genre.map(g => `<span class="genre-tag">${g}</span>`).join('')}
@@ -159,9 +175,11 @@ function truncateText(text, maxLength) {
   var bg = document.getElementById('hero-bg');
   if (!bg) return;
   bg.style.transition = 'filter 0.3s';
-  window.addEventListener('scroll', function () {
+  function onScroll() {
     bg.style.transform = 'translateY(' + Math.round(window.pageYOffset * 0.4) + 'px)';
-  }, { passive: true });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  cleanupHandlers.push(function () { window.removeEventListener('scroll', onScroll); });
 }());
 
 // Scroll reveal: fade-in as elements enter viewport
@@ -171,32 +189,51 @@ function truncateText(text, maxLength) {
   fullEls.forEach(function (el) { el.classList.add('js-reveal-full'); });
   fadeEls.forEach(function (el) { el.classList.add('js-reveal-fade'); });
 
-  var observer = new IntersectionObserver(function (entries) {
+  revealObserver = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (!entry.isIntersecting) return;
       var siblings = Array.from(entry.target.parentNode.children);
       var delay = (siblings.indexOf(entry.target) % 4) * 80;
-      setTimeout(function () { entry.target.classList.add('is-visible'); }, delay);
-      observer.unobserve(entry.target);
+      scheduleTimeout(function () { entry.target.classList.add('is-visible'); }, delay);
+      revealObserver.unobserve(entry.target);
     });
   }, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
 
-  fullEls.forEach(function (el) { observer.observe(el); });
-  fadeEls.forEach(function (el) { observer.observe(el); });
+  fullEls.forEach(function (el) { revealObserver.observe(el); });
+  fadeEls.forEach(function (el) { revealObserver.observe(el); });
 }());
 
 // 3D tilt: movie cards rotate toward cursor
 (function () {
   document.querySelectorAll('.movie-card').forEach(function (card) {
-    card.addEventListener('mousemove', function (e) {
+    function onMouseMove(e) {
       var r = card.getBoundingClientRect();
       var x = (e.clientX - r.left) / r.width - 0.5;
       var y = (e.clientY - r.top) / r.height - 0.5;
       card.style.transform = 'translateY(-4px) perspective(800px) rotateX(' + (-y * 8).toFixed(2) + 'deg) rotateY(' + (x * 8).toFixed(2) + 'deg)';
-    });
-    card.addEventListener('mouseleave', function () {
+    }
+    function onMouseLeave() {
       card.style.transform = '';
+    }
+    card.addEventListener('mousemove', onMouseMove);
+    card.addEventListener('mouseleave', onMouseLeave);
+    cleanupHandlers.push(function () {
+      card.removeEventListener('mousemove', onMouseMove);
+      card.removeEventListener('mouseleave', onMouseLeave);
     });
   });
 }());
+
+return function cleanupHome() {
+  window.clearInterval(heroInterval);
+  timeoutIds.forEach(function (timeoutId) { window.clearTimeout(timeoutId); });
+  timeoutIds.clear();
+  revealObserver?.disconnect();
+  cleanupHandlers.forEach(function (cleanup) { cleanup(); });
+};
+}
+
+function formatScreens(movie) {
+  const screens = getMovieScreens(movie);
+  return screens.length ? `スクリーン ${screens.join('・')}` : '上映情報準備中';
 }

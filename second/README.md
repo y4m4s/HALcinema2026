@@ -38,21 +38,14 @@ go run ./cmd/dbinit
 
 ## 開発
 
-バックエンドは `second/backend` から起動します。
-
-```powershell
-cd second/backend
-go run ./cmd/server
-```
-
-別のターミナルで、フロントエンドを `second/frontend` から起動します。
+フロントエンドの開発コマンドから、Gin バックエンドも同時に起動します。
 
 ```powershell
 cd second/frontend
 npm.cmd run dev
 ```
 
-フロントエンドは `http://localhost:5173` で起動します。`/api` へのリクエストは `http://localhost:8080` の Gin サーバーへプロキシされます。
+フロントエンドは `http://localhost:5173`、バックエンドは `http://localhost:8080` で起動します。`Ctrl+C` で両方を停止できます。`/api` へのリクエストは Gin サーバーへプロキシされます。
 
 主なページは、React のルートとして次の URL から確認できます。
 
