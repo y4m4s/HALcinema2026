@@ -3,9 +3,9 @@ import { formatTicketPrice, SERVICE_DAY_PRICE, TICKET_PRICE_GUIDE } from '../dat
 
 const ticketPriceRows = TICKET_PRICE_GUIDE.map((item) => `
           <tr>
-            <td>${item.category}</td>
-            <td><div class="ticket-price">${formatTicketPrice(item.price, item.prefix)}</div></td>
-            <td><div class="ticket-note">${item.note || '—'}</div></td>
+            <th class="ticket-category" scope="row">${item.category}</th>
+            <td class="ticket-price-cell" data-label="料金"><div class="ticket-price">${formatTicketPrice(item.price, item.prefix)}</div></td>
+            <td class="ticket-note-cell" data-label="備考"><div class="ticket-note">${item.note || '—'}</div></td>
           </tr>`).join('')
 const serviceDayPrice = formatTicketPrice(SERVICE_DAY_PRICE)
 
