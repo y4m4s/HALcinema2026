@@ -49,7 +49,6 @@ const INPUT_LIMITS = {
   password: 128,
 }
 
-const SEAT_AISLE_WIDTH = 28
 const SCREEN_SEAT_LAYOUTS = {
   // colBlocks: 縦通路で区切る左右ブロックの座席数（合計=columns）
   // rowBlocks: 横通路で区切る前後ブロックの行数（合計=rows）
@@ -490,6 +489,7 @@ export function runBooking() {
     }
 
     if (id === 'seat') {
+      const seatScrollLeft = stepRoot.querySelector('.seat-map')?.scrollLeft ?? 0
       stepRoot.innerHTML = SeatStep({
         ...shared,
         screens: SCREENS,
@@ -497,6 +497,10 @@ export function runBooking() {
         ticketUnits: getTicketSeatUnits(),
         seatMapHtml: renderSeatMap(),
       })
+      if (seatScrollLeft > 0) {
+        const seatMap = stepRoot.querySelector('.seat-map')
+        if (seatMap) seatMap.scrollLeft = seatScrollLeft
+      }
       return
     }
 
@@ -592,9 +596,9 @@ export function runBooking() {
       }).join('')).join('<i class="seat-aisle" aria-hidden="true"></i>')
       const rowClass = aisleRowIndices.has(rowIndex) ? 'seat-row seat-row--aisle-after' : 'seat-row'
       return `
-        <div class="${rowClass}" style="--seat-grid-min: ${layout.gridMinWidth}px;">
+        <div class="${rowClass}" style="--seat-cols: ${layout.columns}; --seat-col-aisles: ${layout.colAisles};">
           <span class="seat-row-label">${escapeHtml(row.label)}</span>
-          <div class="seat-row-grid" style="--seat-grid-min: ${layout.gridMinWidth}px; grid-template-columns: ${gridTemplate};">${blockHtml}</div>
+          <div class="seat-row-grid" style="grid-template-columns: ${gridTemplate};">${blockHtml}</div>
           <span class="seat-row-label">${escapeHtml(row.label)}</span>
         </div>`
     }).join('')
@@ -1177,13 +1181,12 @@ export function runBooking() {
     const preset = SCREEN_SEAT_LAYOUTS[seatCount] || createSeatLayoutByCapacity(seatCount)
     const colBlocks = preset.colBlocks && preset.colBlocks.length ? preset.colBlocks : [preset.columns]
     const rowBlocks = preset.rowBlocks && preset.rowBlocks.length ? preset.rowBlocks : [preset.rows]
-    const colAisles = colBlocks.length - 1
     return {
       ...preset,
       seatCount,
       colBlocks,
       rowBlocks,
-      gridMinWidth: preset.columns * 30 + colAisles * SEAT_AISLE_WIDTH,
+      colAisles: colBlocks.length - 1,
     }
   }
 
@@ -1365,7 +1368,7 @@ function splitSeatsIntoBlocks(seats, colBlocks) {
 // 列ブロックを縦通路トラックで連結した grid-template-columns 文字列を組み立てる
 function buildSeatGridTemplate(colBlocks) {
   return colBlocks
-    .map(count => `repeat(${count}, minmax(30px, 1fr))`)
+    .map(count => `repeat(${count}, minmax(var(--seat-size, 30px), 1fr))`)
     .join(' var(--seat-aisle, 28px) ')
 }
 
