@@ -5,12 +5,12 @@ import { BookingContext } from '../components/bokking/BookingContext'
 import { BookingStepper } from '../components/bokking/BookingStepper'
 import { CompleteStep } from '../components/bokking/CompleteStep'
 import { CustomerStep } from '../components/bokking/CustomerStep'
-import { PaymentStep } from '../components/bokking/PaymentStep'
+import { PaymentStep, renderPaymentTotals } from '../components/bokking/PaymentStep'
 import { ReviewStep } from '../components/bokking/ReviewStep'
 import { SeatStep } from '../components/bokking/SeatStep'
 import { TermsStep } from '../components/bokking/TermsStep'
 import { TicketsStep } from '../components/bokking/TicketsStep'
-import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
+import { escapeAttr, escapeHtml, formatCardNumber, formatYen } from '../components/bokking/utils'
 import { SERVICE_DAY_PRICE, THREE_D_EXTRA_FEE, TICKET_TYPES } from '../data/pricing'
 
 import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
@@ -36,6 +36,14 @@ const FLOW_STEPS = [
 ]
 
 const MAX_SEATS_PER_ORDER = 6
+const CARD_EXPIRY_MAX_YEARS = 20
+const CARD_NUMBER_LENGTH = 16
+const CARD_CVC_LENGTH = 3
+const CARD_BRANDS = [
+  { label: 'VISA', pattern: /^4/ },
+  { label: 'Mastercard', pattern: /^(5[1-5]|2[2-7])/ },
+  { label: 'JCB', pattern: /^35/ },
+]
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
@@ -48,7 +56,7 @@ const INPUT_LIMITS = {
   loginIdentifier: 254,
   password: 128,
   cardNumber: 16,
-  cardCvc: 4,
+  cardCvc: 3,
   cardHolder: 40,
 }
 
@@ -147,6 +155,7 @@ export function runBooking() {
     couponApplying: false,
     payment: 'credit',
     paymentDetails: createPaymentDetailsState(),
+    paymentErrors: {},
     confirmationNo: '',
     confirmationCopied: false,
     confirmationCopyTimer: 0,
@@ -164,11 +173,25 @@ export function runBooking() {
   stepRoot.addEventListener('click', onClick)
   stepRoot.addEventListener('input', onInput)
   stepRoot.addEventListener('change', onChange)
+  stepRoot.addEventListener('focusout', onFocusOut)
   stepperRoot.addEventListener('click', onStepperClick)
+
+  const reachableStep = getReachableStep()
+  if (state.currentStep > reachableStep) {
+    state.currentStep = reachableStep
+    state.maxStep = reachableStep
+  }
 
   render()
   if (savedMemberSession?.token) {
     void refreshMemberSession()
+  }
+
+  function getReachableStep() {
+    const lastSelectable = getStepIndex('review')
+    let index = 0
+    while (index < lastSelectable && canProceedFrom(index)) index += 1
+    return index
   }
 
   function onClick(event) {
@@ -215,6 +238,7 @@ export function runBooking() {
     const paymentChoice = target.closest('[data-payment-choice]')
     if (paymentChoice) {
       state.payment = paymentChoice.dataset.paymentChoice
+      state.paymentErrors = {}
       state.maxStep = state.currentStep
       render()
       return
@@ -378,8 +402,14 @@ export function runBooking() {
     if (paymentField) {
       const fieldName = paymentField.dataset.paymentField
       const nextValue = normalizePaymentInput(fieldName, paymentField.value)
-      if (paymentField.value !== nextValue) paymentField.value = nextValue
+      const displayValue = fieldName === 'cardNumber' ? formatCardNumber(nextValue) : nextValue
+      if (paymentField.value !== displayValue) paymentField.value = displayValue
       state.paymentDetails[fieldName] = nextValue
+      state.paymentErrors[fieldName] = ''
+      if (fieldName === 'cardNumber') {
+        const brandLabel = stepRoot.querySelector('[data-payment-brand]')
+        if (brandLabel) brandLabel.textContent = getCardBrand(nextValue)
+      }
       state.maxStep = state.currentStep
       renderStepper()
       syncCurrentStepAction()
@@ -392,11 +422,14 @@ export function runBooking() {
       const nextValue = normalizeCouponInput(couponInput.value)
       if (couponInput.value !== nextValue) couponInput.value = nextValue
       state.couponInput = nextValue
+      const hadCoupon = Boolean(state.couponCode)
       if (state.couponCode && state.couponCode !== nextValue) {
         state.couponCode = ''
         state.coupon = null
       }
       state.couponError = ''
+      stepRoot.querySelector('.coupon-error')?.remove()
+      if (hadCoupon && !state.couponCode) syncDiscardedCoupon()
     }
   }
 
@@ -425,6 +458,15 @@ export function runBooking() {
     if (mail) {
       state.mailMagazine = Boolean(mail.checked)
     }
+  }
+
+  function onFocusOut(event) {
+    const target = event.target instanceof Element ? event.target : null
+    const paymentField = target?.closest('[data-payment-field]')
+    if (!paymentField) return
+    const fieldName = paymentField.dataset.paymentField
+    state.paymentErrors[fieldName] = validatePaymentField(fieldName, state.paymentDetails[fieldName])
+    syncPaymentErrors()
   }
 
   function onStepperClick(event) {
@@ -578,6 +620,7 @@ export function runBooking() {
         paymentMethods: PAYMENT_METHODS,
         qrProviders: QR_PROVIDERS,
         konbiniStores: KONBINI_STORES,
+        cardBrand: getCardBrand(state.paymentDetails.cardNumber),
         errors: getPaymentErrors(),
         totals: getTotals(),
         coupon: getAppliedCoupon(),
@@ -706,7 +749,11 @@ export function runBooking() {
   }
 
   function canProceed() {
-    const id = FLOW_STEPS[state.currentStep].id
+    return canProceedFrom(state.currentStep)
+  }
+
+  function canProceedFrom(stepIndex) {
+    const id = FLOW_STEPS[stepIndex].id
     if (id === 'tickets') return getTicketSeatUnits() > 0 && getTicketSeatUnits() <= MAX_SEATS_PER_ORDER
     if (id === 'seat') return Boolean(state.slot && state.screen && state.selectedSeats.length === getTicketSeatUnits() && getTicketSeatUnits() > 0)
     if (id === 'terms') return state.agreed
@@ -718,8 +765,8 @@ export function runBooking() {
   }
 
   function isCustomerValid() {
-    const name = state.customer.name.trim() || `${state.customer.lastName} ${state.customer.firstName}`.trim()
-    const kana = state.customer.nameKana.trim() || state.customer.kana.trim()
+    const name = state.customer.name.trim()
+    const kana = state.customer.nameKana.trim()
     const phone = getPhoneNumber()
     const email = state.customer.email.trim()
     const emailConfirm = state.customer.emailConfirm.trim()
@@ -754,15 +801,31 @@ export function runBooking() {
   }
 
   function getPaymentErrors() {
-    const errors = {}
-    if (state.payment !== 'credit') return errors
+    if (state.payment !== 'credit') return {}
+    return state.paymentErrors
+  }
 
-    const d = state.paymentDetails
-    if (d.cardNumber && !isValidCardNumber(d.cardNumber)) errors.cardNumber = 'カード番号が正しくありません。'
-    if (d.cardExpiry && !isValidCardExpiry(d.cardExpiry)) errors.cardExpiry = '有効期限が正しくありません。'
-    if (d.cardCvc && !/^[0-9]{3,4}$/.test(d.cardCvc)) errors.cardCvc = '3〜4桁の数字で入力してください。'
-    if (d.cardHolder && !isValidCardHolder(d.cardHolder)) errors.cardHolder = '半角英字とスペースで入力してください。'
-    return errors
+  function validatePaymentField(field, value) {
+    if (field === 'cardNumber') {
+      if (!value) return ''
+      if (value.length < CARD_NUMBER_LENGTH) return `カード番号を${CARD_NUMBER_LENGTH}桁で入力してください。`
+      if (!getCardBrand(value)) return 'VISA・Mastercard・JCB のいずれかをご利用ください。'
+      return isLuhnValid(value) ? '' : 'カード番号が正しくありません。'
+    }
+    if (field === 'cardExpiry') {
+      if (!value) return ''
+      if (value.length < 5) return '有効期限を MM/YY の形式で入力してください。'
+      return isValidCardExpiry(value) ? '' : '有効期限が正しくありません。'
+    }
+    if (field === 'cardCvc') {
+      if (!value) return ''
+      return value.length === CARD_CVC_LENGTH ? '' : `セキュリティコードを${CARD_CVC_LENGTH}桁で入力してください。`
+    }
+    if (field === 'cardHolder') {
+      if (!value.trim()) return ''
+      return isValidCardHolder(value) ? '' : 'カードに記載のとおり半角英字で入力してください。'
+    }
+    return ''
   }
 
   function isPaymentValid() {
@@ -773,7 +836,7 @@ export function runBooking() {
     if (state.payment === 'credit') {
       return isValidCardNumber(d.cardNumber)
         && isValidCardExpiry(d.cardExpiry)
-        && /^[0-9]{3,4}$/.test(d.cardCvc)
+        && d.cardCvc.length === CARD_CVC_LENGTH
         && isValidCardHolder(d.cardHolder)
     }
     return false
@@ -863,6 +926,7 @@ export function runBooking() {
           state.selectedSeats = nextSeats
           state.agreed = false
           state.maxStep = Math.min(state.maxStep, getStepIndex('seat'))
+          state.currentStep = Math.min(state.currentStep, state.maxStep)
         }
       }
     } catch {
@@ -893,11 +957,10 @@ export function runBooking() {
         tickets: state.tickets,
         couponCode: state.couponCode,
         paymentMethod: state.payment,
-        // カード番号とセキュリティコードは送らない
         paymentSummary: getPaymentSummary(),
         customer: {
           name: getCustomerName(),
-          nameKana: state.customer.nameKana || state.customer.kana,
+          nameKana: state.customer.nameKana,
           email: state.customer.email,
           tel: getPhoneNumber(),
         },
@@ -1017,7 +1080,7 @@ export function runBooking() {
   }
 
   function getCustomerName() {
-    return state.customer.name.trim() || `${state.customer.lastName} ${state.customer.firstName}`.trim()
+    return state.customer.name.trim()
   }
 
   function getPhoneNumber() {
@@ -1026,9 +1089,6 @@ export function runBooking() {
 
   function syncCustomerDerivedValues() {
     state.customer.tel = getPhoneNumber()
-    state.customer.lastName = state.customer.name
-    state.customer.firstName = ''
-    state.customer.kana = state.customer.nameKana
   }
 
   function syncCurrentStepAction() {
@@ -1042,6 +1102,13 @@ export function runBooking() {
       const field = el.dataset.customerError
       el.textContent = errors[field] || ''
     })
+  }
+
+  function syncDiscardedCoupon() {
+    stepRoot.querySelector('.coupon-success')?.remove()
+    stepRoot.querySelector('[data-action="remove-coupon"]')?.remove()
+    const totalLine = stepRoot.querySelector('.ticket-total-line')
+    if (totalLine) totalLine.innerHTML = renderPaymentTotals(getTotals())
   }
 
   function syncPaymentErrors() {
@@ -1197,9 +1264,6 @@ export function runBooking() {
       ...state.customer,
       name: member.name || '',
       nameKana: member.nameKana || '',
-      lastName: member.name || '',
-      firstName: '',
-      kana: member.nameKana || '',
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
@@ -1357,9 +1421,6 @@ function createCustomerState(member = null) {
   return {
     name: member?.name || '',
     nameKana: member?.nameKana || '',
-    lastName: member?.name || '',
-    firstName: '',
-    kana: member?.nameKana || '',
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
@@ -1532,7 +1593,10 @@ function normalizeCardExpiry(value) {
 }
 
 function isValidCardNumber(digits) {
-  if (!/^[0-9]{14,16}$/.test(digits)) return false
+  return digits.length === CARD_NUMBER_LENGTH && Boolean(getCardBrand(digits)) && isLuhnValid(digits)
+}
+
+function isLuhnValid(digits) {
   let sum = 0
   let double = false
   for (let index = digits.length - 1; index >= 0; index -= 1) {
@@ -1553,19 +1617,17 @@ function isValidCardExpiry(value) {
   const month = Number(match[1])
   if (month < 1 || month > 12) return false
   const now = new Date()
-  return new Date(2000 + Number(match[2]), month, 1) > now
+  const expiresAt = new Date(2000 + Number(match[2]), month, 1)
+  if (expiresAt <= now) return false
+  return expiresAt <= new Date(now.getFullYear() + CARD_EXPIRY_MAX_YEARS, now.getMonth(), 1)
 }
 
 function isValidCardHolder(value) {
-  return /^[A-Z][A-Z ]*$/.test(value.trim())
+  return /^[A-Z][A-Z' -]*[A-Z]$/.test(value.trim())
 }
 
 function getCardBrand(digits) {
-  if (/^4/.test(digits)) return 'VISA'
-  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard'
-  if (/^3[47]/.test(digits)) return 'AMEX'
-  if (/^35/.test(digits)) return 'JCB'
-  return 'CARD'
+  return CARD_BRANDS.find(brand => brand.pattern.test(digits))?.label || ''
 }
 
 function normalizeLoginInput(field, value) {

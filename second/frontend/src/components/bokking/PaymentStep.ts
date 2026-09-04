@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { escapeAttr, escapeHtml, formatYen, renderStepNav } from './utils'
+import { escapeAttr, escapeHtml, formatCardNumber, formatYen, renderStepNav } from './utils'
 
 export function PaymentStep({
   state,
@@ -8,6 +8,7 @@ export function PaymentStep({
   paymentMethods,
   qrProviders,
   konbiniStores,
+  cardBrand = '',
   errors = {},
   totals,
   coupon,
@@ -29,7 +30,7 @@ export function PaymentStep({
       </div>
       <div class="booking-step-body">
         <div class="payment-grid">${methods}</div>
-        ${renderPaymentDetail({ state, qrProviders, konbiniStores, errors, totals })}
+        ${renderPaymentDetail({ state, qrProviders, konbiniStores, cardBrand, errors, totals })}
         <div class="coupon-box">
           <label>
             <span>クーポンコード</span>
@@ -42,20 +43,24 @@ export function PaymentStep({
           ${coupon ? `<p class="coupon-success">${escapeHtml(coupon.label)}: ${escapeHtml(coupon.description)}</p>` : ''}
           ${state.couponError ? `<p class="coupon-error">${escapeHtml(state.couponError)}</p>` : ''}
         </div>
-        <div class="ticket-total-line">
-          <span>券種 ${formatYen(totals.ticketSubtotal)}</span>
-          ${totals.surcharge ? `<span>追加料金 ${formatYen(totals.surcharge)}</span>` : ''}
-          <span>割引 -${formatYen(totals.discount)}</span>
-          <strong>合計 ${formatYen(totals.total)}</strong>
-        </div>
+        <div class="ticket-total-line">${renderPaymentTotals(totals)}</div>
         ${renderStepNav({ isFirstStep, canProceed, nextLabel: '購入確認へ' })}
       </div>
     </section>
   `
 }
 
-function renderPaymentDetail({ state, qrProviders, konbiniStores, errors, totals }) {
-  if (state.payment === 'credit') return renderCardForm({ state, errors })
+export function renderPaymentTotals(totals) {
+  return `
+    <span>券種 ${formatYen(totals.ticketSubtotal)}</span>
+    ${totals.surcharge ? `<span>追加料金 ${formatYen(totals.surcharge)}</span>` : ''}
+    <span>割引 -${formatYen(totals.discount)}</span>
+    <strong>合計 ${formatYen(totals.total)}</strong>
+  `
+}
+
+function renderPaymentDetail({ state, qrProviders, konbiniStores, cardBrand, errors, totals }) {
+  if (state.payment === 'credit') return renderCardForm({ state, cardBrand, errors })
   if (state.payment === 'qr') {
     return renderOptionPicker({
       title: '決済サービスを選択',
@@ -77,7 +82,7 @@ function renderPaymentDetail({ state, qrProviders, konbiniStores, errors, totals
   return ''
 }
 
-function renderCardForm({ state, errors }) {
+function renderCardForm({ state, cardBrand, errors }) {
   const d = state.paymentDetails
   return `
     <div class="payment-detail">
@@ -89,11 +94,12 @@ function renderCardForm({ state, errors }) {
         ${renderPaymentField({
           label: 'カード番号',
           field: 'cardNumber',
-          value: d.cardNumber,
-          placeholder: '4111111111111111',
-          maxlength: 16,
+          value: formatCardNumber(d.cardNumber),
+          placeholder: '4111 1111 1111 1111',
+          maxlength: 19,
           inputmode: 'numeric',
           error: errors.cardNumber,
+          brand: cardBrand,
           wide: true,
         })}
         ${renderPaymentField({
@@ -110,7 +116,7 @@ function renderCardForm({ state, errors }) {
           field: 'cardCvc',
           value: d.cardCvc,
           placeholder: '123',
-          maxlength: 4,
+          maxlength: 3,
           inputmode: 'numeric',
           error: errors.cardCvc,
         })}
@@ -129,10 +135,8 @@ function renderCardForm({ state, errors }) {
   `
 }
 
-function renderPaymentField({ label, field, value, placeholder, maxlength, inputmode, error, wide }) {
-  return `
-    <label class="payment-field${wide ? ' payment-field-wide' : ''}">
-      <span>${escapeHtml(label)}</span>
+function renderPaymentField({ label, field, value, placeholder, maxlength, inputmode, error, wide, brand }) {
+  const input = `
       <input
         type="text"
         value="${escapeAttr(value)}"
@@ -141,7 +145,18 @@ function renderPaymentField({ label, field, value, placeholder, maxlength, input
         maxlength="${escapeAttr(maxlength)}"
         inputmode="${escapeAttr(inputmode)}"
         autocomplete="off"
-        spellcheck="false">
+        spellcheck="false">`
+
+  const control = brand === undefined
+    ? input
+    : `<span class="payment-field-input">${input}
+        <span class="payment-field-brand" data-payment-brand>${escapeHtml(brand)}</span>
+      </span>`
+
+  return `
+    <label class="payment-field${wide ? ' payment-field-wide' : ''}">
+      <span>${escapeHtml(label)}</span>
+      ${control}
       <p class="payment-field-error" data-payment-error="${escapeAttr(field)}">${error ? escapeHtml(error) : ''}</p>
     </label>
   `
