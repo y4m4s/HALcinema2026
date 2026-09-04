@@ -1025,3 +1025,22 @@ body.modal-open {
   .equipment-grid { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
 }
+/* スマートフォン */
+@media (max-width: 400px){
+  .theater-hero { padding: 1.5rem 1rem 0; } 
+  .theater-title-row { gap: 0.8rem; } 
+  .theater-hero-status { gap: 0.5rem; } 
+  .screens-section { padding: 2.5rem 1rem; } 
+  .about-section { padding: 3.5rem 1rem; } 
+  .about-stats { gap: 0.4rem; margin-top: 1.5rem; } 
+  .about-stat-num { font-size: 1.2rem; } 
+  .lab-section, 
+  .equipment-section, 
+  .facilities-section, 
+  .info-section { padding: 3rem 1rem; } 
+  .lab-feature { gap: 1.5rem; } 
+  .equipment-grid, 
+  .facilities-grid, 
+  .info-grid { gap: 0.8rem; }
+  .catch-copy { white-space: nowrap; font-size: 0.9em; }
+}

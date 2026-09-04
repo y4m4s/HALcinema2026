@@ -609,7 +609,7 @@ export const theaterPage: PageDefinition = {
       <div class="about-grid">
         <div class="about-text">
           <!-- <div class="section-eyebrow">About the Cinema</div> -->
-          <h2>「日常を、恐怖が侵食する。」<br>J-ホラー シアター <span class="accent">”境界„</span></h2>
+          <h2><span class="catch-copy">「日常を、恐怖が侵食する。」</span><br>J-ホラー シアター <span class="accent">”境界„</span></h2>
           <p class="lead">
             そこは、単に映画を鑑賞する場所ではない。現実と虚構、生者と死者の「境界」が曖昧になる場所。世界を震撼させたJホラー特有の「静寂」「湿り気」「視線の気配」を五感すべてに憑依させ、観客の意識を日常の境界の外へと連れ去る、日本初の没入型ホラー専門シアター。
           </p>
