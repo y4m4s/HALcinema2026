@@ -364,6 +364,8 @@
 
 .seat-map {
   --seat-aisle: 28px;
+  --seat-size: 30px;
+  --seat-gap: 6px;
   display: grid;
   gap: 8px;
   overflow-x: auto;
@@ -372,8 +374,13 @@
 }
 
 .seat-row {
+  --seat-grid-min: calc(
+    var(--seat-cols, 20) * var(--seat-size, 30px) +
+    var(--seat-col-aisles, 0) * var(--seat-aisle, 28px) +
+    (var(--seat-cols, 20) + var(--seat-col-aisles, 0) - 1) * var(--seat-gap, 6px)
+  );
   display: grid;
-  grid-template-columns: 24px minmax(var(--seat-grid-min, 520px), 1fr) 24px;
+  grid-template-columns: 24px minmax(var(--seat-grid-min), 1fr) 24px;
   gap: 10px;
   align-items: center;
 }
@@ -392,8 +399,8 @@
 
 .seat-row-grid {
   display: grid;
-  gap: 6px;
-  min-width: var(--seat-grid-min, 520px);
+  gap: var(--seat-gap, 6px);
+  min-width: var(--seat-grid-min);
 }
 
 /* 縦通路: 左右ブロックの間を空けるスペーサー（座席ではない） */
@@ -1982,5 +1989,223 @@
   .booking-nav-row .btn-primary,
   .booking-nav-row .btn-ghost {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .booking-page {
+    padding: calc(var(--nav-h) + 2rem) 16px 56px;
+  }
+
+  .booking-hero {
+    margin-bottom: 22px;
+  }
+
+  .booking-context {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .booking-context-poster img,
+  .booking-context-poster-ph {
+    min-height: 112px;
+  }
+
+  .booking-context-heading {
+    padding: 14px;
+  }
+
+  .booking-context-title {
+    font-size: 19px;
+    margin-bottom: 10px;
+  }
+
+  .booking-context-meta {
+    margin: 0 14px 14px;
+  }
+
+  .booking-stepper {
+    grid-template-columns: repeat(7, 108px);
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+
+  .booking-step {
+    min-width: 108px;
+    min-height: 62px;
+    padding: 8px 10px;
+    scroll-snap-align: start;
+  }
+
+  .booking-step-en {
+    display: none;
+  }
+
+  .booking-step-panel {
+    padding: 18px 14px;
+  }
+
+  .booking-panel-head {
+    margin-bottom: 18px;
+  }
+
+  .booking-panel-head h2 {
+    font-size: 19px;
+  }
+
+  .seat-map {
+    --seat-size: 28px;
+    --seat-aisle: 16px;
+    --seat-gap: 4px;
+    overscroll-behavior-x: contain;
+  }
+
+  .seat-button {
+    height: 30px;
+  }
+
+  .seat-row {
+    gap: 8px;
+  }
+
+  .seat-stage {
+    width: min(560px, 96%);
+  }
+
+  .seat-screen-info {
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .seat-legend {
+    gap: 10px 14px;
+    font-size: 11px;
+  }
+
+  .ticket-option {
+    padding: 14px;
+  }
+
+  .ticket-pricing-notes div {
+    padding: 12px 14px;
+  }
+
+  .coupon-box {
+    padding: 14px;
+  }
+
+  .account-promo {
+    padding: 20px;
+  }
+
+  .account-promo strong {
+    font-size: 22px;
+  }
+
+  .review-tickets div {
+    font-size: 12px;
+  }
+
+  .complete {
+    min-height: 420px;
+  }
+
+  .complete h2 {
+    font-size: 24px;
+  }
+
+  .complete-number strong {
+    font-size: 19px;
+  }
+
+  .complete-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .complete-actions .btn-primary,
+  .complete-actions .btn-ghost {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .booking-page {
+    padding: calc(var(--nav-h) + 1.5rem) 12px 48px;
+  }
+
+  .booking-context {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .booking-context-poster img,
+  .booking-context-poster-ph {
+    min-height: 96px;
+  }
+
+  .booking-context-title {
+    font-size: 18px;
+  }
+
+  .booking-stepper {
+    grid-template-columns: repeat(7, 92px);
+  }
+
+  .booking-step {
+    min-width: 92px;
+    min-height: 56px;
+    padding: 8px;
+  }
+
+  .booking-step-label {
+    font-size: 11px;
+  }
+
+  .booking-step-panel {
+    padding: 16px 12px;
+  }
+
+  .booking-panel-head h2 {
+    font-size: 18px;
+  }
+
+  .seat-map {
+    --seat-size: 26px;
+    --seat-aisle: 12px;
+    --seat-gap: 3px;
+  }
+
+  .seat-button {
+    height: 28px;
+    font-size: 9px;
+  }
+
+  .seat-row-grid {
+    gap: 5px;
+  }
+
+  .seat-legend {
+    gap: 8px 12px;
+    font-size: 10px;
+  }
+
+  .ticket-option-controls {
+    grid-template-columns: 32px 34px 32px;
+  }
+
+  .terms-summary-table dt,
+  .terms-summary-table dd {
+    padding: 10px;
+  }
+
+  .complete h2 {
+    font-size: 21px;
+  }
+
+  .complete-number {
+    padding: 14px;
+  }
+
+  .complete-number strong {
+    font-size: 17px;
   }
 }
