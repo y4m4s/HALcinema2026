@@ -151,6 +151,17 @@
     padding: 16px 18px;
     background: linear-gradient(135deg, rgba(21, 40, 64, 0.96), rgba(12, 26, 49, 0.94));
     border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .ticket-table tr:hover {
+    background: linear-gradient(135deg, rgba(30, 57, 90, 0.98), rgba(18, 39, 70, 0.96));
+    border-color: var(--border2);
+  }
+
+  .ticket-table tr:hover td,
+  .ticket-table tr:hover th {
+    background: transparent;
   }
 
   .ticket-table td,
