@@ -47,6 +47,9 @@ const INPUT_LIMITS = {
   coupon: 20,
   loginIdentifier: 254,
   password: 128,
+  cardNumber: 16,
+  cardCvc: 4,
+  cardHolder: 40,
 }
 
 const SCREEN_SEAT_LAYOUTS = {
@@ -58,9 +61,23 @@ const SCREEN_SEAT_LAYOUTS = {
 }
 
 const PAYMENT_METHODS = [
-  { id: 'credit', label: 'クレジットカード', note: '購入完了後、予約番号を発行します。' },
-  { id: 'qr', label: 'QR決済', note: '外部決済画面へ進む想定のデモです。' },
-  { id: 'konbini', label: 'コンビニ払い', note: '支払期限まで座席を仮押さえします。' },
+  { id: 'credit', label: 'クレジットカード', note: 'カード情報を入力してください。' },
+  { id: 'qr', label: 'QR決済', note: '利用する決済サービスを選択してください。' },
+  { id: 'konbini', label: 'コンビニ払い', note: '支払うコンビニを選択してください。' },
+]
+
+const QR_PROVIDERS = [
+  { id: 'paypay', label: 'PayPay' },
+  { id: 'dbarai', label: 'd払い' },
+  { id: 'aupay', label: 'au PAY' },
+  { id: 'rakutenpay', label: '楽天ペイ' },
+]
+
+const KONBINI_STORES = [
+  { id: 'seven', label: 'セブン-イレブン' },
+  { id: 'lawson', label: 'ローソン' },
+  { id: 'familymart', label: 'ファミリーマート' },
+  { id: 'ministop', label: 'ミニストップ' },
 ]
 
 export function runBooking() {
@@ -129,6 +146,7 @@ export function runBooking() {
     couponError: '',
     couponApplying: false,
     payment: 'credit',
+    paymentDetails: createPaymentDetailsState(),
     confirmationNo: '',
     confirmationCopied: false,
     confirmationCopyTimer: 0,
@@ -171,6 +189,7 @@ export function runBooking() {
       state.account = accountChoice.dataset.accountChoice
       state.login.error = ''
       state.join.error = ''
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -196,6 +215,17 @@ export function runBooking() {
     const paymentChoice = target.closest('[data-payment-choice]')
     if (paymentChoice) {
       state.payment = paymentChoice.dataset.paymentChoice
+      state.maxStep = state.currentStep
+      render()
+      return
+    }
+
+    const paymentOption = target.closest('[data-payment-option]')
+    if (paymentOption) {
+      const field = paymentOption.dataset.paymentOption
+      const value = paymentOption.dataset.paymentOptionValue || ''
+      state.paymentDetails[field] = state.paymentDetails[field] === value ? '' : value
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -314,7 +344,9 @@ export function runBooking() {
       const nextValue = normalizeCustomerInput(fieldName, field.value)
       if (field.value !== nextValue) field.value = nextValue
       state.customer[fieldName] = nextValue
+      state.maxStep = state.currentStep
       syncCustomerDerivedValues()
+      renderStepper()
       syncCurrentStepAction()
       syncCustomerErrors()
       return
@@ -342,6 +374,19 @@ export function runBooking() {
       return
     }
 
+    const paymentField = target.closest('[data-payment-field]')
+    if (paymentField) {
+      const fieldName = paymentField.dataset.paymentField
+      const nextValue = normalizePaymentInput(fieldName, paymentField.value)
+      if (paymentField.value !== nextValue) paymentField.value = nextValue
+      state.paymentDetails[fieldName] = nextValue
+      state.maxStep = state.currentStep
+      renderStepper()
+      syncCurrentStepAction()
+      syncPaymentErrors()
+      return
+    }
+
     const couponInput = target.closest('[data-coupon-input]')
     if (couponInput) {
       const nextValue = normalizeCouponInput(couponInput.value)
@@ -363,6 +408,7 @@ export function runBooking() {
     const terms = target.closest('[data-terms-check]')
     if (terms) {
       state.agreed = Boolean(terms.checked)
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -530,6 +576,9 @@ export function runBooking() {
       stepRoot.innerHTML = PaymentStep({
         ...shared,
         paymentMethods: PAYMENT_METHODS,
+        qrProviders: QR_PROVIDERS,
+        konbiniStores: KONBINI_STORES,
+        errors: getPaymentErrors(),
         totals: getTotals(),
         coupon: getAppliedCoupon(),
       })
@@ -541,6 +590,7 @@ export function runBooking() {
         ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
         payment: getPayment(),
+        paymentSummary: getPaymentSummary(),
         customerName: getCustomerName(),
         phoneNumber: getPhoneNumber(),
       })
@@ -662,7 +712,7 @@ export function runBooking() {
     if (id === 'terms') return state.agreed
     if (id === 'account') return state.account === 'guest' || (state.account === 'member' && Boolean(state.member))
     if (id === 'customer') return isCustomerValid()
-    if (id === 'payment') return Boolean(state.payment)
+    if (id === 'payment') return isPaymentValid()
     if (id === 'review') return true
     return false
   }
@@ -701,6 +751,42 @@ export function runBooking() {
     if (email && !isWithinMax(email, INPUT_LIMITS.email)) errors.email = '254文字以内で入力してください。'
     if (emailConfirm && email && email !== emailConfirm) errors.emailConfirm = 'メールアドレスが一致していません。'
     return errors
+  }
+
+  function getPaymentErrors() {
+    const errors = {}
+    if (state.payment !== 'credit') return errors
+
+    const d = state.paymentDetails
+    if (d.cardNumber && !isValidCardNumber(d.cardNumber)) errors.cardNumber = 'カード番号が正しくありません。'
+    if (d.cardExpiry && !isValidCardExpiry(d.cardExpiry)) errors.cardExpiry = '有効期限が正しくありません。'
+    if (d.cardCvc && !/^[0-9]{3,4}$/.test(d.cardCvc)) errors.cardCvc = '3〜4桁の数字で入力してください。'
+    if (d.cardHolder && !isValidCardHolder(d.cardHolder)) errors.cardHolder = '半角英字とスペースで入力してください。'
+    return errors
+  }
+
+  function isPaymentValid() {
+    if (!state.payment) return false
+    const d = state.paymentDetails
+    if (state.payment === 'qr') return Boolean(d.qrProvider)
+    if (state.payment === 'konbini') return Boolean(d.konbiniStore)
+    if (state.payment === 'credit') {
+      return isValidCardNumber(d.cardNumber)
+        && isValidCardExpiry(d.cardExpiry)
+        && /^[0-9]{3,4}$/.test(d.cardCvc)
+        && isValidCardHolder(d.cardHolder)
+    }
+    return false
+  }
+
+  function getPaymentSummary() {
+    const d = state.paymentDetails
+    if (state.payment === 'credit') {
+      return d.cardNumber ? `${getCardBrand(d.cardNumber)} **** ${d.cardNumber.slice(-4)}` : ''
+    }
+    if (state.payment === 'qr') return QR_PROVIDERS.find(item => item.id === d.qrProvider)?.label || ''
+    if (state.payment === 'konbini') return KONBINI_STORES.find(item => item.id === d.konbiniStore)?.label || ''
+    return ''
   }
 
   async function applyCoupon() {
@@ -807,6 +893,8 @@ export function runBooking() {
         tickets: state.tickets,
         couponCode: state.couponCode,
         paymentMethod: state.payment,
+        // カード番号とセキュリティコードは送らない
+        paymentSummary: getPaymentSummary(),
         customer: {
           name: getCustomerName(),
           nameKana: state.customer.nameKana || state.customer.kana,
@@ -956,6 +1044,13 @@ export function runBooking() {
     })
   }
 
+  function syncPaymentErrors() {
+    const errors = getPaymentErrors()
+    stepRoot.querySelectorAll('[data-payment-error]').forEach(el => {
+      el.textContent = errors[el.dataset.paymentError] || ''
+    })
+  }
+
   function syncAccountActions() {
     const loginButton = stepRoot.querySelector('[data-action="login-member"]')
     if (loginButton) loginButton.disabled = !isLoginValid() || state.login.loading
@@ -1025,6 +1120,7 @@ export function runBooking() {
   async function logoutMember() {
     const token = state.memberToken
     clearMemberAuth()
+    state.maxStep = state.currentStep
     render()
 
     if (!token) return
@@ -1232,6 +1328,17 @@ function createLoginState() {
   }
 }
 
+function createPaymentDetailsState() {
+  return {
+    cardNumber: '',
+    cardExpiry: '',
+    cardCvc: '',
+    cardHolder: '',
+    qrProvider: '',
+    konbiniStore: '',
+  }
+}
+
 function createJoinState() {
   return {
     name: '',
@@ -1408,6 +1515,57 @@ function normalizeCustomerInput(field, value) {
   if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
   if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
   return limitString(stripControlChars(value), 100)
+}
+
+function normalizePaymentInput(field, value) {
+  if (field === 'cardNumber') return normalizeDigits(value, INPUT_LIMITS.cardNumber)
+  if (field === 'cardCvc') return normalizeDigits(value, INPUT_LIMITS.cardCvc)
+  if (field === 'cardExpiry') return normalizeCardExpiry(value)
+  if (field === 'cardHolder') return limitString(stripControlChars(value), INPUT_LIMITS.cardHolder).toUpperCase()
+  return limitString(stripControlChars(value), 40)
+}
+
+function normalizeCardExpiry(value) {
+  const digits = normalizeDigits(value, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`
+}
+
+function isValidCardNumber(digits) {
+  if (!/^[0-9]{14,16}$/.test(digits)) return false
+  let sum = 0
+  let double = false
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let value = Number(digits[index])
+    if (double) {
+      value *= 2
+      if (value > 9) value -= 9
+    }
+    sum += value
+    double = !double
+  }
+  return sum % 10 === 0
+}
+
+function isValidCardExpiry(value) {
+  const match = /^([0-9]{2})\/([0-9]{2})$/.exec(value)
+  if (!match) return false
+  const month = Number(match[1])
+  if (month < 1 || month > 12) return false
+  const now = new Date()
+  return new Date(2000 + Number(match[2]), month, 1) > now
+}
+
+function isValidCardHolder(value) {
+  return /^[A-Z][A-Z ]*$/.test(value.trim())
+}
+
+function getCardBrand(digits) {
+  if (/^4/.test(digits)) return 'VISA'
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard'
+  if (/^3[47]/.test(digits)) return 'AMEX'
+  if (/^35/.test(digits)) return 'JCB'
+  return 'CARD'
 }
 
 function normalizeLoginInput(field, value) {
