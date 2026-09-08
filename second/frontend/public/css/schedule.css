@@ -218,6 +218,10 @@
   cursor: default;
 }
 
+.sub-tab:disabled {
+  cursor: default;
+}
+
 .movie-date-tabs {
   margin-top: 12px;
 }

@@ -127,7 +127,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
             const playing = !m.playingDays || m.playingDays.includes(i);
-            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}">${d}</button>`;
+            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${d}</button>`;
           }).join('')}
         </div>`;
       document.getElementById('movie-date-tabs').addEventListener('click', function (e) {

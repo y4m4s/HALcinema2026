@@ -151,7 +151,7 @@ function buildDateTabs(movie) {
     const m = d.match(/\((.)\)/);
     const isPlaying = m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
     const todayBadge = d === todayLabel ? '<span class="today-badge">TODAY</span>' : '';
-    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}">${escapeHtml(d)}${todayBadge}</button>`;
+    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}"${!isPlaying ? ' disabled' : ''}>${escapeHtml(d)}${todayBadge}</button>`;
   }).join('');
 
   return dateTabs;

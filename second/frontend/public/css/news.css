@@ -184,7 +184,7 @@
   background: rgba(196, 139, 66, 0.1);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .news-detail-container {
     grid-template-columns: 1fr;
   }

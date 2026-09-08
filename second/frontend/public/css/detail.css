@@ -140,6 +140,15 @@
   margin-top: 0;
 }
 
+.detail-booking .sub-tabs {
+  overflow-x: auto;
+}
+
+.detail-booking .sub-tab {
+  flex: 0 0 auto;
+  min-width: 88px;
+}
+
 .coming-soon-notice {
   text-align: center;
   padding: 40px;
@@ -358,5 +367,9 @@
   .film-info-row {
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 14px;
+  }
+
+  .detail-booking .sub-tab {
+    min-width: 84px;
   }
 }
