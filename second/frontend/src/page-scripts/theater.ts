@@ -1,9 +1,14 @@
 /* eslint-disable */
 // @ts-nocheck
+import { initImageModal } from './image-modal';
+
 export function runTheater() {
+// ===== 画像拡大モーダル (スクリーンカードは詳細モーダルを開くため、上映技術は対象外) =====
+  var cleanupImageModal = initImageModal('.about-img, .lab-visual');
+
 // ===== スクリーン詳細モーダル (表示位置は CSS で画面中央に固定) =====
   var modal = document.querySelector('.screen-modal');
-  if (!modal) return;
+  if (!modal) return cleanupImageModal;
 
   var card = modal.querySelector('.screen-modal-card');
   var elImg = modal.querySelector('.screen-modal-image img');
@@ -79,5 +84,6 @@ export function runTheater() {
     });
     document.removeEventListener('keydown', onDocumentKeyDown);
     close();
+    cleanupImageModal();
   };
 }
