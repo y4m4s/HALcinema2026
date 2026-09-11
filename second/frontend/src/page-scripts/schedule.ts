@@ -13,6 +13,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   // 上映回ごとの予約状況をDBから取得し `作品ID-スクリーン-開始時刻` で引けるようにする。
   // 取得できた回はモックの status を上書きし、失敗時はモック値のまま表示する。
   const availabilityByKey = new Map();
+  // 画面離脱時に取得中のリクエストを打ち切る
+  const availabilityAbort = new AbortController();
 
   function slotKey(movieId, screen, start) {
     return `${movieId}-${screen}-${start}`;
@@ -30,9 +32,14 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return !match || movie.playingDays.includes(dayMap[match[1]]);
   }
 
+  function firstPlayingDateIdx(movie) {
+    const idx = DATES.findIndex(date => isPlayingDate(movie, date));
+    return idx < 0 ? 0 : idx;
+  }
+
   async function loadAvailability() {
     try {
-      const res = await fetch('/api/schedules/availability');
+      const res = await fetch('/api/schedules/availability', { signal: availabilityAbort.signal });
       if (!res.ok) return;
       const data = await res.json();
       if (disposed) return;
@@ -114,8 +121,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         const card = e.target.closest('.movie-tab-card');
         if (!card) return;
         movieIdx = parseInt(card.dataset.idx);
-        movieDateIdx = DATES.findIndex(date => isPlayingDate(nowShowing[movieIdx], date));
-        if (movieDateIdx < 0) movieDateIdx = 0;
+        movieDateIdx = firstPlayingDateIdx(nowShowing[movieIdx]);
         root.querySelectorAll('.movie-tab-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         renderHeading();
@@ -130,6 +136,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       el.innerHTML = `<div class="schedule-heading">${DATES[dateIdx]} の上映スケジュール</div>`;
     } else {
       const m = nowShowing[movieIdx];
+      // 初期表示などで非上映日が選ばれている場合は最初の上映日に寄せる
+      if (!isPlayingDate(m, DATES[movieDateIdx])) movieDateIdx = firstPlayingDateIdx(m);
       el.innerHTML = `
         <div class="schedule-heading">${m.title} の上映スケジュール</div>
         <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
@@ -264,6 +272,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
   return function cleanupSchedule() {
     disposed = true;
+    availabilityAbort.abort();
     viewTabs.removeEventListener('click', onViewTabsClick);
     if (fadeTimer) window.clearTimeout(fadeTimer);
   };
