@@ -4,12 +4,17 @@ import { escapeAttr, escapeHtml } from './utils'
 
 export function BookingContext({ state, screen }) {
   const poster = state.movie.image
-    ? `<img src="${escapeAttr(state.movie.image)}" alt="${escapeAttr(state.movie.title)}のポスター">`
+    ? `<img src="${escapeAttr(state.movie.image)}" alt="">`
     : `<div class="booking-context-poster-ph">NO IMAGE</div>`
   const time = state.slot ? `${state.slot.start} - ${state.slot.end}` : '上映回未選択'
+  const detailHref = `/detail?id=${encodeURIComponent(state.movie.id)}#detail-booking`
 
+  // 作品詳細へのリンクはポスターに持たせ、上映情報の枠を小さく保つ。
   return `
-    <div class="booking-context-poster">${poster}</div>
+    <a class="booking-context-poster" href="${escapeAttr(detailHref)}" aria-label="${escapeAttr(`『${state.movie.title}』の作品詳細を見る`)}">
+      ${poster}
+      <span class="booking-context-poster-label" aria-hidden="true">作品詳細 <b>&rarr;</b></span>
+    </a>
     <div class="booking-context-body">
       <div class="booking-context-heading">
         <div>
@@ -36,10 +41,6 @@ export function BookingContext({ state, screen }) {
             <strong>${escapeHtml(screen.type)} / ${escapeHtml(screen.seats)}席</strong>
           </div>
         ` : ''}
-        <a class="booking-context-link" href="/detail?id=${encodeURIComponent(state.movie.id)}#detail-booking">
-          <span>作品詳細</span>
-          <b aria-hidden="true">&rarr;</b>
-        </a>
       </div>
     </div>
   `

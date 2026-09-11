@@ -26,23 +26,28 @@
   font-family: var(--serif);
 }
 
+/* ポスターは 2:3 の枠で表示し、枠の高さがボックスの高さを決める。
+   列幅は各幅で「ポスターの高さ ≒ 本文の高さ」になるよう調整しており、
+   ポスターの上下に黒い帯が出ないようにしている。 */
 .booking-context {
+  --booking-poster-width: 128px;
   border: 1px solid var(--border);
   background:
     linear-gradient(135deg, rgba(16, 33, 58, 0.7), rgba(8, 13, 24, 0.5)),
     rgba(8, 13, 24, 0.42);
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: var(--booking-poster-width) minmax(0, 1fr);
   align-items: stretch;
-  min-height: 150px;
   margin-bottom: 18px;
   overflow: hidden;
 }
 
+/* 作品詳細へのリンクを兼ねる。 */
 .booking-context-poster {
-  display: grid;
-  place-items: center;
-  border-right: 1px solid var(--border);
+  position: relative;
+  display: block;
+  align-self: start;
+  aspect-ratio: 2 / 3;
   background: #050912;
   overflow: hidden;
 }
@@ -51,12 +56,50 @@
 .booking-context-poster-ph {
   width: 100%;
   height: 100%;
-  min-height: 150px;
   display: block;
 }
 
+/* 作品画像は 2:3 なので、枠いっぱいに縦横比を保ったまま収まる。 */
 .booking-context-poster img {
   object-fit: contain;
+  transition: filter 0.2s;
+}
+
+.booking-context-poster-label {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 6px 7px;
+  background: linear-gradient(180deg, transparent, rgba(5, 9, 18, 0.9));
+  color: var(--text2);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.booking-context-poster-label b {
+  color: var(--accent2);
+  font-family: var(--mono);
+  font-weight: 400;
+}
+
+.booking-context-poster:hover img,
+.booking-context-poster:focus-visible img {
+  filter: brightness(1.15);
+}
+
+.booking-context-poster:hover .booking-context-poster-label,
+.booking-context-poster:focus-visible .booking-context-poster-label {
+  color: var(--accent2);
+}
+
+.booking-context-poster:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: -2px;
 }
 
 .booking-context-poster-ph {
@@ -73,6 +116,7 @@
   gap: 18px;
   padding: 24px 28px;
   min-width: 0;
+  border-left: 1px solid var(--border);
 }
 
 .booking-context-heading {
@@ -98,7 +142,7 @@
 
 .booking-context-meta {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(118px, auto);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   background: rgba(36, 68, 108, 0.58);
   border: 1px solid var(--border);
@@ -127,33 +171,6 @@
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
-}
-
-.booking-context-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 54px;
-  background: rgba(8, 13, 24, 0.48);
-  color: var(--text2);
-  font-size: 12px;
-  letter-spacing: 0;
-  padding: 10px 14px;
-  transition: background 0.2s, color 0.2s;
-  white-space: nowrap;
-}
-
-.booking-context-link:hover {
-  background: rgba(74, 159, 212, 0.12);
-  color: var(--accent2);
-}
-
-.booking-context-link b {
-  color: var(--accent2);
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 400;
 }
 
 .booking-stepper {
@@ -1864,12 +1881,12 @@
     padding: calc(var(--nav-h) + 2.5rem) 40px 72px;
   }
 
-  .booking-context-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .booking-context {
+    --booking-poster-width: 165px;
   }
 
-  .booking-context-link {
-    grid-column: 1 / -1;
+  .booking-context-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .payment-grid {
@@ -1883,38 +1900,19 @@
   }
 
   .booking-context {
-    grid-template-columns: 82px minmax(0, 1fr);
-    min-height: 0;
+    --booking-poster-width: 142px;
   }
 
-  .booking-context-poster img,
-  .booking-context-poster-ph {
-    min-height: 136px;
-  }
-
+  /* 768px 以下でも「左にポスター / 右に作品名と上映情報」の配置を保つ。
+     余白と文字サイズだけ画面幅に合わせて詰める。 */
   .booking-context-body {
-    display: contents;
-  }
-
-  .booking-context-heading {
-    align-self: center;
-    padding: 16px;
+    gap: 14px;
+    padding: 18px;
   }
 
   .booking-context-title {
     font-size: 22px;
     margin-bottom: 12px;
-  }
-
-  .booking-context-link {
-    min-height: 44px;
-    padding: 8px 12px;
-  }
-
-  .booking-context-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-column: 1 / -1;
-    margin: 0 16px 16px;
   }
 
   .booking-context-meta div {
@@ -2126,25 +2124,16 @@
   }
 
   .booking-context {
-    grid-template-columns: 72px minmax(0, 1fr);
+    --booking-poster-width: 133px;
   }
 
-  .booking-context-poster img,
-  .booking-context-poster-ph {
-    min-height: 112px;
-  }
-
-  .booking-context-heading {
+  .booking-context-body {
     padding: 14px;
   }
 
   .booking-context-title {
     font-size: 19px;
     margin-bottom: 10px;
-  }
-
-  .booking-context-meta {
-    margin: 0 14px 14px;
   }
 
   .booking-stepper {
@@ -2258,12 +2247,15 @@
   }
 
   .booking-context {
-    grid-template-columns: 64px minmax(0, 1fr);
+    --booking-poster-width: 138px;
   }
 
-  .booking-context-poster img,
-  .booking-context-poster-ph {
-    min-height: 96px;
+  .booking-context-body {
+    padding: 12px;
+  }
+
+  .booking-context-meta div {
+    padding: 7px 8px;
   }
 
   .booking-context-title {
