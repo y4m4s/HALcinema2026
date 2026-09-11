@@ -1110,6 +1110,9 @@ export const theaterPage: PageDefinition = {
   <div class="screen-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="screen-modal-name">
     <div class="screen-modal-backdrop" data-modal-close></div>
     <div class="screen-modal-card">
+      <button type="button" class="screen-modal-close" data-modal-close aria-label="閉じる">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
       <div class="screen-modal-image">
         <img src="" alt="">
         <div class="card-number" id="screen-modal-number"></div>

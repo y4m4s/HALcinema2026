@@ -1,7 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 export function runTheater() {
-// ===== スクリーン詳細モーダル =====
+// ===== スクリーン詳細モーダル (表示位置は CSS で画面中央に固定) =====
   var modal = document.querySelector('.screen-modal');
   if (!modal) return;
 
@@ -13,7 +13,6 @@ export function runTheater() {
   var elNameEn = modal.querySelector('#screen-modal-name-en');
   var elContent = modal.querySelector('#screen-modal-content');
   var activeButton = null;
-  var positionFrame = 0;
 
   function populate(sourceCard) {
     var img = sourceCard.querySelector('.card-image img');
@@ -33,25 +32,6 @@ export function runTheater() {
     elContent.innerHTML = details ? details.innerHTML : '';
   }
 
-  function positionOnCard(sourceCard) {
-    var rect = sourceCard.getBoundingClientRect();
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
-    var margin = 16;
-    var popW = card.offsetWidth || 360;
-    var popH = card.offsetHeight || 400;
-
-    var left = rect.left + (rect.width - popW) / 2;
-    left = Math.max(margin, Math.min(left, vw - popW - margin));
-
-    var top = rect.top;
-    if (top + popH > vh - margin) top = vh - popH - margin;
-    if (top < margin) top = margin;
-
-    card.style.left = left + 'px';
-    card.style.top = top + 'px';
-  }
-
   function open(sourceCard) {
     if (activeButton) activeButton.setAttribute('aria-expanded', 'false');
     activeButton = sourceCard.querySelector('.card-cta');
@@ -61,17 +41,9 @@ export function runTheater() {
     card.scrollTop = 0;
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    if (positionFrame) cancelAnimationFrame(positionFrame);
-    positionFrame = requestAnimationFrame(function () {
-      positionFrame = 0;
-      card.scrollTop = 0;
-      positionOnCard(sourceCard);
-    });
   }
 
   function close() {
-    if (positionFrame) cancelAnimationFrame(positionFrame);
-    positionFrame = 0;
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
