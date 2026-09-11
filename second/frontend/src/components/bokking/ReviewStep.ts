@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { escapeHtml, formatYen, renderReviewItem } from './utils'
 
-export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, customerName, phoneNumber }) {
+export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, paymentSummary, customerName, phoneNumber }) {
   const submitting = Boolean(state.submittingReservation)
   const error = state.reservationError
   return `
@@ -22,6 +22,7 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
           ${renderReviewItem('メール', state.customer.email)}
           ${renderReviewItem('電話番号', phoneNumber)}
           ${renderReviewItem('支払方法', payment ? payment.label : '')}
+          ${paymentSummary ? renderReviewItem('支払い情報', paymentSummary) : ''}
         </div>
         <div class="review-tickets">
           ${ticketTypes.filter((ticket) => state.tickets[ticket.id]).map((ticket) => `

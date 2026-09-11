@@ -32,6 +32,10 @@ export function formatYen(value) {
   return `${Number(value || 0).toLocaleString('ja-JP')}円`
 }
 
+export function formatCardNumber(digits) {
+  return String(digits || '').replace(/(.{4})(?=.)/g, '$1 ')
+}
+
 export function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
