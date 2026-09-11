@@ -1958,7 +1958,7 @@
   }
 
   .terms-summary-table div {
-    grid-template-columns: 1fr;
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .terms-summary-table dt {

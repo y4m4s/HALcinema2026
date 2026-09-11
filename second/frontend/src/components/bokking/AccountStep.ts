@@ -141,7 +141,7 @@ function renderRegisterPanel(state) {
     </label>
     ${join.error ? `<p class="account-form-error">${escapeHtml(join.error)}</p>` : ''}
     <div class="account-panel-actions account-guest-actions">
-      <button class="btn-ghost" type="button" data-account-choice="guest" ${loading ? 'disabled' : ''}>戻る</button>
+      <button class="btn-ghost" type="button" data-account-choice="guest" ${loading ? 'disabled' : ''}>入会せずに戻る</button>
       <button class="btn-primary" type="button" data-action="register-member" ${loading ? 'disabled' : ''}>${loading ? '登録中...' : '登録して購入へ'}</button>
     </div>
   `
