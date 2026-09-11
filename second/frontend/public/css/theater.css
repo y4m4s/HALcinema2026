@@ -1,7 +1,7 @@
 /* ========== スクリーンセクション ========== */
 .screens-section {
   background: var(--bg);
-  padding: 2.5rem 80px 4rem;
+  border-top: 1px solid var(--border);
 }
 
 .screen-grid {
@@ -393,7 +393,6 @@ body.modal-open {
 /* ========== 映画館紹介セクション ========== */
 .about-section {
   background: var(--bg2);
-  border-top: 1px solid var(--border);
   position: relative;
   overflow: hidden;
 }
@@ -410,7 +409,7 @@ body.modal-open {
 .about-section > * { position: relative; z-index: 1; }
 .about-grid {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-columns: 1.3fr 1fr;
   gap: 3.5rem;
   align-items: center;
 }
@@ -485,7 +484,9 @@ body.modal-open {
 
 .about-visual {
   position: relative;
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 4 / 3;
+  max-height: 460px;
+  justify-self: stretch; /* max-height 適用時に幅が縮んで右に余白が出るのを防ぐ */
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   grid-template-rows: 1fr 1fr;
@@ -664,14 +665,14 @@ body.modal-open {
 }
 .lab-feature {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: 1fr 1.6fr;
   gap: 3rem;
-  align-items: start;
+  align-items: center;
   margin-top: 2rem;
 }
 .lab-visual {
   position: relative;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 2; /* 元画像 (640×426) に近い比率で切り抜き・拡大を抑える */
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -998,7 +999,7 @@ body.modal-open {
     grid-template-columns: 1fr;
     gap: 2.5rem;
   }
-  .about-visual { aspect-ratio: 4 / 3; }
+  .about-visual { aspect-ratio: 16 / 10; }
   .equipment-grid { grid-template-columns: repeat(2, 1fr); }
   .lab-feature { grid-template-columns: 1fr; gap: 2rem; }
   .lab-visual { aspect-ratio: 16 / 9; }
@@ -1010,7 +1011,7 @@ body.modal-open {
   .hs-item { text-align: left; flex: 1; }
   .hs-value.live { justify-content: flex-start; }
   .screen-grid { grid-template-columns: 1fr; gap: 0.8rem; }
-  .screens-section { padding: 2.5rem 1rem 3rem; }
+  .screens-section,
   .about-section,
   .lab-section,
   .equipment-section,
@@ -1030,7 +1031,7 @@ body.modal-open {
   .theater-hero { padding: 1.5rem 1rem 0; } 
   .theater-title-row { gap: 0.8rem; } 
   .theater-hero-status { gap: 0.5rem; } 
-  .screens-section { padding: 2.5rem 1rem; } 
+  .screens-section { padding: 3rem 1rem; } 
   .about-section { padding: 3.5rem 1rem; } 
   .about-stats { gap: 0.4rem; margin-top: 1.5rem; } 
   .about-stat-num { font-size: 1.2rem; } 
