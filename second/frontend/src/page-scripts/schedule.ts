@@ -23,6 +23,13 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return live || slot.status || 'ok';
   }
 
+  function isPlayingDate(movie, dateLabel) {
+    if (!Array.isArray(movie.playingDays)) return true;
+    const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
+    const match = String(dateLabel).match(/\((.)\)/);
+    return !match || movie.playingDays.includes(dayMap[match[1]]);
+  }
+
   async function loadAvailability() {
     try {
       const res = await fetch('/api/schedules/availability');
@@ -107,7 +114,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         const card = e.target.closest('.movie-tab-card');
         if (!card) return;
         movieIdx = parseInt(card.dataset.idx);
-        movieDateIdx = 0;
+        movieDateIdx = DATES.findIndex(date => isPlayingDate(nowShowing[movieIdx], date));
+        if (movieDateIdx < 0) movieDateIdx = 0;
         root.querySelectorAll('.movie-tab-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         renderHeading();
@@ -126,7 +134,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         <div class="schedule-heading">${m.title} の上映スケジュール</div>
         <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
-            const playing = !m.playingDays || m.playingDays.includes(i);
+            const playing = isPlayingDate(m, d);
             return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${d}</button>`;
           }).join('')}
         </div>`;
@@ -166,7 +174,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       el.innerHTML = movies.map((m, i) => renderMovieCard(m, i, DATES[dateIdx])).join('');
     } else {
       const m = nowShowing[movieIdx];
-      const isPlaying = !m.playingDays || m.playingDays.includes(movieDateIdx);
+      const isPlaying = isPlayingDate(m, DATES[movieDateIdx]);
       if (!isPlaying) {
         el.innerHTML = emptyHtml('この日は上映がありません', 'NO SCREENINGS ON THIS DATE');
         return;
