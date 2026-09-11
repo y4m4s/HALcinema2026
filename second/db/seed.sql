@@ -11,10 +11,11 @@ BEGIN;
 -- ============================================================
 -- screen_types / screens
 -- ============================================================
-INSERT INTO screen_types (id, name) VALUES
-('SCRT001', '大スクリーン'),
-('SCRT002', '中スクリーン'),
-('SCRT003', '小スクリーン');
+-- surcharge は1席あたりの3D追加料金。frontend/src/data/pricing.ts と揃える。
+INSERT INTO screen_types (id, name, surcharge) VALUES
+('SCRT001', '大スクリーン', 400),
+('SCRT002', '中スクリーン',   0),
+('SCRT003', '小スクリーン',   0);
 
 INSERT INTO screens (id, screen_type_id, name) VALUES
 ('SCR001', 'SCRT001', 'スクリーン1'),
@@ -75,11 +76,13 @@ INSERT INTO coupons (id, code, rule_code, name, description, discount_amount) VA
 ('C0000000009', 'T6W2N9R5KC', 'per_seat',  '冬季特別割引',       '1席200円引き',             200),
 ('C0000000010', 'H4L9D2V8QA', 'per_seat',  '祝日割引',           '1席150円引き',             150);
 
-INSERT INTO ticket_types (id, code, name, price, required_seat_count, display_order, is_active) VALUES
-(2, 'adult',      '一般',               1800, 1, 2, 1),
-(3, 'university', '大学生・専門学生',   1600, 1, 3, 1),
-(4, 'student',    '中学・高校生',       1400, 1, 4, 1),
-(5, 'child',      '小学生・幼児',       1000, 1, 5, 1);
+-- price / service_day_price は frontend/src/data/pricing.ts と揃える。
+-- サービスデー（毎月13日）は中学生以上が対象なので、child は NULL。
+INSERT INTO ticket_types (id, code, name, price, service_day_price, required_seat_count, display_order, is_active) VALUES
+(2, 'adult',      '一般',               1800, 1300, 1, 2, 1),
+(3, 'university', '大学生・専門学生',   1600, 1300, 1, 3, 1),
+(4, 'student',    '中学・高校生',       1400, 1300, 1, 4, 1),
+(5, 'child',      '小学生・幼児',       1000, NULL, 1, 5, 1);
 
 -- ============================================================
 -- people
@@ -230,39 +233,76 @@ INSERT INTO movie_people (movie_id, person_id, role, display_order) VALUES
 
 -- ============================================================
 -- schedules
--- 上映回IDと予約シードの紐づきは維持し、開始/終了時刻だけを現実的な編成に調整。
+-- 上映回は「作品・スクリーン・開始時刻・上映曜日」のテンプレートとして持ち、
+-- 上映週（frontend の DATES と同じ7日間）の各日へ展開して登録する。
+-- テンプレートの内容は frontend/src/page-scripts/data.ts の screenSchedules と
+-- 一致させる。playing_days は 0=日曜〜6=土曜、fill_status は下の占有シード用。
 -- ============================================================
-INSERT INTO schedules (id, movie_id, screen_id, start_at, end_at) VALUES
- (1, 'M001', 'SCR001', '2026-05-23T10:05:00+09:00', '2026-05-23T12:31:00+09:00'),
- (2, 'M001', 'SCR001', '2026-05-23T17:00:00+09:00', '2026-05-23T19:26:00+09:00'),
- (3, 'M001', 'SCR003', '2026-05-23T13:40:00+09:00', '2026-05-23T16:06:00+09:00'),
- (4, 'M001', 'SCR003', '2026-05-23T20:25:00+09:00', '2026-05-23T22:51:00+09:00'),
- (5, 'M002', 'SCR002', '2026-05-22T10:20:00+09:00', '2026-05-22T12:18:00+09:00'),
- (6, 'M002', 'SCR002', '2026-05-22T18:45:00+09:00', '2026-05-22T20:43:00+09:00'),
- (7, 'M002', 'SCR005', '2026-05-22T15:35:00+09:00', '2026-05-22T17:33:00+09:00'),
- (8, 'M003', 'SCR004', '2026-05-22T09:55:00+09:00', '2026-05-22T11:36:00+09:00'),
- (9, 'M003', 'SCR004', '2026-05-22T21:15:00+09:00', '2026-05-22T22:56:00+09:00'),
-(10, 'M003', 'SCR006', '2026-05-23T16:35:00+09:00', '2026-05-23T18:16:00+09:00'),
-(11, 'M006', 'SCR002', '2026-05-23T09:45:00+09:00', '2026-05-23T11:32:00+09:00'),
-(12, 'M006', 'SCR002', '2026-05-23T14:00:00+09:00', '2026-05-23T15:47:00+09:00'),
-(13, 'M006', 'SCR002', '2026-05-23T20:55:00+09:00', '2026-05-23T22:42:00+09:00'),
-(14, 'M006', 'SCR007', '2026-05-23T11:15:00+09:00', '2026-05-23T13:02:00+09:00'),
-(15, 'M006', 'SCR007', '2026-05-23T15:20:00+09:00', '2026-05-23T17:07:00+09:00'),
-(16, 'M006', 'SCR007', '2026-05-23T19:45:00+09:00', '2026-05-23T21:32:00+09:00'),
-(17, 'M007', 'SCR003', '2026-05-22T09:30:00+09:00', '2026-05-22T11:46:00+09:00'),
-(18, 'M007', 'SCR003', '2026-05-22T13:05:00+09:00', '2026-05-22T15:21:00+09:00'),
-(19, 'M007', 'SCR003', '2026-05-22T16:55:00+09:00', '2026-05-22T19:11:00+09:00'),
-(20, 'M007', 'SCR003', '2026-05-22T21:35:00+09:00', '2026-05-22T23:51:00+09:00'),
-(21, 'M007', 'SCR008', '2026-05-22T10:40:00+09:00', '2026-05-22T12:56:00+09:00'),
-(22, 'M007', 'SCR008', '2026-05-22T14:20:00+09:00', '2026-05-22T16:36:00+09:00'),
-(23, 'M007', 'SCR008', '2026-05-22T18:05:00+09:00', '2026-05-22T20:21:00+09:00'),
-(24, 'M007', 'SCR008', '2026-05-22T21:55:00+09:00', '2026-05-23T00:11:00+09:00'),
-(25, 'M008', 'SCR001', '2026-05-22T09:30:00+09:00', '2026-05-22T11:38:00+09:00'),
-(26, 'M008', 'SCR001', '2026-05-22T21:20:00+09:00', '2026-05-22T23:28:00+09:00'),
-(27, 'M008', 'SCR004', '2026-05-22T14:10:00+09:00', '2026-05-22T16:18:00+09:00'),
-(28, 'M009', 'SCR005', '2026-05-22T11:05:00+09:00', '2026-05-22T13:17:00+09:00'),
-(29, 'M009', 'SCR005', '2026-05-22T19:50:00+09:00', '2026-05-22T22:02:00+09:00'),
-(30, 'M009', 'SCR006', '2026-05-22T17:15:00+09:00', '2026-05-22T19:27:00+09:00');
+CREATE TEMP TABLE _schedule_templates(
+    movie_id     TEXT NOT NULL,
+    screen_id    TEXT NOT NULL,
+    start_clock  TEXT NOT NULL,
+    end_clock    TEXT NOT NULL,
+    playing_days TEXT NOT NULL,
+    fill_status  TEXT NOT NULL
+);
+INSERT INTO _schedule_templates
+    (movie_id, screen_id, start_clock, end_clock, playing_days, fill_status) VALUES
+('M001', 'SCR001', '11:20', '13:46', '0123456', 'soldout'),    -- 冷たい熱帯魚
+('M001', 'SCR001', '17:00', '19:26', '0123456', 'ok'),         -- 冷たい熱帯魚
+('M001', 'SCR003', '14:15', '16:41', '0123456', 'few'),        -- 冷たい熱帯魚
+('M001', 'SCR003', '19:25', '21:51', '0123456', 'ok'),         -- 冷たい熱帯魚
+('M002', 'SCR002', '11:00', '12:58', '012345', 'soldout'),     -- 黒い家
+('M002', 'SCR002', '18:45', '20:43', '012345', 'ok'),          -- 黒い家
+('M002', 'SCR005', '15:35', '17:33', '012345', 'few'),         -- 黒い家
+('M003', 'SCR004', '09:55', '11:36', '23456', 'ok'),           -- 仄暗い水の底から
+('M003', 'SCR004', '21:15', '22:56', '23456', 'ok'),           -- 仄暗い水の底から
+('M003', 'SCR006', '15:20', '17:01', '23456', 'soldout'),      -- 仄暗い水の底から
+('M006', 'SCR002', '09:00', '10:47', '01345', 'soldout'),      -- 告白
+('M006', 'SCR002', '14:00', '15:47', '01345', 'few'),          -- 告白
+('M006', 'SCR002', '20:55', '22:42', '01345', 'ok'),           -- 告白
+('M006', 'SCR007', '11:15', '13:02', '01345', 'ok'),           -- 告白
+('M006', 'SCR007', '15:20', '17:07', '01345', 'soldout'),      -- 告白
+('M006', 'SCR007', '19:45', '21:32', '01345', 'ok'),           -- 告白
+('M007', 'SCR003', '09:15', '11:31', '3456', 'ok'),            -- 爆弾
+('M007', 'SCR003', '11:45', '14:01', '3456', 'soldout'),       -- 爆弾
+('M007', 'SCR003', '16:55', '19:11', '3456', 'few'),           -- 爆弾
+('M007', 'SCR003', '22:05', '00:21', '3456', 'ok'),            -- 爆弾
+('M007', 'SCR008', '10:40', '12:56', '3456', 'few'),           -- 爆弾
+('M007', 'SCR008', '14:20', '16:36', '3456', 'ok'),            -- 爆弾
+('M007', 'SCR008', '18:05', '20:21', '3456', 'soldout'),       -- 爆弾
+('M007', 'SCR008', '21:55', '00:11', '3456', 'ok'),            -- 爆弾
+('M008', 'SCR001', '09:00', '11:08', '023456', 'ok'),          -- 死刑にいたる病
+('M008', 'SCR001', '21:20', '23:28', '023456', 'few'),         -- 死刑にいたる病
+('M008', 'SCR004', '14:10', '16:18', '023456', 'ok'),          -- 死刑にいたる病
+('M009', 'SCR005', '11:05', '13:17', '12456', 'few'),          -- ミュージアム
+('M009', 'SCR005', '19:50', '22:02', '12456', 'ok'),           -- ミュージアム
+('M009', 'SCR006', '17:15', '19:27', '12456', 'soldout')       -- ミュージアム
+;
+
+CREATE TEMP TABLE _schedule_dates(show_date TEXT PRIMARY KEY);
+INSERT INTO _schedule_dates (show_date)
+WITH RECURSIVE week(show_date) AS (
+    VALUES ('2026-05-12')
+    UNION ALL
+    SELECT date(show_date, '+1 day') FROM week WHERE show_date < '2026-05-18'
+)
+SELECT show_date FROM week;
+
+INSERT INTO schedules (movie_id, screen_id, start_at, end_at)
+SELECT
+    t.movie_id,
+    t.screen_id,
+    d.show_date || 'T' || t.start_clock || ':00+09:00',
+    -- 終了が開始より小さい回は日跨ぎ（例: 22:05 開始 / 00:21 終了）。
+    CASE WHEN t.end_clock > t.start_clock
+         THEN d.show_date
+         ELSE date(d.show_date, '+1 day')
+    END || 'T' || t.end_clock || ':00+09:00'
+FROM _schedule_dates AS d
+JOIN _schedule_templates AS t
+  ON instr(t.playing_days, strftime('%w', d.show_date)) > 0
+ORDER BY d.show_date, t.screen_id, t.start_clock;
 
 -- ============================================================
 -- 予約状況シード (reservations / reservation_details / reservation_seats)
@@ -275,38 +315,16 @@ INSERT INTO schedules (id, movie_id, screen_id, start_at, end_at) VALUES
 -- 占有のみを再現する簡易データのため、1予約=1明細に座席をまとめて紐付ける。
 -- status の値は frontend のモック表示 (page-scripts/data.ts) と一致させている。
 -- ============================================================
+-- 占有目標は上映回テンプレートの fill_status（= data.ts の slot.status）を使う。
+-- 同じ上映回が7日分あるため、どの日付タブでも同じ表示になる。
 CREATE TEMP TABLE _schedule_fill(schedule_id INTEGER PRIMARY KEY, status TEXT NOT NULL);
-INSERT INTO _schedule_fill (schedule_id, status) VALUES
-(1, 'soldout'),
-(2, 'ok'),
-(3, 'few'),
-(4, 'ok'),
-(5, 'soldout'),
-(6, 'ok'),
-(7, 'few'),
-(8, 'ok'),
-(9, 'ok'),
-(10, 'soldout'),
-(11, 'soldout'),
-(12, 'few'),
-(13, 'ok'),
-(14, 'ok'),
-(15, 'soldout'),
-(16, 'ok'),
-(17, 'ok'),
-(18, 'soldout'),
-(19, 'few'),
-(20, 'ok'),
-(21, 'few'),
-(22, 'ok'),
-(23, 'soldout'),
-(24, 'ok'),
-(25, 'ok'),
-(26, 'few'),
-(27, 'ok'),
-(28, 'few'),
-(29, 'ok'),
-(30, 'soldout');
+INSERT INTO _schedule_fill (schedule_id, status)
+SELECT sch.id, t.fill_status
+  FROM schedules AS sch
+  JOIN _schedule_templates AS t
+    ON t.movie_id = sch.movie_id
+   AND t.screen_id = sch.screen_id
+   AND t.start_clock = substr(sch.start_at, 12, 5);
 
 -- 1上映回につき1予約。内部IDはスケジュールIDと同じ連番にし、予約番号は生成列で決まる。
 INSERT INTO reservations
@@ -383,6 +401,8 @@ FROM ranked
 WHERE rn <= reserve_count;
 
 DROP TABLE _schedule_fill;
+DROP TABLE _schedule_dates;
+DROP TABLE _schedule_templates;
 
 -- ============================================================
 -- news

@@ -14,7 +14,7 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, paymen
       <div class="booking-step-body">
         <div class="review-grid">
           ${renderReviewItem('作品', state.movie.title)}
-          ${renderReviewItem('上映日時', `${state.date} ${state.slot ? state.slot.start + ' - ' + state.slot.end : ''}`)}
+          ${renderReviewItem('上映日時', `${state.dateLabel || state.date} ${state.slot ? state.slot.start + ' - ' + state.slot.end : ''}`)}
           ${renderReviewItem('スクリーン', `スクリーン ${state.screen || '-'}`)}
           ${renderReviewItem('座席', state.selectedSeats.join(' / '))}
           ${state.member ? renderReviewItem('会員ID', state.member.id) : ''}

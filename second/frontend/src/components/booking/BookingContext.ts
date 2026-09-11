@@ -20,7 +20,7 @@ export function BookingContext({ state, screen }) {
       <div class="booking-context-meta" aria-label="予約中の上映情報">
         <div>
           <span>DATE</span>
-          <strong>${escapeHtml(state.date)}</strong>
+          <strong>${escapeHtml(state.dateLabel || state.date)}</strong>
         </div>
         <div>
           <span>SCREEN</span>

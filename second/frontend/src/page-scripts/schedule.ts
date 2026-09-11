@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES, getMovieScreenSchedules, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, formatDateLabel, getMovieScreenSchedules, getMovieStatus, isMoviePlayingOn } from './data'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
@@ -16,20 +16,18 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   // 画面離脱時に取得中のリクエストを打ち切る
   const availabilityAbort = new AbortController();
 
-  function slotKey(movieId, screen, start) {
-    return `${movieId}-${screen}-${start}`;
+  // 同じ時刻でも日付が違えば別の上映回なので、日付までキーに含める。
+  function slotKey(movieId, screen, date, start) {
+    return `${movieId}-${screen}-${date}-${start}`;
   }
 
-  function resolveSlotStatus(movie, screen, slot) {
-    const live = availabilityByKey.get(slotKey(movie.id, screen, slot.start));
+  function resolveSlotStatus(movie, screen, date, slot) {
+    const live = availabilityByKey.get(slotKey(movie.id, screen, date, slot.start));
     return live || slot.status || 'ok';
   }
 
-  function isPlayingDate(movie, dateLabel) {
-    if (!Array.isArray(movie.playingDays)) return true;
-    const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
-    const match = String(dateLabel).match(/\((.)\)/);
-    return !match || movie.playingDays.includes(dayMap[match[1]]);
+  function isPlayingDate(movie, date) {
+    return isMoviePlayingOn(movie, date);
   }
 
   function firstPlayingDateIdx(movie) {
@@ -46,7 +44,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       if (!Array.isArray(data)) return;
       availabilityByKey.clear();
       data.forEach(function (item) {
-        availabilityByKey.set(slotKey(item.movieId, item.screen, item.start), item.status);
+        availabilityByKey.set(slotKey(item.movieId, item.screen, item.date, item.start), item.status);
       });
       renderRows();
     } catch (e) {
@@ -89,7 +87,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     if (viewMode === 'date') {
       root.innerHTML = '<div class="sub-tabs">' +
         DATES.map((d, i) =>
-          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${d}</button>`
+          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${formatDateLabel(d)}</button>`
         ).join('') + '</div>';
       root.querySelector('.sub-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
@@ -133,7 +131,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   function renderHeading() {
     const el = document.getElementById('schedule-heading');
     if (viewMode === 'date') {
-      el.innerHTML = `<div class="schedule-heading">${DATES[dateIdx]} の上映スケジュール</div>`;
+      el.innerHTML = `<div class="schedule-heading">${formatDateLabel(DATES[dateIdx])} の上映スケジュール</div>`;
     } else {
       const m = nowShowing[movieIdx];
       // 初期表示などで非上映日が選ばれている場合は最初の上映日に寄せる
@@ -143,7 +141,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
             const playing = isPlayingDate(m, d);
-            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${d}</button>`;
+            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${formatDateLabel(d)}</button>`;
           }).join('')}
         </div>`;
       document.getElementById('movie-date-tabs').addEventListener('click', function (e) {
@@ -195,7 +193,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return getMovieScreenSchedules(m);
   }
 
-  function renderMovieCard(m, idx, dateLabel) {
+  function renderMovieCard(m, idx, date) {
     const delay = (idx * 0.07).toFixed(2);
     const imgInner = m.image
       ? `<img src="${m.image}" alt="${m.title}">`
@@ -204,7 +202,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
     const theatersHtml = getScreenSchedules(m).map(function (sc) {
       const slotsHtml = sc.slots.map(function (slot) {
-        const status = resolveSlotStatus(m, sc.screen, slot);
+        const status = resolveSlotStatus(m, sc.screen, date, slot);
         const statusClass = status === 'soldout' ? 'soldout' : status === 'few' ? 'few' : 'ok';
         const statusText  = status === 'soldout' ? '販売終了' : status === 'few' ? '△残りわずか' : '◎余裕あり';
         const slotInner = `
@@ -213,7 +211,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         if (statusClass === 'soldout') {
           return `<div class="time-slot soldout">${slotInner}</div>`;
         }
-        return `<a class="time-slot" href="${buildBookingHref(m, sc.screen, slot, dateLabel)}">${slotInner}</a>`;
+        return `<a class="time-slot" href="${buildBookingHref(m, sc.screen, slot, date)}">${slotInner}</a>`;
       }).join('');
       const screenInfo = SCREENS.find(s => s.num === sc.screen);
       const featureBadges = screenInfo
@@ -256,10 +254,10 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       </div>`;
   }
 
-  function buildBookingHref(movie, screen, slot, dateLabel) {
+  function buildBookingHref(movie, screen, slot, date) {
     const params = new URLSearchParams({
       movie: String(movie.id),
-      date: dateLabel,
+      date: date,
       screen: String(screen),
       start: slot.start,
       end: slot.end,

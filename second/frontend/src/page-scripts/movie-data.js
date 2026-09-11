@@ -14,6 +14,32 @@ function validScreenNumbers(value) {
   return [...new Set(value.filter((screen) => Number.isInteger(screen) && screen > 0))]
 }
 
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土']
+
+// 上映日は YYYY-MM-DD で保持し、表示用のラベルはここで組み立てる。
+export function formatDateLabel(value) {
+  const date = parseDateOnly(value)
+  if (!date) return String(value || '')
+  return `${date.getMonth() + 1}/${date.getDate()}(${WEEKDAY_LABELS[date.getDay()]})`
+}
+
+export function getDateWeekday(value) {
+  const date = parseDateOnly(value)
+  return date ? date.getDay() : -1
+}
+
+export function isMoviePlayingOn(movie, value) {
+  if (!Array.isArray(movie?.playingDays)) return true
+  const weekday = getDateWeekday(value)
+  return weekday >= 0 && movie.playingDays.includes(weekday)
+}
+
+// 毎月13日は「呪いのサービスデー」。
+export function isCurseServiceDay(value) {
+  const date = parseDateOnly(value)
+  return date ? date.getDate() === 13 : false
+}
+
 export function getMovieStatus(movie, today = todayDateOnly()) {
   const screeningStartDate = parseDateOnly(movie?.screeningStartDate)
   if (!screeningStartDate) return 'now'

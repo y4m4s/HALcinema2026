@@ -29,6 +29,10 @@ DBは `db/schema.sql`（テーブル定義）と `db/seed.sql`（初期データ
 
 スクリプトは内部で `go run ./cmd/dbinit` を呼び出し、`schema.sql` → `seed.sql` の順に適用します。`schema.sql` は各テーブルを `DROP TABLE IF EXISTS` してから作り直すため、**何度実行しても安全**です（毎回まっさらな初期データ状態に戻るので、DBをリセットしたいときにも使えます）。
 
+上映回（`schedules`）は、`db/seed.sql` に置いた「作品・スクリーン・開始時刻・上映曜日」のテンプレートを、上映週（`frontend/src/page-scripts/data.ts` の `DATES` と同じ7日間）の各日へ展開して作ります。テンプレートの内容は `data.ts` の `screenSchedules` と一致させる必要があり、ズレると `npm test` の「seed.sql の上映回テンプレートは data.ts の screenSchedules と一致する」が失敗します。
+
+> **既にDBを作成済みの場合**: 上映回の日付の持ち方を変更したため、以前のDBのままでは予約時に「指定された上映回が見つかりません」になります。初期化スクリプトを再実行してください（登録済みの会員・予約データは消えます）。
+
 スクリプトを使わず直接実行することもできます。
 
 ```powershell

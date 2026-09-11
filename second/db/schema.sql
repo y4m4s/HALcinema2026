@@ -102,7 +102,9 @@ CREATE TABLE payment_methods (
 -- ============================================================
 CREATE TABLE screen_types (
     id         TEXT    PRIMARY KEY,
-    name       TEXT    NOT NULL UNIQUE
+    name       TEXT    NOT NULL UNIQUE,
+    -- 1席あたりの追加料金（3D 追加料金）。
+    surcharge  INTEGER NOT NULL DEFAULT 0 CHECK (surcharge >= 0)
 );
 
 -- ============================================================
@@ -234,6 +236,8 @@ CREATE TABLE ticket_types (
     code                 TEXT    NOT NULL UNIQUE,
     name                 TEXT    NOT NULL UNIQUE,
     price                INTEGER NOT NULL CHECK (price >= 0),
+    -- 呪いのサービスデー（毎月13日）の価格。NULL は対象外。
+    service_day_price    INTEGER CHECK (service_day_price IS NULL OR service_day_price >= 0),
     required_seat_count  INTEGER NOT NULL DEFAULT 1 CHECK (required_seat_count > 0),
     display_order        INTEGER NOT NULL DEFAULT 999,
     is_active            INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
