@@ -12,8 +12,8 @@ export const theaterPage: PageDefinition = {
 ],
   html: String.raw`<div class="page page-enter">
 
-    <!-- スクリーン一覧 -->
-    <div class="section screens-section">
+    <!-- 映画館紹介 -->
+    <div class="section about-section">
       <nav class="breadcrumb-nav" aria-label="パンくずリスト">
         <ol class="breadcrumb">
           <li class="breadcrumb__list"><a href="/">トップページ</a></li>
@@ -21,7 +21,57 @@ export const theaterPage: PageDefinition = {
         </ol>
       </nav>
       <div class="section-header">
-        <h1 class="section-title">スクリーン</h1>
+        <h1 class="section-title">劇場について</h1>
+        <span class="section-title-en">About the Cinema</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="about-grid">
+        <div class="about-text">
+          <!-- <div class="section-eyebrow">About the Cinema</div> -->
+          <h2><span class="catch-copy">「日常を、恐怖が侵食する。」</span><br>J-ホラー シアター <span class="accent">”境界„</span></h2>
+          <p class="lead">
+            そこは、単に映画を鑑賞する場所ではない。現実と虚構、生者と死者の「境界」が曖昧になる場所。世界を震撼させたJホラー特有の「静寂」「湿り気」「視線の気配」を五感すべてに憑依させ、観客の意識を日常の境界の外へと連れ去る、日本初の没入型ホラー専門シアター。
+          </p>
+          <p class="desc">
+            IMAX®、Dolby Cinema、4DXといった最先端フォーマットから35mmアーカイブ上映まで——「あらゆる恐怖を、最高の状態で観られる場所」を目指して、8つのスクリーンそれぞれに固有の役割を持たせました。ここでしか体験できない恐怖が、静かにあなたを待っている。
+          </p>
+          <div class="about-stats">
+            <div class="about-stat">
+              <div class="about-stat-num">1988<span class="unit">年</span></div>
+              <div class="about-stat-label">Founded</div>
+            </div>
+            <div class="about-stat">
+              <div class="about-stat-num">1,050<span class="unit">席</span></div>
+              <div class="about-stat-label">Total Seats</div>
+            </div>
+            <div class="about-stat">
+              <div class="about-stat-num">8<span class="unit">F</span></div>
+              <div class="about-stat-label">Floors</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-visual">
+          <div class="about-img main">
+            <img src="/assets/images/screen.jpg" alt="">
+            <span class="about-img-label">THEATER</span>
+          </div>
+          <div class="about-img">
+            <img src="/assets/images/lobby.jpg" alt="">
+            <span class="about-img-label">LOBBY</span>
+          </div>
+          <div class="about-img">
+            <img src="/assets/images/hal.webp" alt="">
+            <span class="about-img-label">EXTERIOR</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- スクリーン一覧 -->
+    <div class="section screens-section">
+      <div class="section-header">
+        <h2 class="section-title">スクリーン</h2>
         <span class="section-title-en">Screens</span>
         <div class="section-line"></div>
       </div>
@@ -599,56 +649,6 @@ export const theaterPage: PageDefinition = {
       </div>
 </div>
 
-    <!-- 映画館紹介 -->
-    <div class="section about-section">
-<div class="section-header">
-        <h2 class="section-title">劇場について</h2>
-        <span class="section-title-en">About the Cinema</span>
-        <div class="section-line"></div>
-      </div>
-      <div class="about-grid">
-        <div class="about-text">
-          <!-- <div class="section-eyebrow">About the Cinema</div> -->
-          <h2><span class="catch-copy">「日常を、恐怖が侵食する。」</span><br>J-ホラー シアター <span class="accent">”境界„</span></h2>
-          <p class="lead">
-            そこは、単に映画を鑑賞する場所ではない。現実と虚構、生者と死者の「境界」が曖昧になる場所。世界を震撼させたJホラー特有の「静寂」「湿り気」「視線の気配」を五感すべてに憑依させ、観客の意識を日常の境界の外へと連れ去る、日本初の没入型ホラー専門シアター。
-          </p>
-          <p class="desc">
-            IMAX®、Dolby Cinema、4DXといった最先端フォーマットから35mmアーカイブ上映まで——「あらゆる恐怖を、最高の状態で観られる場所」を目指して、8つのスクリーンそれぞれに固有の役割を持たせました。ここでしか体験できない恐怖が、静かにあなたを待っている。
-          </p>
-          <div class="about-stats">
-            <div class="about-stat">
-              <div class="about-stat-num">1988<span class="unit">年</span></div>
-              <div class="about-stat-label">Founded</div>
-            </div>
-            <div class="about-stat">
-              <div class="about-stat-num">1,050<span class="unit">席</span></div>
-              <div class="about-stat-label">Total Seats</div>
-            </div>
-            <div class="about-stat">
-              <div class="about-stat-num">8<span class="unit">F</span></div>
-              <div class="about-stat-label">Floors</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="about-visual">
-          <div class="about-img main">
-            <img src="/assets/images/screen.jpg" alt="">
-            <span class="about-img-label">THEATER</span>
-          </div>
-          <div class="about-img">
-            <img src="/assets/images/lobby.jpg" alt="">
-            <span class="about-img-label">LOBBY</span>
-          </div>
-          <div class="about-img">
-            <img src="/assets/images/hal.webp" alt="">
-            <span class="about-img-label">EXTERIOR</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- シンクロ・ホラー・ラボ -->
     <div class="section lab-section">
 <div class="section-header">
@@ -1104,6 +1104,26 @@ export const theaterPage: PageDefinition = {
       </div>
     </div>
 
+  </div>
+
+  <!-- スクリーン詳細モーダル (.page-enter の transform 影響を避けるため .page の外に置く) -->
+  <div class="screen-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="screen-modal-name">
+    <div class="screen-modal-backdrop" data-modal-close></div>
+    <div class="screen-modal-card">
+      <button type="button" class="screen-modal-close" data-modal-close aria-label="閉じる">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+      <div class="screen-modal-image">
+        <img src="" alt="">
+        <div class="card-number" id="screen-modal-number"></div>
+        <div class="card-badges" id="screen-modal-badges"></div>
+      </div>
+      <div class="screen-modal-body">
+        <div class="card-name" id="screen-modal-name"></div>
+        <div class="card-name-en" id="screen-modal-name-en"></div>
+        <div class="card-details-content" id="screen-modal-content"></div>
+      </div>
+    </div>
   </div>`,
 }
 
