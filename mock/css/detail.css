@@ -140,6 +140,21 @@
   margin-top: 0;
 }
 
+.detail-date-current {
+  display: none;
+}
+
+#detail-date-tabs {
+  display: block;
+  background: transparent;
+  margin-bottom: 0;
+  overflow: visible;
+}
+
+.detail-date-options {
+  margin-bottom: 28px;
+}
+
 .coming-soon-notice {
   text-align: center;
   padding: 40px;
@@ -358,5 +373,147 @@
   .film-info-row {
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-breadcrumb-wrap {
+    padding: 2rem 16px 16px;
+  }
+
+  .detail-hero-wrap {
+    padding: 24px 16px 36px;
+  }
+
+  .detail-hero {
+    gap: 24px;
+  }
+
+  .detail-hero-poster-wrap {
+    width: min(190px, 64vw);
+  }
+
+  .detail-status-label {
+    margin-bottom: 12px;
+  }
+
+  .detail-title {
+    font-size: 32px;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .detail-title-en {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    margin-bottom: 16px;
+  }
+
+  .detail-meta {
+    margin-bottom: 24px;
+  }
+
+  .detail-synopsis {
+    font-size: 14px;
+    line-height: 1.9;
+  }
+
+  .detail-info-section {
+    padding: 36px 16px 32px;
+  }
+
+  .detail-sub-grid {
+    gap: 32px;
+  }
+
+  .detail-booking {
+    padding: 28px 16px 40px;
+  }
+
+  .detail-date-current {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    padding: 12px 16px;
+    border: 1px solid var(--border2);
+    background: var(--bg4);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-align: left;
+  }
+
+  .detail-date-current-icon {
+    width: 8px;
+    height: 8px;
+    border-right: 1px solid var(--accent2);
+    border-bottom: 1px solid var(--accent2);
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.2s;
+  }
+
+  .detail-date-current[aria-expanded="true"] .detail-date-current-icon {
+    transform: rotate(225deg) translate(-1px, -1px);
+  }
+
+  .detail-date-options {
+    display: flex;
+    max-height: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.2s ease, margin-bottom 0.25s ease;
+  }
+
+  #detail-date-tabs.is-open .detail-date-options {
+    max-height: 420px;
+    margin-bottom: 28px;
+    opacity: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .detail-date-options .sub-tab {
+    flex: 0 0 auto;
+    min-width: 78px;
+    padding: 12px 10px;
+  }
+
+  .detail-theaters-wrap .theaters-grid {
+    display: flex;
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .detail-theaters-wrap .theater-col {
+    min-width: 0;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-theaters-wrap .theater-col:last-child {
+    border-bottom: 0;
+  }
+
+  .detail-theaters-wrap .theater-col-header {
+    align-items: flex-start;
+  }
+
+  .coming-soon-notice {
+    padding: 32px 16px;
+  }
+
+  .film-info-row {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .film-info-label {
+    font-size: 9px;
   }
 }
