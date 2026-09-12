@@ -10,6 +10,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   let dateIdx = 0;
   let movieIdx = 0;
   let movieDateIdx = 0;
+  // 遷移直後の位置合わせを止めるための後片付け関数 (作品指定で開いたときだけ設定される)
+  let stopFollowingOnLeave = null;
   // 上映回ごとの予約状況をDBから取得し `作品ID-スクリーン-開始時刻` で引けるようにする。
   // 取得できた回はモックの status を上書きし、失敗時はモック値のまま表示する。
   const availabilityByKey = new Map();
@@ -281,11 +283,82 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return `/booking?${params.toString()}`;
   }
 
+  // 上映作品一覧の「予約する」から ?view=movie&movie=<作品ID> で開かれたときは、
+  // 上映作品毎タブで該当作品を選んだ状態から始める。
+  const query = new URLSearchParams(location.search);
+  const requestedIdx = nowShowing.findIndex(m => String(m.id) === query.get('movie'));
+  if (query.get('view') === 'movie' || requestedIdx >= 0) {
+    viewMode = 'movie';
+    if (requestedIdx >= 0) {
+      movieIdx = requestedIdx;
+      movieDateIdx = firstPlayingDateIdx(nowShowing[movieIdx]);
+    }
+    // 上映日程毎に付いている初期の active を移す
+    document.querySelectorAll('.view-tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mode === 'movie');
+    });
+  }
+
   render();
+
+  if (viewMode === 'movie' && requestedIdx >= 0) {
+    // 作品カードは横スクロールなので、選んだ作品が画面外だと分かりにくい。中央寄りに出す。
+    const tabs = document.querySelector('.movie-tabs');
+    const card = tabs && tabs.querySelector('.movie-tab-card.active');
+    if (card) tabs.scrollLeft = card.offsetLeft - (tabs.clientWidth - card.offsetWidth) / 2;
+
+    // 「(作品名) の上映スケジュール」を固定ヘッダーの下に出す。
+    // 表示演出 (.page-enter) の translateY が残っていると位置がずれるため、演出は行わない。
+    const enter = document.querySelector('.page-enter');
+    if (enter) enter.classList.remove('page-enter');
+
+    // ヘッダーの高さは CSS 変数ではなく実際の描画結果から取る。
+    // ページ用CSSの適用前だと変数が効かず、見出しがヘッダーに隠れるため。
+    function scrollToHeading() {
+      const heading = document.getElementById('schedule-heading');
+      if (!heading) return;
+      const header = document.querySelector('.site-header');
+      const offset = (header ? header.getBoundingClientRect().height : 0) + 16;
+      const top = heading.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+    }
+    scrollToHeading();
+
+    // 遷移直後はページ用CSS・Webフォント・画像の反映で本文の高さが変わり、
+    // 一度決めた位置がずれる。高さの変化を監視して、落ち着くまで合わせ直す。
+    // 利用者が自分で操作したら以後は触らない (スクロール位置の比較では、
+    // 高さが縮んだときのブラウザ側の補正と区別できないため操作そのものを見る)。
+    let userMoved = false;
+    function onUserMove() {
+      userMoved = true;
+      stopFollowing();
+    }
+    const userEvents = ['wheel', 'touchstart', 'keydown', 'mousedown'];
+    userEvents.forEach(function (type) {
+      window.addEventListener(type, onUserMove, { passive: true });
+    });
+
+    const heightObserver = new ResizeObserver(function () {
+      if (!userMoved) scrollToHeading();
+    });
+    heightObserver.observe(document.body);
+    const followTimer = window.setTimeout(stopFollowing, 1500);
+
+    function stopFollowing() {
+      heightObserver.disconnect();
+      window.clearTimeout(followTimer);
+      userEvents.forEach(function (type) {
+        window.removeEventListener(type, onUserMove);
+      });
+    }
+    stopFollowingOnLeave = stopFollowing;
+  }
+
   loadAvailability();
 
   return function cleanupSchedule() {
     disposed = true;
+    if (stopFollowingOnLeave) stopFollowingOnLeave();
     availabilityAbort.abort();
     viewTabs.removeEventListener('click', onViewTabsClick);
     if (fadeTimer) window.clearTimeout(fadeTimer);

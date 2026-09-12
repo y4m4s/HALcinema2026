@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, DATES, TODAY_DATE, formatScreeningStartDate, getMovieStatus, isMoviePlayingOn } from './data'
+import { MOVIES, formatScreeningStartDate, getMovieStatus } from './data'
 
 export function runWorks() {
 function escapeHtml(str) {
@@ -117,17 +117,10 @@ function renderMovieCard(movie) {
 }
 
 function buildBookingHref(movie) {
-  const item = getFirstBookableSlot(movie);
-  if (!item) return "";
-
-  const params = new URLSearchParams({
-    movie: String(movie.id),
-    date: getDefaultDate(movie),
-    screen: String(item.screen),
-    start: item.slot.start,
-    end: item.slot.end,
-  });
-  return `/booking?${params.toString()}`;
+  // 予約できる回が1つも無い作品では、予約ボタン自体を出さない。
+  if (!getFirstBookableSlot(movie)) return "";
+  // 上映日と上映回はここで決め打ちせず、上映スケジュールの「上映作品毎」タブで選んでもらう。
+  return `schedule.html?view=movie&movie=${movie.id}`;
 }
 
 function getFirstBookableSlot(movie) {
@@ -137,12 +130,6 @@ function getFirstBookableSlot(movie) {
     if (slot) return { screen: schedule.screen, slot };
   }
   return null;
-}
-
-function getDefaultDate(movie) {
-  // 当日に上映があれば当日、なければ週内で最初に上映がある日を選ぶ。
-  if (isMoviePlayingOn(movie, TODAY_DATE)) return TODAY_DATE;
-  return DATES.find((date) => isMoviePlayingOn(movie, date)) || DATES[0];
 }
 
 function renderMovies(movies, filter) {

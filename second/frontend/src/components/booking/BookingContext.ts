@@ -7,7 +7,7 @@ export function BookingContext({ state, screen }) {
     ? `<img src="${escapeAttr(state.movie.image)}" alt="">`
     : `<div class="booking-context-poster-ph">NO IMAGE</div>`
   const time = state.slot ? `${state.slot.start} - ${state.slot.end}` : '上映回未選択'
-  const detailHref = `/detail?id=${encodeURIComponent(state.movie.id)}#detail-booking`
+  const detailHref = `/detail?id=${encodeURIComponent(state.movie.id)}`
 
   // 作品詳細へのリンクはポスターに持たせ、上映情報の枠を小さく保つ。
   return `
