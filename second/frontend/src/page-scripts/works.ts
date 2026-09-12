@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, DATES, formatScreeningStartDate, getMovieStatus } from './data'
+import { MOVIES, DATES, TODAY_DATE, formatScreeningStartDate, getMovieStatus, isMoviePlayingOn } from './data'
 
 export function runWorks() {
 function escapeHtml(str) {
@@ -140,17 +140,9 @@ function getFirstBookableSlot(movie) {
 }
 
 function getDefaultDate(movie) {
-  const dayMap = { "日": 0, "月": 1, "火": 2, "水": 3, "木": 4, "金": 5, "土": 6 };
-  const todayLabel = "5/15(金)";
-  const todayIsPlaying = movie.playingDays && DATES.find((date) => {
-    const match = date.match(/\((.)\)/);
-    return date === todayLabel && match && movie.playingDays.includes(dayMap[match[1]]);
-  });
-  if (todayIsPlaying) return todayLabel;
-  return DATES.find((date) => {
-    const match = date.match(/\((.)\)/);
-    return !movie.playingDays || (match && movie.playingDays.includes(dayMap[match[1]]));
-  }) || DATES[0];
+  // 当日に上映があれば当日、なければ週内で最初に上映がある日を選ぶ。
+  if (isMoviePlayingOn(movie, TODAY_DATE)) return TODAY_DATE;
+  return DATES.find((date) => isMoviePlayingOn(movie, date)) || DATES[0];
 }
 
 function renderMovies(movies, filter) {

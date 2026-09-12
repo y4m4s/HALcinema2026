@@ -972,8 +972,10 @@ func TestReservationStoreServiceDayPrice(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	const serviceDate = "2026-05-13"
-	serviceSchedule := scheduleIDOn(t, memberStore.db, serviceDate, "17:00")
+	// seed.sql の上映週は「当日から7日間」なので、13日を含むとは限らない。
+	// サービスデーの判定そのものを確かめるため、この上映回はテスト内で用意する。
+	const serviceDate = "2026-06-13"
+	serviceSchedule := insertScheduleOn(t, memberStore.db, serviceDate, "17:00", "19:26")
 	seat := firstFreeSeat(t, memberStore.db, serviceSchedule)
 	req := reservationCreateRequest{
 		MovieID:       "1",
@@ -1040,6 +1042,21 @@ func scheduleIDOn(t *testing.T, db *sql.DB, date, clock string) string {
 		t.Fatalf("scheduleIDOn(%q, %q) error = %v", date, clock, err)
 	}
 	return id
+}
+
+// insertScheduleOn adds a M001 / SCR001 showtime on the given date and
+// returns its schedules.id. seed.sql の上映週の外にある日付を使うテスト用。
+func insertScheduleOn(t *testing.T, db *sql.DB, date, startClock, endClock string) string {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO schedules (movie_id, screen_id, start_at, end_at)
+		 VALUES ('M001', 'SCR001', ?, ?)`,
+		date+"T"+startClock+":00+09:00",
+		date+"T"+endClock+":00+09:00",
+	); err != nil {
+		t.Fatalf("insertScheduleOn(%q, %q) error = %v", date, startClock, err)
+	}
+	return scheduleIDOn(t, db, date, startClock)
 }
 
 // firstFreeSeatOnBoth returns a seat_code that is free on both schedules.

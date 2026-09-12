@@ -108,7 +108,14 @@ test('DATES は YYYY-MM-DD の連続した1週間で、TODAY_DATE を含む', ()
     const nextDate = `${previous.getFullYear()}-${pad(previous.getMonth() + 1)}-${pad(previous.getDate())}`
     assert.equal(DATES[i], nextDate)
   }
-  assert.ok(DATES.includes(TODAY_DATE))
+  // 上映週は当日から始まる。schedule / detail の日付タブは先頭が TODAY になる。
+  assert.equal(DATES[0], TODAY_DATE)
+})
+
+test('上映週に呪いのサービスデー (13日) が含まれる', () => {
+  const { DATES } = loadMockData()
+  const serviceDays = DATES.filter((date) => isCurseServiceDay(date))
+  assert.equal(serviceDays.length, 1, `上映週にサービスデーが1日だけ含まれること: ${DATES.join(', ')}`)
 })
 
 test('seed.sql の上映週は DATES と一致する', () => {

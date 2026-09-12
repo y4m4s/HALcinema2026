@@ -13,7 +13,7 @@ import { TicketsStep } from '../components/booking/TicketsStep'
 import { escapeAttr, escapeHtml, formatCardNumber, formatYen } from '../components/booking/utils'
 import { SERVICE_DAY_PRICE, THREE_D_EXTRA_FEE, TICKET_TYPES } from '../data/pricing'
 
-import { MOVIES, SCREENS, DATES, formatDateLabel, getMovieStatus, isCurseServiceDay, isMoviePlayingOn } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieStatus, isCurseServiceDay, isMoviePlayingOn } from './data'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -1461,7 +1461,8 @@ function getAvailableSlots(movie) {
 }
 
 function getDefaultDate(movie) {
-  const todayIndex = Math.min(3, DATES.length - 1)
+  // 当日以降で最初に上映がある日を選ぶ。見つからなければ週の先頭に戻す。
+  const todayIndex = Math.max(0, DATES.indexOf(TODAY_DATE))
   const fromToday = DATES.slice(todayIndex).find(date => isPlayingDate(movie, date))
   return fromToday || DATES.find(date => isPlayingDate(movie, date)) || DATES[0]
 }

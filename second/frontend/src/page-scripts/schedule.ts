@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES, formatDateLabel, getMovieScreenSchedules, getMovieStatus, isMoviePlayingOn } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieScreenSchedules, getMovieStatus, isMoviePlayingOn } from './data'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
@@ -82,12 +82,17 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     }, 110);
   }
 
+  // 当日のタブに付ける TODAY バッジ (作品詳細ページと同じ)
+  function todayBadge(d) {
+    return d === TODAY_DATE ? '<span class="today-badge">TODAY</span>' : '';
+  }
+
   function renderSubTabs() {
     const root = document.getElementById('sub-tabs');
     if (viewMode === 'date') {
       root.innerHTML = '<div class="sub-tabs">' +
         DATES.map((d, i) =>
-          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${formatDateLabel(d)}</button>`
+          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${formatDateLabel(d)}${todayBadge(d)}</button>`
         ).join('') + '</div>';
       root.querySelector('.sub-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
@@ -141,7 +146,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
             const playing = isPlayingDate(m, d);
-            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${formatDateLabel(d)}</button>`;
+            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${formatDateLabel(d)}${todayBadge(d)}</button>`;
           }).join('')}
         </div>`;
       document.getElementById('movie-date-tabs').addEventListener('click', function (e) {
@@ -232,12 +237,23 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
     const noteText = m.note || '—';
 
+    // レーティングとジャンルは 760px 以下のカードだけで表示する (CSS 側で出し分け)
+    const ratingHtml = m.rating ? `<span class="movie-card-rating">${m.rating}</span>` : '';
+    const genres = Array.isArray(m.genre) ? m.genre : [];
+    const genresHtml = genres.length
+      ? `<div class="movie-card-genres">${genres.map(g => `<span>${g}</span>`).join('')}</div>`
+      : '';
+
     return `
       <div class="movie-card" style="--card-delay: ${delay}s">
         <div class="movie-card-header">
           <div class="movie-card-title-wrap">
             <a href="detail.html?id=${m.id}" class="movie-card-title">${m.title}</a>
-            <span class="movie-card-duration">本編 ${m.duration}分</span>
+            <div class="movie-card-meta">
+              ${ratingHtml}
+              <span class="movie-card-duration">本編 ${m.duration}分</span>
+            </div>
+            ${genresHtml}
           </div>
           <div class="movie-card-header-right">
             <a href="detail.html?id=${m.id}" class="btn-ghost schedule-detail-btn">詳細</a>
