@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
 import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieScreenSchedules, getMovieStatus, isMoviePlayingOn } from './data'
+import { datePagerHtml, setupDatePager } from './date-pager'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
@@ -92,10 +93,11 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   function renderSubTabs() {
     const root = document.getElementById('sub-tabs');
     if (viewMode === 'date') {
-      root.innerHTML = '<div class="sub-tabs">' +
+      root.innerHTML = datePagerHtml('<div class="sub-tabs">' +
         DATES.map((d, i) =>
           `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${formatDateLabel(d)}${todayBadge(d)}</button>`
-        ).join('') + '</div>';
+        ).join('') + '</div>');
+      setupDatePager(root.querySelector('[data-date-pager]'));
       root.querySelector('.sub-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
         if (!btn) return;
@@ -145,12 +147,13 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       if (!isPlayingDate(m, DATES[movieDateIdx])) movieDateIdx = firstPlayingDateIdx(m);
       el.innerHTML = `
         <div class="schedule-heading">${m.title} の上映スケジュール</div>
-        <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
+        ${datePagerHtml(`<div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
             const playing = isPlayingDate(m, d);
             return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${formatDateLabel(d)}${todayBadge(d)}</button>`;
           }).join('')}
-        </div>`;
+        </div>`, 'movie-date-pager')}`;
+      setupDatePager(el.querySelector('[data-date-pager]'));
       document.getElementById('movie-date-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
         if (!btn) return;

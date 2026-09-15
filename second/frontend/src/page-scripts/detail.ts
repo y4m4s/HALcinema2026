@@ -2,6 +2,7 @@
 // @ts-nocheck
 import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, formatScreeningStartDate, getMovieStatus, isMoviePlayingOn } from './data'
 import { badge } from './common'
+import { setupDatePager } from './date-pager'
 
 export function runDetail() {
 const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
@@ -134,7 +135,10 @@ function renderBooking(movie, isNow) {
     return;
   }
 
-  if (dateTabs) dateTabs.innerHTML = buildDateTabs(movie);
+  if (dateTabs) {
+    dateTabs.innerHTML = buildDateTabs(movie);
+    setupDatePager(dateTabs.closest('[data-date-pager]'));
+  }
   if (theatersGrid) theatersGrid.innerHTML = buildTheaterCols(movie);
   if (note && noteText) {
     note.hidden = !movie.note;

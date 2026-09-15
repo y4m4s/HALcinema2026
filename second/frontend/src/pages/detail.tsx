@@ -59,7 +59,11 @@ export const detailPage: PageDefinition = {
           <div class="coming-soon-text">予約受付は公開日前日より開始予定です</div>
         </div>
         <div class="detail-now-booking" id="detail-now-booking" hidden>
-          <div class="sub-tabs" id="detail-date-tabs"></div>
+          <div class="date-pager" data-date-pager>
+            <button type="button" class="date-pager-btn" data-date-pager-prev aria-label="前の日付を表示">&larr;</button>
+            <div class="sub-tabs" id="detail-date-tabs"></div>
+            <button type="button" class="date-pager-btn" data-date-pager-next aria-label="次の日付を表示">&rarr;</button>
+          </div>
           <div class="detail-theaters-wrap">
             <div class="theaters-grid" id="detail-theaters-grid"></div>
           </div>

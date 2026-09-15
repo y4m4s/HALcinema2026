@@ -286,15 +286,109 @@
   font-weight: 700;
 }
 
-/* タブが狭くなる幅では、日付の下へ回して横幅を増やさない */
+/* タブが狭くなる幅では、日付の下へ回して横幅を増やさない。
+   バッジの縦の寸法は、ページ送りで TODAY の無いタブの高さをそろえる計算
+   (下の @media (max-width: 500px)) でも使うので変数にまとめる。 */
 @media (max-width: 1024px) {
+  .sub-tabs {
+    --today-badge-gap: 3px;
+    --today-badge-pad-y: 1px;
+    --today-badge-font: 6px;
+    --today-badge-line: 1.3;
+  }
+
   .sub-tabs .today-badge {
     display: block;
     width: max-content;
-    margin: 3px auto 0;
-    padding: 1px 3px;
-    font-size: 6px;
-    line-height: 1.3;
+    margin: var(--today-badge-gap) auto 0;
+    padding: var(--today-badge-pad-y) 3px;
+    font-size: var(--today-badge-font);
+    line-height: var(--today-badge-line);
+  }
+}
+
+/* ── 日付タブのページ送り (page-scripts/date-pager.ts) ── */
+/* 幅に余裕があるときは包み要素を無いものとして扱い、7日分をそのまま並べる。 */
+.date-pager {
+  display: contents;
+}
+
+.date-pager-btn {
+  display: none;
+}
+
+/* 7日分が入りきらず横スクロールになる幅（実測で detail が 483px 以下）では、
+   4日ずつ表示して左右のボタンで切り替える。フォントの描画差を見込んで 500px で切り替える。 */
+@media (max-width: 500px) {
+  .date-pager {
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    margin-bottom: 28px;
+    background: var(--border);
+  }
+
+  .date-pager.movie-date-pager {
+    margin-top: 12px;
+  }
+
+  .date-pager > .sub-tabs {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .date-pager .sub-tab {
+    min-width: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .date-pager .sub-tab.is-off-page {
+    display: none;
+  }
+
+  /* TODAY の無いタブは、TODAY バッジ1段分の高さを日付の上と下に半分ずつ足す。
+     TODAY を含まないページでもタブ列の高さがそろい、日付は上下の中央に来る。 */
+  .date-pager.has-today .sub-tab:not(.is-today)::before,
+  .date-pager.has-today .sub-tab:not(.is-today)::after {
+    content: '';
+    display: block;
+    height: calc((var(--today-badge-gap) + var(--today-badge-pad-y) * 2 + var(--today-badge-font) * var(--today-badge-line)) / 2);
+  }
+
+  /* 日付タブ (--bg2) と同じ地にすると空きマスに見えるので、矢印はタブと違う地で置く。 */
+  .date-pager-btn {
+    display: grid;
+    place-items: center;
+    flex: 0 0 30px;
+    padding: 0;
+    border: 0;
+    background: var(--accent);
+    color: #edf4ff;
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .date-pager-btn:hover:not(:disabled) {
+    background: var(--accent2);
+  }
+
+  /* 押せない側もボタンの形は見せ、矢印の色だけ落ち着かせる (左右どちらの端でも同じ見た目) */
+  .date-pager-btn:disabled {
+    background: var(--bg3);
+    color: rgba(150, 166, 192, 0.6);
+    box-shadow: inset 0 0 0 1px var(--border2);
+    cursor: default;
+  }
+
+  .date-pager-btn:focus-visible {
+    outline: 2px solid #edf4ff;
+    outline-offset: -3px;
   }
 }
 
