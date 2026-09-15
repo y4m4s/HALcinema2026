@@ -41,8 +41,9 @@ const CARD_NUMBER_LENGTH = 16
 const CARD_CVC_LENGTH = 3
 const CARD_BRANDS = [
   { label: 'VISA', pattern: /^4/ },
-  { label: 'Mastercard', pattern: /^(5[1-5]|2[2-7])/ },
-  { label: 'JCB', pattern: /^35/ },
+  // Mastercard は 51〜55 と 2221〜2720、JCB は 3528〜3589 の範囲。
+  { label: 'Mastercard', pattern: /^(5[1-5]|22(?:2[1-9]|[3-9]\d)|2[3-6]\d{2}|27(?:[01]\d|20))/ },
+  { label: 'JCB', pattern: /^35(?:2[89]|[3-7]\d|8\d)/ },
 ]
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
@@ -239,6 +240,7 @@ export function runBooking() {
     const paymentChoice = target.closest('[data-payment-choice]')
     if (paymentChoice) {
       state.payment = paymentChoice.dataset.paymentChoice
+      if (state.payment !== 'credit') clearCardSecrets()
       state.paymentErrors = {}
       state.maxStep = state.currentStep
       render()
@@ -848,6 +850,12 @@ export function runBooking() {
     return false
   }
 
+  // カード番号とCVCは、クレジットカード以外を選んだとき・予約完了時・画面離脱時に保持しない。
+  function clearCardSecrets() {
+    state.paymentDetails.cardNumber = ''
+    state.paymentDetails.cardCvc = ''
+  }
+
   function getPaymentSummary() {
     const d = state.paymentDetails
     if (state.payment === 'credit') {
@@ -987,6 +995,7 @@ export function runBooking() {
       })
 
       state.confirmationNo = result.confirmationNo || result.reservationId || createConfirmationNo()
+      clearCardSecrets()
       state.currentStep = getStepIndex('complete')
       state.maxStep = state.currentStep
       state.submittingReservation = false
@@ -1376,6 +1385,7 @@ export function runBooking() {
 
   return function cleanupBooking() {
     disposed = true
+    clearCardSecrets()
     stepRoot.removeEventListener('click', onClick)
     stepRoot.removeEventListener('input', onInput)
     stepRoot.removeEventListener('change', onChange)

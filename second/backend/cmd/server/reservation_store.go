@@ -272,7 +272,74 @@ func (s *reservationStore) init(ctx context.Context) error {
 	if err := s.migrateScreenTypeSurcharge(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateReservationPriceSnapshot(ctx); err != nil {
+		return err
+	}
 	return s.expireStaleSeatHolds(ctx, time.Now().UTC().Format(time.RFC3339))
+}
+
+// migrateReservationPriceSnapshot adds reservations.surcharge_unit_price / discount_amount
+// so 予約確認の内訳 uses the amounts fixed at reservation time instead of the current masters.
+// 列を持たない既存の予約は、移行時点の料金マスタから予約作成時と同じ計算で値を埋める。
+func (s *reservationStore) migrateReservationPriceSnapshot(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "reservations")
+	if err != nil {
+		return err
+	}
+	statements := []string{}
+	if !columns["surcharge_unit_price"] {
+		statements = append(statements,
+			`ALTER TABLE reservations ADD COLUMN surcharge_unit_price INTEGER NOT NULL DEFAULT 0 CHECK (surcharge_unit_price >= 0)`,
+			`UPDATE reservations
+			    SET surcharge_unit_price = COALESCE((
+			            SELECT st.surcharge
+			              FROM schedules AS sch
+			              JOIN screens AS scr ON scr.id = sch.screen_id
+			              JOIN screen_types AS st ON st.id = scr.screen_type_id
+			             WHERE sch.id = reservations.schedule_id
+			        ), 0)`,
+		)
+	}
+	if !columns["discount_amount"] {
+		statements = append(statements,
+			`ALTER TABLE reservations ADD COLUMN discount_amount INTEGER NOT NULL DEFAULT 0 CHECK (discount_amount >= 0)`,
+			// couponDiscount と同じく「1席あたりの割引額 x 座席数」を券種の小計で頭打ちにする。
+			`UPDATE reservations
+			    SET discount_amount = COALESCE((
+			            SELECT MIN(
+			                       c.discount_amount * (
+			                           SELECT COALESCE(SUM(rd.quantity * tt.required_seat_count), 0)
+			                             FROM reservation_details AS rd
+			                             JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
+			                            WHERE rd.reservation_id = reservations.id
+			                       ),
+			                       (
+			                           SELECT COALESCE(SUM(rd.subtotal), 0)
+			                             FROM reservation_details AS rd
+			                            WHERE rd.reservation_id = reservations.id
+			                       )
+			                   )
+			              FROM coupons AS c
+			             WHERE c.id = reservations.coupon_id
+			        ), 0)
+			  WHERE coupon_id IS NOT NULL`,
+		)
+	}
+	if len(statements) == 0 {
+		return nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *reservationStore) migrateReservationIdempotency(ctx context.Context) error {
@@ -976,15 +1043,14 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		response              reservationLookupResponse
 		reservationID         int64
 		startAt, endAt        string
-		screenID              string
-		couponID              sql.NullString
+		surchargeUnitPrice    int
 		paymentMethod, status string
 		amount                int
 	)
 	err := s.db.QueryRowContext(
 		ctx,
 		`SELECT r.id, r.reservation_no, r.status, r.customer_name, r.customer_email, r.customer_tel,
-		        sch.start_at, sch.end_at, m.title, scr.name, sch.screen_id, r.coupon_id,
+		        sch.start_at, sch.end_at, m.title, scr.name, r.surcharge_unit_price, r.discount_amount,
 		        COALESCE(pm.name, ''), COALESCE(p.status, ''), COALESCE(p.amount, 0)
 		   FROM reservations AS r
 		   JOIN schedules AS sch ON sch.id = r.schedule_id
@@ -1011,8 +1077,8 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		&endAt,
 		&response.MovieTitle,
 		&response.Screen,
-		&screenID,
-		&couponID,
+		&surchargeUnitPrice,
+		&response.Discount,
 		&paymentMethod,
 		&status,
 		&amount,
@@ -1045,33 +1111,16 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 	}
 	response.Tickets = tickets
 
-	// 追加料金と割引は保存していないため、予約作成時（Create）と同じ計算で内訳を再現する。
+	// 追加料金の単価と割引額は、料金マスタの変更に左右されないよう予約作成時に保存した値を使う。
 	// 座席数は、期限切れで予約座席が解放された予約でも変わらないよう明細の必要座席数から求める。
 	seatUnits, err := s.reservationSeatUnits(ctx, reservationID)
 	if err != nil {
 		return reservationLookupResponse{}, err
 	}
-	unitSurcharge, err := s.screenSurcharge(ctx, screenID)
-	if err != nil {
-		return reservationLookupResponse{}, err
-	}
 	response.Surcharge = reservationLookupSurcharge{
-		UnitPrice: unitSurcharge,
+		UnitPrice: surchargeUnitPrice,
 		Units:     seatUnits,
-		Amount:    unitSurcharge * seatUnits,
-	}
-
-	if couponID.Valid {
-		var discountPerSeat int
-		err := s.db.QueryRowContext(ctx, `SELECT discount_amount FROM coupons WHERE id = ?`, couponID.String).Scan(&discountPerSeat)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return reservationLookupResponse{}, err
-		}
-		ticketSubtotal := 0
-		for _, ticket := range tickets {
-			ticketSubtotal += ticket.Price
-		}
-		response.Discount = couponDiscount(discountPerSeat, seatUnits, ticketSubtotal)
+		Amount:    surchargeUnitPrice * seatUnits,
 	}
 
 	return response, nil
@@ -1328,8 +1377,9 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		ctx,
 		`INSERT INTO reservations
 			(schedule_id, member_id, coupon_id, customer_name, customer_name_kana,
-			 customer_email, customer_tel, status, seat_hold_expires_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 customer_email, customer_tel, status, seat_hold_expires_at,
+			 surcharge_unit_price, discount_amount, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		showtime.id,
 		memberID,
 		nullableString(couponID),
@@ -1339,6 +1389,8 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		customer.Tel,
 		status,
 		seatHoldExpiresAt,
+		surcharge,
+		discount,
 		now,
 		now,
 	)

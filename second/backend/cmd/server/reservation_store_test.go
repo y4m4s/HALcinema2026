@@ -649,6 +649,111 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	assertLookupBreakdownMatchesAmount(t, lookup)
 }
 
+// TestReservationStoreLookupKeepsPriceSnapshot は、予約後に料金マスタを変更しても
+// 予約確認の追加料金と割引が予約作成時の金額のままであることを確かめる。
+func TestReservationStoreLookupKeepsPriceSnapshot(t *testing.T) {
+	store, db := newTestReservationStore(t)
+	ctx := context.Background()
+	lookupReq := createGroupCouponReservation(t, store, db, "price-snapshot-0001")
+
+	if _, err := db.ExecContext(ctx, `UPDATE screen_types SET surcharge = 900 WHERE id = 'SCRT001'`); err != nil {
+		t.Fatalf("update screen surcharge error = %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE coupons SET discount_amount = 50 WHERE rule_code = 'group'`); err != nil {
+		t.Fatalf("update coupon discount error = %v", err)
+	}
+
+	lookup, err := store.Lookup(ctx, lookupReq)
+	if err != nil {
+		t.Fatalf("Lookup() after master change error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() after master change surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
+}
+
+// TestReservationStoreMigratesPriceSnapshot は、追加料金・割引の列がない既存DBを移行したとき、
+// 既存の予約に予約作成時と同じ計算の金額が埋まることを確かめる。
+func TestReservationStoreMigratesPriceSnapshot(t *testing.T) {
+	store, db := newTestReservationStore(t)
+	ctx := context.Background()
+	lookupReq := createGroupCouponReservation(t, store, db, "price-snapshot-migrate-0001")
+
+	for _, column := range []string{"surcharge_unit_price", "discount_amount"} {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE reservations DROP COLUMN `+column); err != nil {
+			t.Fatalf("drop reservations.%s error = %v", column, err)
+		}
+	}
+	migrated, err := newReservationStore(db)
+	if err != nil {
+		t.Fatalf("newReservationStore() price snapshot migration error = %v", err)
+	}
+
+	lookup, err := migrated.Lookup(ctx, lookupReq)
+	if err != nil {
+		t.Fatalf("Lookup() after migration error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() after migration surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
+}
+
+func newTestReservationStore(t *testing.T) (*reservationStore, *sql.DB) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	t.Cleanup(func() { memberStore.Close() })
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+	return store, memberStore.db
+}
+
+// createGroupCouponReservation はスクリーン1で一般4枚・グループ割引の予約を作り、照会用の条件を返す。
+// 券種 1800x4=7200円 + 追加料金 400x4=1600円 - 割引 200x4=800円 = 8000円。
+func createGroupCouponReservation(t *testing.T, store *reservationStore, db *sql.DB, idempotencyKey string) reservationLookupRequest {
+	t.Helper()
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          testShowDate,
+		Seats:         firstFreeSeats(t, db, testScheduleID(t, db), 4),
+		Tickets:       map[string]int{"adult": 4},
+		CouponCode:    couponCodeByRule(t, db, "group"),
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Snapshot User",
+			NameKana: "すなっぷしょっとゆーざー",
+			Email:    "snapshot@example.com",
+			Tel:      "09056789012",
+		},
+	}
+	result, err := store.Create(context.Background(), req, nil, idempotencyKey)
+	if err != nil {
+		t.Fatalf("Create() group coupon error = %v", err)
+	}
+	if result.Amount != 8000 {
+		t.Fatalf("Create() amount = %d, want 8000", result.Amount)
+	}
+	return reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         req.Customer.Email,
+		Tel:           req.Customer.Tel,
+	}
+}
+
 func TestReservationStorePreviewCoupon(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
 	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
