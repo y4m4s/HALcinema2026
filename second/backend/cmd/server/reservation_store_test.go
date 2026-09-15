@@ -132,6 +132,11 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if !containsString(lookup.Seats, testSeat) {
 		t.Fatalf("Lookup() seats = %#v, want %s", lookup.Seats, testSeat)
 	}
+	// スクリーン1は3D追加料金 400円/席。券種 1800円 + 追加料金 400円 = 2200円。
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 1, Amount: 400}) || lookup.Discount != 0 {
+		t.Fatalf("Lookup() surcharge = %+v discount = %d, want 400x1=400 / 0", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
 
 	_, err = store.Lookup(ctx, reservationLookupRequest{
 		ReservationID: result.ReservationID,
@@ -552,6 +557,20 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		t.Fatalf("expired state = reservation:%q payment:%q, want expired/cancelled", reservationStatus, paymentStatus)
 	}
 
+	// 期限切れで予約座席が解放されても、照会の追加料金は明細の座席数から出す。
+	expiredLookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "hold@example.com",
+		Tel:           "09045678901",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() expired hold error = %v", err)
+	}
+	if len(expiredLookup.Seats) != 0 || expiredLookup.Surcharge.Units != 1 {
+		t.Fatalf("Lookup() expired hold seats = %#v surcharge = %+v, want no seats / 1 unit", expiredLookup.Seats, expiredLookup.Surcharge)
+	}
+	assertLookupBreakdownMatchesAmount(t, expiredLookup)
+
 	req.PaymentMethod = "credit"
 	secondResult, err := store.Create(ctx, req, nil, "konbini-hold-0002")
 	if err != nil {
@@ -614,6 +633,20 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	if couponID != "C0000000002" {
 		t.Fatalf("coupon_id = %q, want C0000000002", couponID)
 	}
+
+	// 券種 1800x4=7200円 + 追加料金 400x4=1600円 - 割引 200x4=800円 = 8000円。
+	lookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "coupon@example.com",
+		Tel:           "09034567890",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() group coupon error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
 }
 
 func TestReservationStorePreviewCoupon(t *testing.T) {
@@ -1282,6 +1315,19 @@ func forceLegacyPaymentTable(t *testing.T, db *sql.DB) {
 	}
 	if err := tx.Commit(); err != nil {
 		t.Fatalf("legacy payment commit error = %v", err)
+	}
+}
+
+// assertLookupBreakdownMatchesAmount は、照会画面に出す内訳（券種・追加料金・割引）の合計が
+// お支払い合計と一致することを確かめる。
+func assertLookupBreakdownMatchesAmount(t *testing.T, lookup reservationLookupResponse) {
+	t.Helper()
+	total := lookup.Surcharge.Amount - lookup.Discount
+	for _, ticket := range lookup.Tickets {
+		total += ticket.Price
+	}
+	if total != lookup.Payment.Amount {
+		t.Fatalf("Lookup() breakdown total = %d, want payment amount %d (%+v)", total, lookup.Payment.Amount, lookup)
 	}
 }
 
