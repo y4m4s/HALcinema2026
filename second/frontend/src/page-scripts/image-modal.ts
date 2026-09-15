@@ -6,6 +6,7 @@ export type ImageModalCleanup = () => void
  * - selector には <img> を含む要素 (画像のラッパー) を指定する
  * - 背景は暗い半透明で、後ろのページが透けて見える
  * - 画像以外の場所のクリック / タップ、閉じるボタン、Escape キーで閉じる
+ * - 開いている間はフォーカスを閉じるボタンに留め、閉じたら開く前の要素へ戻す
  *
  * 戻り値の関数を呼ぶと、登録したイベントと生成した DOM を破棄する。
  * ページ離脱時の cleanup として page-script の戻り値に含めること。
@@ -38,17 +39,24 @@ export function initImageModal(selector: string): ImageModalCleanup {
   modal.append(closeButton, image)
   document.body.appendChild(modal)
 
+  // 閉じたときにフォーカスを戻す要素 (開く直前にフォーカスがあった要素)
+  let returnFocusTo: HTMLElement | null = null
+
   function open(source: HTMLImageElement) {
+    returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
     image.src = source.currentSrc || source.src
     image.alt = source.alt
     modal.hidden = false
     document.body.classList.add('modal-open')
+    closeButton.focus()
   }
 
   function close() {
     if (modal.hidden) return
     modal.hidden = true
     document.body.classList.remove('modal-open')
+    returnFocusTo?.focus()
+    returnFocusTo = null
   }
 
   function onTriggerClick(e: Event) {
@@ -64,6 +72,11 @@ export function initImageModal(selector: string): ImageModalCleanup {
 
   function onDocumentKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') close()
+    // モーダル内でフォーカスできるのは閉じるボタンだけなので、Tab 移動はそこに留める
+    if (e.key === 'Tab' && !modal.hidden) {
+      e.preventDefault()
+      closeButton.focus()
+    }
   }
 
   triggers.forEach((trigger) => {

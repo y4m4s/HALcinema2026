@@ -182,7 +182,8 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   function renderRows() {
     const el = document.getElementById('schedule-rows');
     if (viewMode === 'date') {
-      const movies = nowShowing.slice();
+      // 非上映日の作品を出すと、存在しない上映回への予約リンクができてしまうため除外する。
+      const movies = nowShowing.filter(m => isPlayingDate(m, DATES[dateIdx]));
       if (movies.length === 0) {
         el.innerHTML = emptyHtml('上映中の作品がありません', 'NO MOVIES SCHEDULED');
         return;

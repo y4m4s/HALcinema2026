@@ -2296,7 +2296,7 @@
   }
 
   .seat-row-grid {
-    gap: 5px;
+    gap: var(--seat-gap);
   }
 
   .seat-legend {

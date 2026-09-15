@@ -27,7 +27,7 @@ function start(name, command, args, cwd) {
     if (shuttingDown) return
     const reason = signal ? `signal ${signal}` : `exit code ${code ?? 1}`
     console.error(`[dev] ${name} が停止しました (${reason})`)
-    void shutdown(code ?? 1)
+    void shutdown(code === 0 ? 1 : (code ?? 1))
   })
 
   return child
