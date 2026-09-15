@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES, getMovieScreenSchedules, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieScreenSchedules, getMovieStatus, isMoviePlayingOn } from './data'
+import { datePagerHtml, setupDatePager } from './date-pager'
 
 export function runSchedule() {
 const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
@@ -10,36 +11,43 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   let dateIdx = 0;
   let movieIdx = 0;
   let movieDateIdx = 0;
+  // 遷移直後の位置合わせを止めるための後片付け関数 (作品指定で開いたときだけ設定される)
+  let stopFollowingOnLeave = null;
   // 上映回ごとの予約状況をDBから取得し `作品ID-スクリーン-開始時刻` で引けるようにする。
   // 取得できた回はモックの status を上書きし、失敗時はモック値のまま表示する。
   const availabilityByKey = new Map();
+  // 画面離脱時に取得中のリクエストを打ち切る
+  const availabilityAbort = new AbortController();
 
-  function slotKey(movieId, screen, start) {
-    return `${movieId}-${screen}-${start}`;
+  // 同じ時刻でも日付が違えば別の上映回なので、日付までキーに含める。
+  function slotKey(movieId, screen, date, start) {
+    return `${movieId}-${screen}-${date}-${start}`;
   }
 
-  function resolveSlotStatus(movie, screen, slot) {
-    const live = availabilityByKey.get(slotKey(movie.id, screen, slot.start));
+  function resolveSlotStatus(movie, screen, date, slot) {
+    const live = availabilityByKey.get(slotKey(movie.id, screen, date, slot.start));
     return live || slot.status || 'ok';
   }
 
-  function isPlayingDate(movie, dateLabel) {
-    if (!Array.isArray(movie.playingDays)) return true;
-    const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
-    const match = String(dateLabel).match(/\((.)\)/);
-    return !match || movie.playingDays.includes(dayMap[match[1]]);
+  function isPlayingDate(movie, date) {
+    return isMoviePlayingOn(movie, date);
+  }
+
+  function firstPlayingDateIdx(movie) {
+    const idx = DATES.findIndex(date => isPlayingDate(movie, date));
+    return idx < 0 ? 0 : idx;
   }
 
   async function loadAvailability() {
     try {
-      const res = await fetch('/api/schedules/availability');
+      const res = await fetch('/api/schedules/availability', { signal: availabilityAbort.signal });
       if (!res.ok) return;
       const data = await res.json();
       if (disposed) return;
       if (!Array.isArray(data)) return;
       availabilityByKey.clear();
       data.forEach(function (item) {
-        availabilityByKey.set(slotKey(item.movieId, item.screen, item.start), item.status);
+        availabilityByKey.set(slotKey(item.movieId, item.screen, item.date, item.start), item.status);
       });
       renderRows();
     } catch (e) {
@@ -77,13 +85,19 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     }, 110);
   }
 
+  // 当日のタブに付ける TODAY バッジ (作品詳細ページと同じ)
+  function todayBadge(d) {
+    return d === TODAY_DATE ? '<span class="today-badge">TODAY</span>' : '';
+  }
+
   function renderSubTabs() {
     const root = document.getElementById('sub-tabs');
     if (viewMode === 'date') {
-      root.innerHTML = '<div class="sub-tabs">' +
+      root.innerHTML = datePagerHtml('<div class="sub-tabs">' +
         DATES.map((d, i) =>
-          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${d}</button>`
-        ).join('') + '</div>';
+          `<button class="sub-tab${i === dateIdx ? ' active' : ''}" data-idx="${i}">${formatDateLabel(d)}${todayBadge(d)}</button>`
+        ).join('') + '</div>');
+      setupDatePager(root.querySelector('[data-date-pager]'));
       root.querySelector('.sub-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
         if (!btn) return;
@@ -114,8 +128,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         const card = e.target.closest('.movie-tab-card');
         if (!card) return;
         movieIdx = parseInt(card.dataset.idx);
-        movieDateIdx = DATES.findIndex(date => isPlayingDate(nowShowing[movieIdx], date));
-        if (movieDateIdx < 0) movieDateIdx = 0;
+        movieDateIdx = firstPlayingDateIdx(nowShowing[movieIdx]);
         root.querySelectorAll('.movie-tab-card').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         renderHeading();
@@ -127,17 +140,20 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
   function renderHeading() {
     const el = document.getElementById('schedule-heading');
     if (viewMode === 'date') {
-      el.innerHTML = `<div class="schedule-heading">${DATES[dateIdx]} の上映スケジュール</div>`;
+      el.innerHTML = `<div class="schedule-heading">${formatDateLabel(DATES[dateIdx])} の上映スケジュール</div>`;
     } else {
       const m = nowShowing[movieIdx];
+      // 初期表示などで非上映日が選ばれている場合は最初の上映日に寄せる
+      if (!isPlayingDate(m, DATES[movieDateIdx])) movieDateIdx = firstPlayingDateIdx(m);
       el.innerHTML = `
         <div class="schedule-heading">${m.title} の上映スケジュール</div>
-        <div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
+        ${datePagerHtml(`<div class="sub-tabs movie-date-tabs" id="movie-date-tabs">
           ${DATES.map((d, i) => {
             const playing = isPlayingDate(m, d);
-            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${d}</button>`;
+            return `<button class="sub-tab${i === movieDateIdx ? ' active' : ''}${!playing ? ' no-play' : ''}" data-idx="${i}"${!playing ? ' disabled' : ''}>${formatDateLabel(d)}${todayBadge(d)}</button>`;
           }).join('')}
-        </div>`;
+        </div>`, 'movie-date-pager')}`;
+      setupDatePager(el.querySelector('[data-date-pager]'));
       document.getElementById('movie-date-tabs').addEventListener('click', function (e) {
         const btn = e.target.closest('.sub-tab');
         if (!btn) return;
@@ -187,7 +203,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return getMovieScreenSchedules(m);
   }
 
-  function renderMovieCard(m, idx, dateLabel) {
+  function renderMovieCard(m, idx, date) {
     const delay = (idx * 0.07).toFixed(2);
     const imgInner = m.image
       ? `<img src="${m.image}" alt="${m.title}">`
@@ -196,7 +212,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
     const theatersHtml = getScreenSchedules(m).map(function (sc) {
       const slotsHtml = sc.slots.map(function (slot) {
-        const status = resolveSlotStatus(m, sc.screen, slot);
+        const status = resolveSlotStatus(m, sc.screen, date, slot);
         const statusClass = status === 'soldout' ? 'soldout' : status === 'few' ? 'few' : 'ok';
         const statusText  = status === 'soldout' ? '販売終了' : status === 'few' ? '△残りわずか' : '◎余裕あり';
         const slotInner = `
@@ -205,7 +221,7 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
         if (statusClass === 'soldout') {
           return `<div class="time-slot soldout">${slotInner}</div>`;
         }
-        return `<a class="time-slot" href="${buildBookingHref(m, sc.screen, slot, dateLabel)}">${slotInner}</a>`;
+        return `<a class="time-slot" href="${buildBookingHref(m, sc.screen, slot, date)}">${slotInner}</a>`;
       }).join('');
       const screenInfo = SCREENS.find(s => s.num === sc.screen);
       const featureBadges = screenInfo
@@ -226,12 +242,23 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
 
     const noteText = m.note || '—';
 
+    // レーティングとジャンルは 760px 以下のカードだけで表示する (CSS 側で出し分け)
+    const ratingHtml = m.rating ? `<span class="movie-card-rating">${m.rating}</span>` : '';
+    const genres = Array.isArray(m.genre) ? m.genre : [];
+    const genresHtml = genres.length
+      ? `<div class="movie-card-genres">${genres.map(g => `<span>${g}</span>`).join('')}</div>`
+      : '';
+
     return `
       <div class="movie-card" style="--card-delay: ${delay}s">
         <div class="movie-card-header">
           <div class="movie-card-title-wrap">
             <a href="detail.html?id=${m.id}" class="movie-card-title">${m.title}</a>
-            <span class="movie-card-duration">本編 ${m.duration}分</span>
+            <div class="movie-card-meta">
+              ${ratingHtml}
+              <span class="movie-card-duration">本編 ${m.duration}分</span>
+            </div>
+            ${genresHtml}
           </div>
           <div class="movie-card-header-right">
             <a href="detail.html?id=${m.id}" class="btn-ghost schedule-detail-btn">詳細</a>
@@ -248,10 +275,10 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
       </div>`;
   }
 
-  function buildBookingHref(movie, screen, slot, dateLabel) {
+  function buildBookingHref(movie, screen, slot, date) {
     const params = new URLSearchParams({
       movie: String(movie.id),
-      date: dateLabel,
+      date: date,
       screen: String(screen),
       start: slot.start,
       end: slot.end,
@@ -259,11 +286,83 @@ const nowShowing = MOVIES.filter(m => getMovieStatus(m) === 'now');
     return `/booking?${params.toString()}`;
   }
 
+  // 上映作品一覧の「予約する」から ?view=movie&movie=<作品ID> で開かれたときは、
+  // 上映作品毎タブで該当作品を選んだ状態から始める。
+  const query = new URLSearchParams(location.search);
+  const requestedIdx = nowShowing.findIndex(m => String(m.id) === query.get('movie'));
+  if (query.get('view') === 'movie' || requestedIdx >= 0) {
+    viewMode = 'movie';
+    if (requestedIdx >= 0) {
+      movieIdx = requestedIdx;
+      movieDateIdx = firstPlayingDateIdx(nowShowing[movieIdx]);
+    }
+    // 上映日程毎に付いている初期の active を移す
+    document.querySelectorAll('.view-tab').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.mode === 'movie');
+    });
+  }
+
   render();
+
+  if (viewMode === 'movie' && requestedIdx >= 0) {
+    // 作品カードは横スクロールなので、選んだ作品が画面外だと分かりにくい。中央寄りに出す。
+    const tabs = document.querySelector('.movie-tabs');
+    const card = tabs && tabs.querySelector('.movie-tab-card.active');
+    if (card) tabs.scrollLeft = card.offsetLeft - (tabs.clientWidth - card.offsetWidth) / 2;
+
+    // 「(作品名) の上映スケジュール」を固定ヘッダーの下に出す。
+    // 表示演出 (.page-enter) の translateY が残っていると位置がずれるため、演出は行わない。
+    const enter = document.querySelector('.page-enter');
+    if (enter) enter.classList.remove('page-enter');
+
+    // ヘッダーの高さは CSS 変数ではなく実際の描画結果から取る。
+    // ページ用CSSの適用前だと変数が効かず、見出しがヘッダーに隠れるため。
+    function scrollToHeading() {
+      const heading = document.getElementById('schedule-heading');
+      if (!heading) return;
+      const header = document.querySelector('.site-header');
+      const offset = (header ? header.getBoundingClientRect().height : 0) + 16;
+      const top = heading.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+    }
+    scrollToHeading();
+
+    // 遷移直後はページ用CSS・Webフォント・画像の反映で本文の高さが変わり、
+    // 一度決めた位置がずれる。高さの変化を監視して、落ち着くまで合わせ直す。
+    // 利用者が自分で操作したら以後は触らない (スクロール位置の比較では、
+    // 高さが縮んだときのブラウザ側の補正と区別できないため操作そのものを見る)。
+    let userMoved = false;
+    function onUserMove() {
+      userMoved = true;
+      stopFollowing();
+    }
+    const userEvents = ['wheel', 'touchstart', 'keydown', 'mousedown'];
+    userEvents.forEach(function (type) {
+      window.addEventListener(type, onUserMove, { passive: true });
+    });
+
+    const heightObserver = new ResizeObserver(function () {
+      if (!userMoved) scrollToHeading();
+    });
+    heightObserver.observe(document.body);
+    const followTimer = window.setTimeout(stopFollowing, 1500);
+
+    function stopFollowing() {
+      heightObserver.disconnect();
+      window.clearTimeout(followTimer);
+      userEvents.forEach(function (type) {
+        window.removeEventListener(type, onUserMove);
+      });
+    }
+    stopFollowingOnLeave = stopFollowing;
+  }
+
   loadAvailability();
 
   return function cleanupSchedule() {
     disposed = true;
+    if (stopFollowingOnLeave) stopFollowingOnLeave();
+    availabilityAbort.abort();
     viewTabs.removeEventListener('click', onViewTabsClick);
     if (fadeTimer) window.clearTimeout(fadeTimer);
   };

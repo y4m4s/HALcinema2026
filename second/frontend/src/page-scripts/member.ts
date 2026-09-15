@@ -31,11 +31,15 @@ export function runMember() {
   if (!root) return
   let disposed = false
 
+  // 予約確認ページの案内リンクから ?tab=history で開かれたときは履歴タブから始める
+  const requestedTab =
+    new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'profile'
+
   const state = {
     session: readMemberSession(),
     checking: Boolean(readMemberSession()?.token),
     mode: 'login',
-    activeTab: 'profile',
+    activeTab: requestedTab,
     login: createLoginState(),
     register: createRegisterState(),
     history: createHistoryState(),
@@ -55,6 +59,8 @@ export function runMember() {
       state.session = session
       state.checking = false
       render()
+      // 履歴タブで開いた場合は、ログイン状態を確認できてから履歴を読み込む
+      if (state.activeTab === 'history' && session?.token) void loadReservationHistory()
     })
   }
 

@@ -237,10 +237,6 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-body.modal-open {
-  overflow: hidden;
-}
-
 .card-details-lead {
   font-size: 0.82rem;
   line-height: 1.75;
@@ -1028,11 +1024,19 @@ body.modal-open {
 
 /* ========== レスポンシブ ========== */
 @media (max-width: 968px) {
+  /* 縦並び時は「キャッチコピー → 画像 → 本文」の順に並べ替える */
   .about-grid {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; /* 横並び用の align-items: center を打ち消す */
+    gap: 0;
   }
-  .about-visual { aspect-ratio: 16 / 10; }
+  .about-text { display: contents; }
+  .about-text h2 { order: 1; margin-bottom: 2.5rem; }
+  .about-visual { order: 2; margin-bottom: 2.5rem; aspect-ratio: 16 / 10; }
+  .about-text .lead { order: 3; }
+  .about-text .desc { order: 4; }
+  .about-stats { order: 5; }
   .equipment-grid { grid-template-columns: repeat(2, 1fr); }
   .lab-feature { grid-template-columns: 1fr; gap: 2rem; }
   .lab-visual { aspect-ratio: 16 / 9; }

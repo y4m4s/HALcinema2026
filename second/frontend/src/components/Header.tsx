@@ -26,6 +26,7 @@ function getActiveNav(currentPage: string) {
 
 export function Header({ currentPage }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [renderedPage, setRenderedPage] = useState(currentPage)
   const [memberLoggedIn, setMemberLoggedIn] = useState(() => Boolean(readMemberSession()))
   const toggleRef = useRef<HTMLButtonElement>(null)
   const activeNav = getActiveNav(currentPage)
@@ -47,6 +48,12 @@ export function Header({ currentPage }: HeaderProps) {
       window.removeEventListener(MEMBER_SESSION_CHANGE_EVENT, syncMemberSession)
     }
   }, [])
+
+  // ページ遷移時はモバイルメニューを閉じる
+  if (renderedPage !== currentPage) {
+    setRenderedPage(currentPage)
+    setMenuOpen(false)
+  }
 
   const closeMenu = () => setMenuOpen(false)
 

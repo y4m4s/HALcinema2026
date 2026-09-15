@@ -46,6 +46,7 @@ export const reservationPage: PageDefinition = {
           <button class="btn-primary" type="submit">予約を確認する</button>
         </form>
         <p class="reservation-help">購入時に入力したメールアドレスと電話番号が一致した場合のみ、予約内容を表示します。</p>
+        <p class="reservation-help">会員の方は<a class="reservation-help-link" href="member.html?tab=history">こちら</a>から予約内容を確認できます。</p>
       </div>
       <div class="reservation-result" id="reservation-result" aria-live="polite"></div>
     </section>

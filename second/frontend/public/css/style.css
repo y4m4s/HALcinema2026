@@ -741,6 +741,92 @@ body:not(.home-page) .page > .section:first-child {
   animation: fadeInUp 0.4s ease forwards;
 }
 
+/* ========== 画像拡大モーダル (共通コンポーネント) ========== */
+/* page-scripts/image-modal.ts の initImageModal() が DOM を生成する */
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 40px);
+  /* 少し暗い透過。後ろのページが透けて見える */
+  background: rgba(0, 0, 0, 0.6);
+  cursor: zoom-out;
+  animation: imageModalFadeIn 0.18s ease;
+}
+
+.image-modal[hidden] {
+  display: none;
+}
+
+.image-modal-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: default;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: imageModalZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.image-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.image-modal-close:hover {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: var(--bg);
+}
+
+/* クリックで拡大できる画像であることを示す */
+.image-modal-trigger {
+  cursor: zoom-in;
+}
+
+@keyframes imageModalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes imageModalZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* モーダル表示中は背面をスクロールさせない */
+body.modal-open {
+  overflow: hidden;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -1070,6 +1156,11 @@ body:not(.home-page) .page > .section:first-child {
   }
 
   .page-enter {
+    animation: none;
+  }
+
+  .image-modal,
+  .image-modal-image {
     animation: none;
   }
 

@@ -27,7 +27,7 @@ export function SeatStep({
       <div class="seat-screen-info">
         <div>
           <span>SELECTED SHOW</span>
-          <strong>${escapeHtml(state.date)} ${escapeHtml(showTime)}</strong>
+          <strong>${escapeHtml(state.dateLabel || state.date)} ${escapeHtml(showTime)}</strong>
         </div>
         <p>スクリーン ${escapeHtml(selectedScreen.num)} / ${escapeHtml(selectedScreen.type)} / ${escapeHtml(selectedScreen.seats)}席</p>
       </div>`

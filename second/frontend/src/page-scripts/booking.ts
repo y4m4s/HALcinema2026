@@ -1,19 +1,19 @@
 /* eslint-disable */
 // @ts-nocheck
-import { AccountStep } from '../components/bokking/AccountStep'
-import { BookingContext } from '../components/bokking/BookingContext'
-import { BookingStepper } from '../components/bokking/BookingStepper'
-import { CompleteStep } from '../components/bokking/CompleteStep'
-import { CustomerStep } from '../components/bokking/CustomerStep'
-import { PaymentStep, renderPaymentTotals } from '../components/bokking/PaymentStep'
-import { ReviewStep } from '../components/bokking/ReviewStep'
-import { SeatStep } from '../components/bokking/SeatStep'
-import { TermsStep } from '../components/bokking/TermsStep'
-import { TicketsStep } from '../components/bokking/TicketsStep'
-import { escapeAttr, escapeHtml, formatCardNumber, formatYen } from '../components/bokking/utils'
+import { AccountStep } from '../components/booking/AccountStep'
+import { BookingContext } from '../components/booking/BookingContext'
+import { BookingStepper } from '../components/booking/BookingStepper'
+import { CompleteStep } from '../components/booking/CompleteStep'
+import { CustomerStep } from '../components/booking/CustomerStep'
+import { PaymentStep, renderPaymentTotals } from '../components/booking/PaymentStep'
+import { ReviewStep } from '../components/booking/ReviewStep'
+import { SeatStep } from '../components/booking/SeatStep'
+import { TermsStep } from '../components/booking/TermsStep'
+import { TicketsStep } from '../components/booking/TicketsStep'
+import { escapeAttr, escapeHtml, formatCardNumber, formatYen } from '../components/booking/utils'
 import { SERVICE_DAY_PRICE, THREE_D_EXTRA_FEE, TICKET_TYPES } from '../data/pricing'
 
-import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieStatus, isCurseServiceDay, isMoviePlayingOn } from './data'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -136,6 +136,7 @@ export function runBooking() {
     maxStep: initialStep,
     movie,
     date: initialDate,
+    dateLabel: formatDateLabel(initialDate),
     screen: initialSlot ? initialSlot.screen : null,
     slot: initialSlot ? initialSlot.slot : null,
     selectedSeats: [],
@@ -1465,22 +1466,15 @@ function getAvailableSlots(movie) {
 }
 
 function getDefaultDate(movie) {
-  const todayIndex = Math.min(3, DATES.length - 1)
+  // 当日以降で最初に上映がある日を選ぶ。見つからなければ週の先頭に戻す。
+  const todayIndex = Math.max(0, DATES.indexOf(TODAY_DATE))
   const fromToday = DATES.slice(todayIndex).find(date => isPlayingDate(movie, date))
   return fromToday || DATES.find(date => isPlayingDate(movie, date)) || DATES[0]
 }
 
 function isPlayingDate(movie, date) {
-  if (!movie || !Array.isArray(movie.playingDays)) return true
-  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 }
-  const match = String(date).match(/\((.)\)/)
-  if (!match) return true
-  return movie.playingDays.includes(dayMap[match[1]])
-}
-
-function isCurseServiceDay(dateLabel) {
-  const match = String(dateLabel || '').match(/\/(\d{1,2})\(/)
-  return Number(match?.[1]) === 13
+  if (!movie) return true
+  return isMoviePlayingOn(movie, date)
 }
 
 function createEmptyTickets() {

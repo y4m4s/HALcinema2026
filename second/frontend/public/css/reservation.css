@@ -77,6 +77,18 @@
   line-height: 1.8;
 }
 
+/* 既定では a に色も下線も付かないため、本文中のリンクだと分かる見た目にする */
+.reservation-help-link {
+  color: var(--accent2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.reservation-help-link:hover {
+  color: var(--text);
+}
+
 .reservation-result {
   min-height: 240px;
 }
