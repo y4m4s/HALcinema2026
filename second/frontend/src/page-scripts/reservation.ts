@@ -72,6 +72,7 @@ export function runReservation() {
   function renderReservation(reservation) {
     const seats = Array.isArray(reservation.seats) ? reservation.seats : []
     const tickets = Array.isArray(reservation.tickets) ? reservation.tickets : []
+    const surcharge = reservation.surcharge || {}
     const payment = reservation.payment || {}
     const customer = reservation.customer || {}
 
@@ -105,6 +106,16 @@ export function runReservation() {
               <strong>${formatYen(ticket.price)}</strong>
             </div>
           `).join('')}
+          ${surcharge.amount ? `
+            <div>
+              <span>3D追加料金 x ${escapeHtml(surcharge.units)}</span>
+              <strong>${formatYen(surcharge.amount)}</strong>
+            </div>
+          ` : ''}
+          <div>
+            <span>割引</span>
+            <strong>-${formatYen(reservation.discount)}</strong>
+          </div>
           <div class="grand">
             <span>お支払い合計</span>
             <strong>${formatYen(payment.amount)}</strong>

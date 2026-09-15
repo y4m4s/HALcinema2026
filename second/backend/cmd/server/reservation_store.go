@@ -130,17 +130,25 @@ type reservationLookupRequest struct {
 }
 
 type reservationLookupResponse struct {
-	ReservationID string                    `json:"reservationId"`
-	Status        string                    `json:"status"`
-	MovieTitle    string                    `json:"movieTitle"`
-	Date          string                    `json:"date"`
-	Start         string                    `json:"start"`
-	End           string                    `json:"end"`
-	Screen        string                    `json:"screen"`
-	Seats         []string                  `json:"seats"`
-	Tickets       []reservationLookupTicket `json:"tickets"`
-	Payment       reservationLookupPayment  `json:"payment"`
-	Customer      reservationLookupCustomer `json:"customer"`
+	ReservationID string                     `json:"reservationId"`
+	Status        string                     `json:"status"`
+	MovieTitle    string                     `json:"movieTitle"`
+	Date          string                     `json:"date"`
+	Start         string                     `json:"start"`
+	End           string                     `json:"end"`
+	Screen        string                     `json:"screen"`
+	Seats         []string                   `json:"seats"`
+	Tickets       []reservationLookupTicket  `json:"tickets"`
+	Surcharge     reservationLookupSurcharge `json:"surcharge"`
+	Discount      int                        `json:"discount"`
+	Payment       reservationLookupPayment   `json:"payment"`
+	Customer      reservationLookupCustomer  `json:"customer"`
+}
+
+type reservationLookupSurcharge struct {
+	UnitPrice int `json:"unitPrice"`
+	Units     int `json:"units"`
+	Amount    int `json:"amount"`
 }
 
 type reservationLookupTicket struct {
@@ -968,13 +976,15 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		response              reservationLookupResponse
 		reservationID         int64
 		startAt, endAt        string
+		screenID              string
+		couponID              sql.NullString
 		paymentMethod, status string
 		amount                int
 	)
 	err := s.db.QueryRowContext(
 		ctx,
 		`SELECT r.id, r.reservation_no, r.status, r.customer_name, r.customer_email, r.customer_tel,
-		        sch.start_at, sch.end_at, m.title, scr.name,
+		        sch.start_at, sch.end_at, m.title, scr.name, sch.screen_id, r.coupon_id,
 		        COALESCE(pm.name, ''), COALESCE(p.status, ''), COALESCE(p.amount, 0)
 		   FROM reservations AS r
 		   JOIN schedules AS sch ON sch.id = r.schedule_id
@@ -1001,6 +1011,8 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		&endAt,
 		&response.MovieTitle,
 		&response.Screen,
+		&screenID,
+		&couponID,
 		&paymentMethod,
 		&status,
 		&amount,
@@ -1033,7 +1045,49 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 	}
 	response.Tickets = tickets
 
+	// 追加料金と割引は保存していないため、予約作成時（Create）と同じ計算で内訳を再現する。
+	// 座席数は、期限切れで予約座席が解放された予約でも変わらないよう明細の必要座席数から求める。
+	seatUnits, err := s.reservationSeatUnits(ctx, reservationID)
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+	unitSurcharge, err := s.screenSurcharge(ctx, screenID)
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+	response.Surcharge = reservationLookupSurcharge{
+		UnitPrice: unitSurcharge,
+		Units:     seatUnits,
+		Amount:    unitSurcharge * seatUnits,
+	}
+
+	if couponID.Valid {
+		var discountPerSeat int
+		err := s.db.QueryRowContext(ctx, `SELECT discount_amount FROM coupons WHERE id = ?`, couponID.String).Scan(&discountPerSeat)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return reservationLookupResponse{}, err
+		}
+		ticketSubtotal := 0
+		for _, ticket := range tickets {
+			ticketSubtotal += ticket.Price
+		}
+		response.Discount = couponDiscount(discountPerSeat, seatUnits, ticketSubtotal)
+	}
+
 	return response, nil
+}
+
+func (s *reservationStore) reservationSeatUnits(ctx context.Context, reservationID int64) (int, error) {
+	var units int
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT COALESCE(SUM(rd.quantity * tt.required_seat_count), 0)
+		   FROM reservation_details AS rd
+		   JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
+		  WHERE rd.reservation_id = ?`,
+		reservationID,
+	).Scan(&units)
+	return units, err
 }
 
 func (s *reservationStore) PreviewCoupon(ctx context.Context, req couponPreviewRequest) (couponPreviewResponse, error) {
@@ -1737,11 +1791,16 @@ func (s *reservationStore) resolveCouponInfo(ctx context.Context, code string, s
 		}
 	}
 
-	discount := coupon.discountAmount * seatCount
+	return coupon, couponDiscount(coupon.discountAmount, seatCount, subtotal), nil
+}
+
+// couponDiscount は1席あたりの割引額に座席数を掛け、券種の小計を上限にした割引額を返す。
+func couponDiscount(discountPerSeat int, seatCount int, subtotal int) int {
+	discount := discountPerSeat * seatCount
 	if discount > subtotal {
 		discount = subtotal
 	}
-	return coupon, discount, nil
+	return discount
 }
 
 func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID int64, seats []resolvedSeat, now string) error {
