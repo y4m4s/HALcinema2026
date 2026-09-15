@@ -31,7 +31,6 @@ const (
 	maxAPIJSONBodyBytes    = 32 * 1024
 	maxSeatCodeLength      = 8
 	maxPaymentMethodLength = 24
-	maxDateLabelRunes      = 20
 	maxTicketTypeCount     = 16
 )
 
@@ -107,7 +106,7 @@ func openMemberStore(dbPath string) (*memberStore, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", sqliteDSN(dbPath))
 	if err != nil {
 		return nil, err
 	}
@@ -129,10 +128,17 @@ func (s *memberStore) Close() error {
 	return s.db.Close()
 }
 
+// sqliteDSN appends the pragmas as DSN parameters so that they are applied to
+// every connection the pool opens. 接続ごとに設定しないと、接続が張り直された
+// ときに外部キー制約が無効のまま動いてしまう。
+// クエリ文字列は modernc.org/sqlite が解釈し、"?" より前のパスだけを
+// そのままファイル名として開くため、Windows のパスでもそのまま渡せる。
+func sqliteDSN(dbPath string) string {
+	return dbPath + "?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+}
+
 func (s *memberStore) init(ctx context.Context) error {
 	statements := []string{
-		`PRAGMA foreign_keys = ON`,
-		`PRAGMA busy_timeout = 5000`,
 		`CREATE TABLE IF NOT EXISTS members (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,

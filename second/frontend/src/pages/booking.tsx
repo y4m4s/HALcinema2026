@@ -1,4 +1,3 @@
-/* eslint-disable no-irregular-whitespace */
 import type { PageDefinition } from '../types'
 
 export const bookingPage: PageDefinition = {
@@ -9,9 +8,7 @@ export const bookingPage: PageDefinition = {
   "/css/style.css",
   "/css/booking.css"
 ],
-  html: String.raw`<div id="nav-root"></div>
-
-  <main class="booking-page page-enter">
+  html: String.raw`<main class="booking-page page-enter">
     <section class="booking-hero">
       <nav class="breadcrumb-nav" aria-label="パンくずリスト">
         <ol class="breadcrumb">
@@ -34,7 +31,5 @@ export const bookingPage: PageDefinition = {
         <div class="booking-main" id="booking-step-root"></div>
       </div>
     </section>
-  </main>
-
-  <div id="footer-root"></div>`,
+  </main>`,
 }

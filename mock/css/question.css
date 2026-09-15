@@ -147,3 +147,42 @@
     font-size: 13px;
   }
 }
+
+@media (max-width: 480px) {
+  .question-page .section {
+    padding: 36px 16px 44px;
+  }
+
+  .question-page .breadcrumb-nav {
+    margin-bottom: 22px;
+  }
+
+  .question-page .section-header {
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .question-page .section-title {
+    font-size: 25px;
+  }
+
+  .question-page .section-title-en {
+    font-size: 10px;
+  }
+
+  .faq-question {
+    gap: 12px;
+    padding: 20px 0;
+    font-size: 14px;
+  }
+
+  .faq-answer {
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.85;
+  }
+
+  .faq-answer.open {
+    padding-bottom: 22px;
+  }
+}

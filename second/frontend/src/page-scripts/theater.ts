@@ -1,9 +1,14 @@
 /* eslint-disable */
 // @ts-nocheck
+import { initImageModal } from './image-modal';
+
 export function runTheater() {
-// ===== スクリーン詳細モーダル =====
+// ===== 画像拡大モーダル (スクリーンカードは詳細モーダルを開くため、上映技術は対象外) =====
+  var cleanupImageModal = initImageModal('.about-img, .lab-visual');
+
+// ===== スクリーン詳細モーダル (表示位置は CSS で画面中央に固定) =====
   var modal = document.querySelector('.screen-modal');
-  if (!modal) return;
+  if (!modal) return cleanupImageModal;
 
   var card = modal.querySelector('.screen-modal-card');
   var elImg = modal.querySelector('.screen-modal-image img');
@@ -32,25 +37,6 @@ export function runTheater() {
     elContent.innerHTML = details ? details.innerHTML : '';
   }
 
-  function positionOnCard(sourceCard) {
-    var rect = sourceCard.getBoundingClientRect();
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
-    var margin = 16;
-    var popW = card.offsetWidth || 360;
-    var popH = card.offsetHeight || 400;
-
-    var left = rect.left + (rect.width - popW) / 2;
-    left = Math.max(margin, Math.min(left, vw - popW - margin));
-
-    var top = rect.top;
-    if (top + popH > vh - margin) top = vh - popH - margin;
-    if (top < margin) top = margin;
-
-    card.style.left = left + 'px';
-    card.style.top = top + 'px';
-  }
-
   function open(sourceCard) {
     if (activeButton) activeButton.setAttribute('aria-expanded', 'false');
     activeButton = sourceCard.querySelector('.card-cta');
@@ -60,10 +46,6 @@ export function runTheater() {
     card.scrollTop = 0;
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    requestAnimationFrame(function () {
-      card.scrollTop = 0;
-      positionOnCard(sourceCard);
-    });
   }
 
   function close() {
@@ -74,18 +56,34 @@ export function runTheater() {
     activeButton = null;
   }
 
-  document.querySelectorAll('.screen-card').forEach(function (screenCard) {
-    screenCard.addEventListener('click', function (e) {
-      e.preventDefault();
-      open(screenCard);
-    });
+  var screenCards = Array.from(document.querySelectorAll('.screen-card'));
+  function onScreenCardClick(e) {
+    e.preventDefault();
+    open(e.currentTarget);
+  }
+  screenCards.forEach(function (screenCard) {
+    screenCard.addEventListener('click', onScreenCardClick);
   });
 
-  modal.querySelectorAll('[data-modal-close]').forEach(function (el) {
+  var closeButtons = Array.from(modal.querySelectorAll('[data-modal-close]'));
+  closeButtons.forEach(function (el) {
     el.addEventListener('click', close);
   });
 
-  document.addEventListener('keydown', function (e) {
+  function onDocumentKeyDown(e) {
     if (e.key === 'Escape' && !modal.hidden) close();
-  });
+  }
+  document.addEventListener('keydown', onDocumentKeyDown);
+
+  return function cleanupTheater() {
+    screenCards.forEach(function (screenCard) {
+      screenCard.removeEventListener('click', onScreenCardClick);
+    });
+    closeButtons.forEach(function (el) {
+      el.removeEventListener('click', close);
+    });
+    document.removeEventListener('keydown', onDocumentKeyDown);
+    close();
+    cleanupImageModal();
+  };
 }

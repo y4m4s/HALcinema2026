@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { escapeHtml, formatYen, renderReviewItem } from './utils'
 
-export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, customerName, phoneNumber }) {
+export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, paymentSummary, customerName, phoneNumber }) {
   const submitting = Boolean(state.submittingReservation)
   const error = state.reservationError
   return `
@@ -14,7 +14,7 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
       <div class="booking-step-body">
         <div class="review-grid">
           ${renderReviewItem('作品', state.movie.title)}
-          ${renderReviewItem('上映日時', `${state.date} ${state.slot ? state.slot.start + ' - ' + state.slot.end : ''}`)}
+          ${renderReviewItem('上映日時', `${state.dateLabel || state.date} ${state.slot ? state.slot.start + ' - ' + state.slot.end : ''}`)}
           ${renderReviewItem('スクリーン', `スクリーン ${state.screen || '-'}`)}
           ${renderReviewItem('座席', state.selectedSeats.join(' / '))}
           ${state.member ? renderReviewItem('会員ID', state.member.id) : ''}
@@ -22,6 +22,7 @@ export function ReviewStep({ state, stepNo, ticketTypes, totals, payment, custom
           ${renderReviewItem('メール', state.customer.email)}
           ${renderReviewItem('電話番号', phoneNumber)}
           ${renderReviewItem('支払方法', payment ? payment.label : '')}
+          ${paymentSummary ? renderReviewItem('支払い情報', paymentSummary) : ''}
         </div>
         <div class="review-tickets">
           ${ticketTypes.filter((ticket) => state.tickets[ticket.id]).map((ticket) => `

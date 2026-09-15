@@ -9,6 +9,35 @@ import (
 	"testing"
 )
 
+// TestMemberStoreEnablesForeignKeys は、プールが開く接続すべてで外部キー制約が
+// 有効になっていることを確かめる。DSN ではなく起動時の PRAGMA だけに頼ると、
+// 接続が張り直されたときに制約が外れる。
+func TestMemberStoreEnablesForeignKeys(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	store, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer store.Close()
+
+	var enabled int
+	if err := store.db.QueryRow(`PRAGMA foreign_keys`).Scan(&enabled); err != nil {
+		t.Fatalf("PRAGMA foreign_keys error = %v", err)
+	}
+	if enabled != 1 {
+		t.Fatalf("PRAGMA foreign_keys = %d, want 1", enabled)
+	}
+
+	// 存在しない会員のセッションは外部キー制約で弾かれる。
+	_, err = store.db.Exec(
+		`INSERT INTO member_sessions (token_hash, member_id, created_at, expires_at)
+		 VALUES ('dummy', 999999, '2026-01-01T00:00:00Z', '2099-01-01T00:00:00Z')`,
+	)
+	if err == nil {
+		t.Fatal("INSERT with unknown member_id succeeded, want foreign key error")
+	}
+}
+
 func TestMemberStoreRegisterLoginAndSession(t *testing.T) {
 	store, err := openMemberStore(filepath.Join(t.TempDir(), "members.sqlite3"))
 	if err != nil {

@@ -53,12 +53,28 @@
   gap: 8px;
   overflow-x: auto;
   margin-bottom: 28px;
-  scrollbar-width: none;
+  /* 作品が入りきらない幅では横スクロールになる。
+     日付タブと同じく、必要なときだけ下にスクロールバーを出す。 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
   padding-bottom: 2px;
 }
 
 .movie-tabs::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.movie-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.movie-tabs::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 3px;
+}
+
+.movie-tabs::-webkit-scrollbar-thumb:hover {
+  background: var(--accent2);
 }
 
 .movie-tab-card {
@@ -180,17 +196,36 @@
   gap: 1px;
   background: var(--border);
   margin-bottom: 28px;
+  /* 7日分が入りきらない幅では横スクロールになる。
+     overflow-x: auto なので、スクロールが必要なときだけ
+     日付の下に細いスクロールバーが出る。 */
   overflow-x: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
 }
 
 .sub-tabs::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.sub-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sub-tabs::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 3px;
+}
+
+.sub-tabs::-webkit-scrollbar-thumb:hover {
+  background: var(--accent2);
 }
 
 .sub-tab {
   flex: 1;
-  min-width: 72px;
+  /* ラベルより狭くは縮めない (縮むと日付が見切れる)。
+     余白があるときは flex: 1 で全タブが同じ幅に揃う */
+  min-width: max-content;
   padding: 13px 18px;
   text-align: center;
   background: var(--bg2);
@@ -218,8 +253,143 @@
   cursor: default;
 }
 
+.sub-tab:disabled {
+  cursor: default;
+}
+
 .movie-date-tabs {
   margin-top: 12px;
+}
+
+/* 画面が狭い幅では、7日分が画面に収まるよう文字と余白を詰める。
+   本文の左右余白が広がる 900px 以下から適用しないと、7枚が入りきらない。 */
+@media (max-width: 900px) {
+  .sub-tab {
+    padding: 10px 6px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* 当日のタブに付く TODAY バッジ */
+.today-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  background: var(--accent2);
+  color: #0a1628;
+  padding: 2px 5px;
+  margin-left: 5px;
+  vertical-align: middle;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+/* タブが狭くなる幅では、日付の下へ回して横幅を増やさない。
+   バッジの縦の寸法は、ページ送りで TODAY の無いタブの高さをそろえる計算
+   (下の @media (max-width: 500px)) でも使うので変数にまとめる。 */
+@media (max-width: 1024px) {
+  .sub-tabs {
+    --today-badge-gap: 3px;
+    --today-badge-pad-y: 1px;
+    --today-badge-font: 6px;
+    --today-badge-line: 1.3;
+  }
+
+  .sub-tabs .today-badge {
+    display: block;
+    width: max-content;
+    margin: var(--today-badge-gap) auto 0;
+    padding: var(--today-badge-pad-y) 3px;
+    font-size: var(--today-badge-font);
+    line-height: var(--today-badge-line);
+  }
+}
+
+/* ── 日付タブのページ送り (page-scripts/date-pager.ts) ── */
+/* 幅に余裕があるときは包み要素を無いものとして扱い、7日分をそのまま並べる。 */
+.date-pager {
+  display: contents;
+}
+
+.date-pager-btn {
+  display: none;
+}
+
+/* 7日分が入りきらず横スクロールになる幅（実測で detail が 483px 以下）では、
+   4日ずつ表示して左右のボタンで切り替える。フォントの描画差を見込んで 500px で切り替える。 */
+@media (max-width: 500px) {
+  .date-pager {
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    margin-bottom: 28px;
+    background: var(--border);
+  }
+
+  .date-pager.movie-date-pager {
+    margin-top: 12px;
+  }
+
+  .date-pager > .sub-tabs {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .date-pager .sub-tab {
+    min-width: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .date-pager .sub-tab.is-off-page {
+    display: none;
+  }
+
+  /* TODAY の無いタブは、TODAY バッジ1段分の高さを日付の上と下に半分ずつ足す。
+     TODAY を含まないページでもタブ列の高さがそろい、日付は上下の中央に来る。 */
+  .date-pager.has-today .sub-tab:not(.is-today)::before,
+  .date-pager.has-today .sub-tab:not(.is-today)::after {
+    content: '';
+    display: block;
+    height: calc((var(--today-badge-gap) + var(--today-badge-pad-y) * 2 + var(--today-badge-font) * var(--today-badge-line)) / 2);
+  }
+
+  /* 日付タブ (--bg2) と同じ地にすると空きマスに見えるので、矢印はタブと違う地で置く。 */
+  .date-pager-btn {
+    display: grid;
+    place-items: center;
+    flex: 0 0 30px;
+    padding: 0;
+    border: 0;
+    background: var(--accent);
+    color: #edf4ff;
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .date-pager-btn:hover:not(:disabled) {
+    background: var(--accent2);
+  }
+
+  /* 押せない側もボタンの形は見せ、矢印の色だけ落ち着かせる (左右どちらの端でも同じ見た目) */
+  .date-pager-btn:disabled {
+    background: var(--bg3);
+    color: rgba(150, 166, 192, 0.6);
+    box-shadow: inset 0 0 0 1px var(--border2);
+    cursor: default;
+  }
+
+  .date-pager-btn:focus-visible {
+    outline: 2px solid #edf4ff;
+    outline-offset: -3px;
+  }
 }
 
 /* ── Rows fade transition ────────────────── */
@@ -286,6 +456,13 @@
   color: var(--accent2);
 }
 
+.movie-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
 .movie-card-duration {
   font-family: var(--mono);
   font-size: 12px;
@@ -293,6 +470,12 @@
   color: var(--text2);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* レーティングとジャンルは 760px 以下の縦積みレイアウトでのみ出す */
+.movie-card-rating,
+.movie-card-genres {
+  display: none;
 }
 
 .movie-card-header-right {
@@ -313,12 +496,16 @@
   border-right: 1px solid var(--border);
   overflow: hidden;
   display: flex;
-  align-items: stretch;
+  /* stretch にすると上映回の多いカードでポスターが縦に伸びて切り取られるため、
+     縦方向の中央に置いてポスター自身の高さに任せる */
+  align-items: center;
 }
 
 .movie-thumb-link {
   display: flex;
   width: 100%;
+  /* ポスターは 2:3。枠を同じ比率にして、上下比を変えずに全体を表示する */
+  aspect-ratio: 2 / 3;
   overflow: hidden;
   position: relative;
 }
@@ -340,7 +527,8 @@
 .movie-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* 見切れさせない。枠と同じ 2:3 なので余白は出ない */
+  object-fit: contain;
   transition: transform 0.3s;
 }
 
@@ -350,6 +538,7 @@
 
 .movie-thumb-placeholder {
   width: 100%;
+  height: 100%;
   background: var(--bg4);
   display: flex;
   align-items: center;
@@ -583,21 +772,107 @@
   .theater-col-features {
     justify-content: flex-start;
   }
+  /* 横スクロール量を減らすため、劇場列の最小幅と内側余白を詰める */
+  .theater-col {
+    min-width: 200px;
+    padding: 16px;
+  }
+
+  /* 上映回を横 2 列に置くと列幅が足りず、カード内に横スクロールが出るため 1 列に積む */
+  .slots-grid,
+  .slots-grid--quad {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 @media (max-width: 760px) {
+  /* 上段は「左にポスター / 右に作品名・上映時間・詳細ボタン」の2列。
+     スクリーンと上映回、補足事項はその下に全幅で積む。
+     カード直下の要素を1つのグリッドに載せるため、
+     .movie-card-body は display: contents で枠だけ外す。 */
+  .movie-card {
+    display: grid;
+    grid-template-columns: clamp(112px, 34vw, 136px) minmax(0, 1fr);
+  }
   .movie-card-body {
-    flex-direction: column;
+    display: contents;
   }
   .movie-thumb {
+    grid-column: 1;
+    grid-row: 1;
     width: 100%;
-    max-height: 220px;
-    border-right: none;
+    /* ポスターより行が高くなったときに header 側と色を揃える */
+    background: var(--bg3);
     border-bottom: 1px solid var(--border);
   }
+  .movie-card-header {
+    grid-column: 2;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .movie-card-title-wrap {
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .movie-card-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  /* 上映作品一覧のカードと同じ体裁でレーティングとジャンルを出す */
+  .movie-card-rating {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--red2);
+    white-space: nowrap;
+  }
+  .movie-card-meta {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .movie-card-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .movie-card-genres span {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+  }
+  /* 詳細ボタンはポスターの下端に合わせて置く */
+  .movie-card-header-right {
+    width: 100%;
+    margin-top: auto;
+  }
+  .schedule-detail-btn {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+  }
   .theaters-grid {
+    grid-column: 1 / -1;
+    grid-row: 2;
     flex-direction: column;
     overflow-x: visible;
+  }
+  .movie-card > .movie-card-note {
+    grid-column: 1 / -1;
+    grid-row: 3;
   }
   .theater-col {
     min-width: 0;
@@ -607,12 +882,80 @@
   .theater-col:last-child {
     border-bottom: none;
   }
+  /* 劇場列が縦積みになると見出しの行数だけ縦に伸びるため、
+     スクリーン番号の横にスクリーンサイズと席数を並べて高さを詰める。
+     幅が足りない場合は wrap で従来どおり下に折り返す */
+  .theater-col-left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+  }
+  .theater-col-meta {
+    font-size: 11px;
+  }
+  /* 劇場列が全幅になるので、上映回は列幅に応じた複数列に戻す */
+  .slots-grid,
+  .slots-grid--quad {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
 }
+
 @media (max-width: 600px) {
+  .view-tab {
+    padding: 13px 0;
+    font-size: 13px;
+  }
+
+  .movie-tab-card {
+    width: 104px;
+  }
+
+  .schedule-heading {
+    font-size: 16px;
+    margin-bottom: 18px;
+  }
+
+  /* 縦積みと詳細ボタンの全幅化は 760px 以下の指定が担当する。ここでは余白と文字サイズだけ詰める */
+  .movie-card-header {
+    padding: 14px 16px;
+  }
   .movie-card-title {
     font-size: 16px;
   }
+
+  .theater-col {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  /* 幅が足りなければ 2 列 → 1 列へ自動で落ちる */
+  .slots-grid,
+  .slots-grid--quad {
+    gap: 8px;
+  }
+
+  .time-slot {
+    padding: 10px 6px;
+  }
   .time-slot-time {
-    font-size: 15px;
+    font-size: 14px;
+  }
+  .time-slot-status {
+    font-size: 11px;
+  }
+
+  .movie-card-note {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .note-text {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .schedule-empty {
+    padding: 48px 0;
   }
 }

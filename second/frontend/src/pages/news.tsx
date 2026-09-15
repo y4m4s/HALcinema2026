@@ -1,4 +1,3 @@
-﻿ 
 import type { PageDefinition } from '../types'
 
 export const newsPage: PageDefinition = {
@@ -9,9 +8,7 @@ export const newsPage: PageDefinition = {
   "/css/style.css",
   "/css/news.css"
 ],
-  html: String.raw`<div id="nav-root"></div>
-
-  <div class="page page-enter">
+  html: String.raw`<div class="page page-enter">
     <div class="section">
       <div class="section-header">
         <h1 class="section-title">お知らせ</h1>
@@ -41,9 +38,7 @@ export const newsPage: PageDefinition = {
         </aside>
       </div>
     </div>
-  </div>
-
-  <div id="footer-root"></div>`,
+  </div>`,
 }
 
 

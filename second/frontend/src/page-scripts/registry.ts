@@ -12,7 +12,8 @@ import { runSchedule } from './schedule'
 import { runTheater } from './theater'
 import { runWorks } from './works'
 
-export type PageRunner = () => void
+export type PageCleanup = () => void
+export type PageRunner = () => void | PageCleanup
 
 export const pageRunners: Record<string, PageRunner | undefined> = {
   "access": runAccess,

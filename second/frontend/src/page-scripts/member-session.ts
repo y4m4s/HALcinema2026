@@ -2,6 +2,11 @@
 // @ts-nocheck
 
 export const MEMBER_SESSION_STORAGE_KEY = 'halcinema-member-session'
+export const MEMBER_SESSION_CHANGE_EVENT = 'halcinema:member-session-change'
+
+function notifyMemberSessionChange() {
+  window.dispatchEvent(new Event(MEMBER_SESSION_CHANGE_EVENT))
+}
 
 export function readMemberSession() {
   try {
@@ -19,6 +24,7 @@ export function writeMemberSession(session) {
   try {
     if (!isValidMemberSession(session)) return
     window.sessionStorage.setItem(MEMBER_SESSION_STORAGE_KEY, JSON.stringify(session))
+    notifyMemberSessionChange()
   } catch {
     // Session storage can be unavailable in private browsing; the current view still works.
   }
@@ -27,6 +33,7 @@ export function writeMemberSession(session) {
 export function removeMemberSession() {
   try {
     window.sessionStorage.removeItem(MEMBER_SESSION_STORAGE_KEY)
+    notifyMemberSessionChange()
   } catch {
     // Nothing to clean up when storage is unavailable.
   }

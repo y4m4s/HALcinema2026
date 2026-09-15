@@ -17,18 +17,6 @@ type healthResponse struct {
 	Time    string `json:"time"`
 }
 
-type movieSummary struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Genre       string `json:"genre"`
-	ReleaseYear int    `json:"releaseYear"`
-}
-
-type pageSummary struct {
-	Path  string `json:"path"`
-	Title string `json:"title"`
-}
-
 func main() {
 	router := gin.Default()
 	frontendDist := getEnv("FRONTEND_DIST", filepath.Join("..", "frontend", "dist"))
@@ -55,30 +43,6 @@ func main() {
 				Status:  "ok",
 				Version: "v0.1.0",
 				Time:    time.Now().Format(time.RFC3339),
-			})
-		})
-
-		api.GET("/movies", func(c *gin.Context) {
-			c.JSON(http.StatusOK, []movieSummary{
-				{ID: 1, Title: "境界のシアター", Genre: "Mystery", ReleaseYear: 2026},
-				{ID: 2, Title: "午前零時の上映会", Genre: "Horror", ReleaseYear: 2026},
-				{ID: 3, Title: "沈黙のスクリーン", Genre: "Suspense", ReleaseYear: 2026},
-			})
-		})
-
-		api.GET("/pages", func(c *gin.Context) {
-			c.JSON(http.StatusOK, []pageSummary{
-				{Path: "/", Title: "トップ"},
-				{Path: "/works", Title: "上映作品一覧"},
-				{Path: "/schedule", Title: "上映スケジュール"},
-				{Path: "/theater", Title: "劇場案内"},
-				{Path: "/access", Title: "交通案内"},
-				{Path: "/tickets", Title: "料金案内"},
-				{Path: "/question", Title: "よくある質問"},
-				{Path: "/reservation", Title: "予約確認"},
-				{Path: "/member", Title: "会員の方へ"},
-				{Path: "/contact", Title: "お問い合わせ"},
-				{Path: "/news", Title: "お知らせ"},
 			})
 		})
 

@@ -37,13 +37,13 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 
 	ctx := context.Background()
 	// seed.sql の占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
-	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	testSeat := firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         []string{testSeat},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "credit",
@@ -107,8 +107,9 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Availability() error = %v", err)
 	}
-	if availability.ScheduleID != "2" {
-		t.Fatalf("Availability() schedule = %q, want 2", availability.ScheduleID)
+	wantSchedule := testScheduleID(t, memberStore.db)
+	if availability.ScheduleID != wantSchedule {
+		t.Fatalf("Availability() schedule = %q, want %s", availability.ScheduleID, wantSchedule)
 	}
 	if !containsString(availability.ReservedSeats, testSeat) {
 		t.Fatalf("Availability() reserved seats = %#v, want to contain %s", availability.ReservedSeats, testSeat)
@@ -131,6 +132,11 @@ func TestReservationStoreCreateAndAvailability(t *testing.T) {
 	if !containsString(lookup.Seats, testSeat) {
 		t.Fatalf("Lookup() seats = %#v, want %s", lookup.Seats, testSeat)
 	}
+	// スクリーン1は3D追加料金 400円/席。券種 1800円 + 追加料金 400円 = 2200円。
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 1, Amount: 400}) || lookup.Discount != 0 {
+		t.Fatalf("Lookup() surcharge = %+v discount = %d, want 400x1=400 / 0", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
 
 	_, err = store.Lookup(ctx, reservationLookupRequest{
 		ReservationID: result.ReservationID,
@@ -165,13 +171,13 @@ func TestReservationStoreConcurrentCreateSameSeat(t *testing.T) {
 
 	const attempts = 16
 	ctx := context.Background()
-	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	testSeat := firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         []string{testSeat},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "credit",
@@ -222,8 +228,9 @@ func TestReservationStoreConcurrentCreateSameSeat(t *testing.T) {
 		`SELECT COUNT(*)
 		   FROM reservation_seats AS rs
 		   JOIN seats AS st ON st.id = rs.seat_id
-		  WHERE rs.schedule_id = 2
+		  WHERE rs.schedule_id = ?
 		    AND st.seat_code = ?`,
+		testScheduleID(t, memberStore.db),
 		testSeat,
 	).Scan(&reservedSeatRows); err != nil {
 		t.Fatalf("reserved seat count error = %v", err)
@@ -265,13 +272,13 @@ func TestReservationStoreConcurrentIdempotentRetry(t *testing.T) {
 		idempotencyKey = "concurrent-idempotency-retry-0001"
 	)
 	ctx := context.Background()
-	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	testSeat := firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         []string{testSeat},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "credit",
@@ -396,13 +403,13 @@ func TestReservationStoreCreateMultipleSeats(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "2", 3)
+	seats := firstFreeSeats(t, memberStore.db, testScheduleID(t, memberStore.db), 3)
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         seats,
 		Tickets:       map[string]int{"adult": 2, "student": 1},
 		PaymentMethod: "credit",
@@ -457,13 +464,13 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	testSeat := firstFreeSeat(t, memberStore.db, "2")
+	testSeat := firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         []string{testSeat},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "konbini",
@@ -550,6 +557,20 @@ func TestReservationStoreKonbiniHoldExpires(t *testing.T) {
 		t.Fatalf("expired state = reservation:%q payment:%q, want expired/cancelled", reservationStatus, paymentStatus)
 	}
 
+	// 期限切れで予約座席が解放されても、照会の追加料金は明細の座席数から出す。
+	expiredLookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "hold@example.com",
+		Tel:           "09045678901",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() expired hold error = %v", err)
+	}
+	if len(expiredLookup.Seats) != 0 || expiredLookup.Surcharge.Units != 1 {
+		t.Fatalf("Lookup() expired hold seats = %#v surcharge = %+v, want no seats / 1 unit", expiredLookup.Seats, expiredLookup.Surcharge)
+	}
+	assertLookupBreakdownMatchesAmount(t, expiredLookup)
+
 	req.PaymentMethod = "credit"
 	secondResult, err := store.Create(ctx, req, nil, "konbini-hold-0002")
 	if err != nil {
@@ -577,14 +598,14 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "2", 4)
+	seats := firstFreeSeats(t, memberStore.db, testScheduleID(t, memberStore.db), 4)
 	groupCouponCode := couponCodeByRule(t, memberStore.db, "group")
 	req := reservationCreateRequest{
 		MovieID:       "1",
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         seats,
 		Tickets:       map[string]int{"adult": 4},
 		CouponCode:    groupCouponCode,
@@ -612,6 +633,125 @@ func TestReservationStoreCreateWithGroupCoupon(t *testing.T) {
 	if couponID != "C0000000002" {
 		t.Fatalf("coupon_id = %q, want C0000000002", couponID)
 	}
+
+	// 券種 1800x4=7200円 + 追加料金 400x4=1600円 - 割引 200x4=800円 = 8000円。
+	lookup, err := store.Lookup(ctx, reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         "coupon@example.com",
+		Tel:           "09034567890",
+	})
+	if err != nil {
+		t.Fatalf("Lookup() group coupon error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
+}
+
+// TestReservationStoreLookupKeepsPriceSnapshot は、予約後に料金マスタを変更しても
+// 予約確認の追加料金と割引が予約作成時の金額のままであることを確かめる。
+func TestReservationStoreLookupKeepsPriceSnapshot(t *testing.T) {
+	store, db := newTestReservationStore(t)
+	ctx := context.Background()
+	lookupReq := createGroupCouponReservation(t, store, db, "price-snapshot-0001")
+
+	if _, err := db.ExecContext(ctx, `UPDATE screen_types SET surcharge = 900 WHERE id = 'SCRT001'`); err != nil {
+		t.Fatalf("update screen surcharge error = %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE coupons SET discount_amount = 50 WHERE rule_code = 'group'`); err != nil {
+		t.Fatalf("update coupon discount error = %v", err)
+	}
+
+	lookup, err := store.Lookup(ctx, lookupReq)
+	if err != nil {
+		t.Fatalf("Lookup() after master change error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() after master change surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
+}
+
+// TestReservationStoreMigratesPriceSnapshot は、追加料金・割引の列がない既存DBを移行したとき、
+// 既存の予約に予約作成時と同じ計算の金額が埋まることを確かめる。
+func TestReservationStoreMigratesPriceSnapshot(t *testing.T) {
+	store, db := newTestReservationStore(t)
+	ctx := context.Background()
+	lookupReq := createGroupCouponReservation(t, store, db, "price-snapshot-migrate-0001")
+
+	for _, column := range []string{"surcharge_unit_price", "discount_amount"} {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE reservations DROP COLUMN `+column); err != nil {
+			t.Fatalf("drop reservations.%s error = %v", column, err)
+		}
+	}
+	migrated, err := newReservationStore(db)
+	if err != nil {
+		t.Fatalf("newReservationStore() price snapshot migration error = %v", err)
+	}
+
+	lookup, err := migrated.Lookup(ctx, lookupReq)
+	if err != nil {
+		t.Fatalf("Lookup() after migration error = %v", err)
+	}
+	if lookup.Surcharge != (reservationLookupSurcharge{UnitPrice: 400, Units: 4, Amount: 1600}) || lookup.Discount != 800 {
+		t.Fatalf("Lookup() after migration surcharge = %+v discount = %d, want 400x4=1600 / 800", lookup.Surcharge, lookup.Discount)
+	}
+	assertLookupBreakdownMatchesAmount(t, lookup)
+}
+
+func newTestReservationStore(t *testing.T) (*reservationStore, *sql.DB) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	t.Cleanup(func() { memberStore.Close() })
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+	return store, memberStore.db
+}
+
+// createGroupCouponReservation はスクリーン1で一般4枚・グループ割引の予約を作り、照会用の条件を返す。
+// 券種 1800x4=7200円 + 追加料金 400x4=1600円 - 割引 200x4=800円 = 8000円。
+func createGroupCouponReservation(t *testing.T, store *reservationStore, db *sql.DB, idempotencyKey string) reservationLookupRequest {
+	t.Helper()
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          testShowDate,
+		Seats:         firstFreeSeats(t, db, testScheduleID(t, db), 4),
+		Tickets:       map[string]int{"adult": 4},
+		CouponCode:    couponCodeByRule(t, db, "group"),
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Snapshot User",
+			NameKana: "すなっぷしょっとゆーざー",
+			Email:    "snapshot@example.com",
+			Tel:      "09056789012",
+		},
+	}
+	result, err := store.Create(context.Background(), req, nil, idempotencyKey)
+	if err != nil {
+		t.Fatalf("Create() group coupon error = %v", err)
+	}
+	if result.Amount != 8000 {
+		t.Fatalf("Create() amount = %d, want 8000", result.Amount)
+	}
+	return reservationLookupRequest{
+		ReservationID: result.ReservationID,
+		Email:         req.Customer.Email,
+		Tel:           req.Customer.Tel,
+	}
 }
 
 func TestReservationStorePreviewCoupon(t *testing.T) {
@@ -631,13 +771,13 @@ func TestReservationStorePreviewCoupon(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	seats := firstFreeSeats(t, memberStore.db, "2", 4)
+	seats := firstFreeSeats(t, memberStore.db, testScheduleID(t, memberStore.db), 4)
 	result, err := store.PreviewCoupon(ctx, couponPreviewRequest{
 		MovieID:    "1",
 		Screen:     "1",
 		Start:      "17:00",
 		End:        "19:26",
-		Date:       "5/15(金)",
+		Date:       testShowDate,
 		Seats:      seats,
 		Tickets:    map[string]int{"adult": 4},
 		CouponCode: couponCodeByRule(t, memberStore.db, "group"),
@@ -766,13 +906,13 @@ func TestReservationRoutesCreate(t *testing.T) {
 	registerReservationRoutes(api, store, memberStore)
 
 	// 占有データはランダムに座席を埋めるため、空席を DB から動的に取得する。
-	freeSeat := firstFreeSeat(t, memberStore.db, "2")
+	freeSeat := firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))
 	body := fmt.Sprintf(`{
 		"movieId": "1",
 		"screen": "1",
 		"start": "17:00",
 		"end": "19:26",
-		"date": "5/15(金)",
+		"date": %q,
 		"seats": [%q],
 		"tickets": {"adult": 1},
 		"paymentMethod": "credit",
@@ -782,7 +922,7 @@ func TestReservationRoutesCreate(t *testing.T) {
 			"email": "test@example.com",
 			"tel": "09012345678"
 		}
-	}`, freeSeat)
+	}`, testShowDate, freeSeat)
 
 	const idempotencyKey = "reservation-route-create-0001"
 	response := performReservationRequest(router, body, idempotencyKey)
@@ -841,7 +981,7 @@ func TestReservationStoreRejectsInputLimits(t *testing.T) {
 		Screen:        "1",
 		Start:         "17:00",
 		End:           "19:26",
-		Date:          "5/15(金)",
+		Date:          testShowDate,
 		Seats:         []string{"A1"},
 		Tickets:       map[string]int{"adult": 1},
 		PaymentMethod: "credit",
@@ -870,6 +1010,217 @@ func TestReservationStoreRejectsInputLimits(t *testing.T) {
 	if err := validateReservationRequest(badEmail); !isValidationError(err) {
 		t.Fatalf("bad email error = %v, want validationError", err)
 	}
+}
+
+// TestReservationStoreSeparatesShowDates は、開始時刻が同じでも鑑賞日が違えば
+// 別の上映回として扱われ、座席の在庫が日付ごとに独立することを確かめる。
+func TestReservationStoreSeparatesShowDates(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	ctx := context.Background()
+	const nextDate = "2026-05-16"
+	firstSchedule := scheduleIDOn(t, memberStore.db, testShowDate, "17:00")
+	secondSchedule := scheduleIDOn(t, memberStore.db, nextDate, "17:00")
+	if firstSchedule == secondSchedule {
+		t.Fatalf("schedule ids for %s and %s are the same (%s)", testShowDate, nextDate, firstSchedule)
+	}
+
+	// 占有シードは上映回ごとにランダムに座席を埋めるため、両日で空いている席を選ぶ。
+	seat := firstFreeSeatOnBoth(t, memberStore.db, firstSchedule, secondSchedule)
+	newRequest := func(date, key string) (reservationCreateRequest, string) {
+		return reservationCreateRequest{
+			MovieID:       "1",
+			Screen:        "1",
+			Start:         "17:00",
+			End:           "19:26",
+			Date:          date,
+			Seats:         []string{seat},
+			Tickets:       map[string]int{"adult": 1},
+			PaymentMethod: "credit",
+			Customer: reservationCustomer{
+				Name:     "Test User",
+				NameKana: "てすとゆーざー",
+				Email:    "test@example.com",
+				Tel:      "09012345678",
+			},
+		}, key
+	}
+
+	firstReq, firstKey := newRequest(testShowDate, "separate-dates-first-000")
+	if _, err := store.Create(ctx, firstReq, nil, firstKey); err != nil {
+		t.Fatalf("Create(%s) error = %v", testShowDate, err)
+	}
+
+	// 同じ座席・同じ時刻でも、別の日付なら予約できる。
+	secondReq, secondKey := newRequest(nextDate, "separate-dates-second-00")
+	if _, err := store.Create(ctx, secondReq, nil, secondKey); err != nil {
+		t.Fatalf("Create(%s) error = %v", nextDate, err)
+	}
+
+	// 同じ日付の同じ座席は二重予約できない。
+	dupReq, dupKey := newRequest(testShowDate, "separate-dates-dup-00000")
+	if _, err := store.Create(ctx, dupReq, nil, dupKey); !errors.Is(err, errSeatAlreadyReserved) {
+		t.Fatalf("Create(duplicate) error = %v, want errSeatAlreadyReserved", err)
+	}
+
+	// 空席APIも日付ごとに別の上映回を返す。
+	firstAvailability, err := store.Availability(ctx, firstReq)
+	if err != nil {
+		t.Fatalf("Availability(%s) error = %v", testShowDate, err)
+	}
+	secondAvailability, err := store.Availability(ctx, secondReq)
+	if err != nil {
+		t.Fatalf("Availability(%s) error = %v", nextDate, err)
+	}
+	if firstAvailability.ScheduleID != firstSchedule || secondAvailability.ScheduleID != secondSchedule {
+		t.Fatalf("Availability() schedules = %s / %s, want %s / %s",
+			firstAvailability.ScheduleID, secondAvailability.ScheduleID, firstSchedule, secondSchedule)
+	}
+}
+
+// TestReservationStoreServiceDayPrice は、サービスデー価格が上映回の日付から
+// 決まり、リクエストの文字列では左右されないことを確かめる。
+func TestReservationStoreServiceDayPrice(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "halcinema.sqlite3")
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "schema.sql"))
+	applySQLFile(t, dbPath, filepath.Join("..", "..", "..", "db", "seed.sql"))
+
+	memberStore, err := openMemberStore(dbPath)
+	if err != nil {
+		t.Fatalf("openMemberStore() error = %v", err)
+	}
+	defer memberStore.Close()
+
+	store, err := newReservationStore(memberStore.db)
+	if err != nil {
+		t.Fatalf("newReservationStore() error = %v", err)
+	}
+
+	ctx := context.Background()
+	// seed.sql の上映週は「当日から7日間」なので、13日を含むとは限らない。
+	// サービスデーの判定そのものを確かめるため、この上映回はテスト内で用意する。
+	const serviceDate = "2026-06-13"
+	serviceSchedule := insertScheduleOn(t, memberStore.db, serviceDate, "17:00", "19:26")
+	seat := firstFreeSeat(t, memberStore.db, serviceSchedule)
+	req := reservationCreateRequest{
+		MovieID:       "1",
+		Screen:        "1",
+		Start:         "17:00",
+		End:           "19:26",
+		Date:          serviceDate,
+		Seats:         []string{seat},
+		Tickets:       map[string]int{"adult": 1},
+		PaymentMethod: "credit",
+		Customer: reservationCustomer{
+			Name:     "Test User",
+			NameKana: "てすとゆーざー",
+			Email:    "test@example.com",
+			Tel:      "09012345678",
+		},
+	}
+
+	// 13日は 一般1800円 -> 1300円。スクリーン1の追加料金400円を足して1700円。
+	result, err := store.Create(ctx, req, nil, "service-day-price-0000001")
+	if err != nil {
+		t.Fatalf("Create(service day) error = %v", err)
+	}
+	if result.Amount != 1700 {
+		t.Fatalf("Create(service day) amount = %d, want 1700", result.Amount)
+	}
+
+	// 鑑賞日に 13 を含む文字列を送っても、サービスデー価格にはならない。
+	for _, badDate := range []string{"-13", "5/15(金) 13", "2026-05-15 13"} {
+		spoofed := req
+		spoofed.Date = badDate
+		spoofed.Seats = []string{firstFreeSeat(t, memberStore.db, testScheduleID(t, memberStore.db))}
+		if _, err := store.Create(ctx, spoofed, nil, "service-day-spoof-00000"); !isValidationError(err) {
+			t.Fatalf("Create(date=%q) error = %v, want validationError", badDate, err)
+		}
+	}
+}
+
+// testShowDate は seed.sql が生成する上映週のうち、テストで使う鑑賞日。
+const testShowDate = "2026-05-15"
+
+// testScheduleID returns the schedules.id of M001 / SCR001 / 17:00 on
+// testShowDate. seed.sql の行順に依存しないよう毎回DBから引く。
+func testScheduleID(t *testing.T, db *sql.DB) string {
+	t.Helper()
+	return scheduleIDOn(t, db, testShowDate, "17:00")
+}
+
+// scheduleIDOn returns the schedules.id of M001 / SCR001 on the given date.
+func scheduleIDOn(t *testing.T, db *sql.DB, date, clock string) string {
+	t.Helper()
+	var id string
+	err := db.QueryRow(
+		`SELECT id
+		   FROM schedules
+		  WHERE movie_id = 'M001'
+		    AND screen_id = 'SCR001'
+		    AND substr(start_at, 1, 10) = ?
+		    AND substr(start_at, 12, 5) = ?`,
+		date,
+		clock,
+	).Scan(&id)
+	if err != nil {
+		t.Fatalf("scheduleIDOn(%q, %q) error = %v", date, clock, err)
+	}
+	return id
+}
+
+// insertScheduleOn adds a M001 / SCR001 showtime on the given date and
+// returns its schedules.id. seed.sql の上映週の外にある日付を使うテスト用。
+func insertScheduleOn(t *testing.T, db *sql.DB, date, startClock, endClock string) string {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO schedules (movie_id, screen_id, start_at, end_at)
+		 VALUES ('M001', 'SCR001', ?, ?)`,
+		date+"T"+startClock+":00+09:00",
+		date+"T"+endClock+":00+09:00",
+	); err != nil {
+		t.Fatalf("insertScheduleOn(%q, %q) error = %v", date, startClock, err)
+	}
+	return scheduleIDOn(t, db, date, startClock)
+}
+
+// firstFreeSeatOnBoth returns a seat_code that is free on both schedules.
+func firstFreeSeatOnBoth(t *testing.T, db *sql.DB, firstSchedule, secondSchedule string) string {
+	t.Helper()
+	var seatCode string
+	err := db.QueryRow(
+		`SELECT s.seat_code
+		   FROM seats AS s
+		  WHERE s.screen_id = (SELECT screen_id FROM schedules WHERE id = ?)
+		    AND s.is_active = 1
+		    AND s.id NOT IN (
+		        SELECT rs.seat_id
+		          FROM reservation_seats AS rs
+		         WHERE rs.schedule_id IN (?, ?)
+		    )
+		  ORDER BY s.id
+		  LIMIT 1`,
+		firstSchedule,
+		firstSchedule,
+		secondSchedule,
+	).Scan(&seatCode)
+	if err != nil {
+		t.Fatalf("firstFreeSeatOnBoth(%q, %q) error = %v", firstSchedule, secondSchedule, err)
+	}
+	return seatCode
 }
 
 // firstFreeSeat returns a seat_code on the given schedule's screen that is not
@@ -1069,6 +1420,19 @@ func forceLegacyPaymentTable(t *testing.T, db *sql.DB) {
 	}
 	if err := tx.Commit(); err != nil {
 		t.Fatalf("legacy payment commit error = %v", err)
+	}
+}
+
+// assertLookupBreakdownMatchesAmount は、照会画面に出す内訳（券種・追加料金・割引）の合計が
+// お支払い合計と一致することを確かめる。
+func assertLookupBreakdownMatchesAmount(t *testing.T, lookup reservationLookupResponse) {
+	t.Helper()
+	total := lookup.Surcharge.Amount - lookup.Discount
+	for _, ticket := range lookup.Tickets {
+		total += ticket.Price
+	}
+	if total != lookup.Payment.Amount {
+		t.Fatalf("Lookup() breakdown total = %d, want payment amount %d (%+v)", total, lookup.Payment.Amount, lookup)
 	}
 }
 

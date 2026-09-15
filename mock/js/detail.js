@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.title = movie.title + ' | HAL シネマ';
 
   renderDetail(movie, isNow);
-  bindDateTabs();
+  bindDateTabs(movie);
 });
 
 function renderDetail(movie, isNow) {
@@ -157,18 +157,38 @@ function buildDateTabs(movie) {
     return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}">${escapeHtml(d)}${todayBadge}</button>`;
   }).join('');
 
-  return dateTabs;
+  return `<button class="detail-date-current" type="button" aria-expanded="false">
+    <span class="detail-date-current-label">${escapeHtml(defaultDate)}</span>
+    <span class="detail-date-current-icon" aria-hidden="true"></span>
+  </button>
+  <div class="sub-tabs detail-date-options" aria-label="上映日を選択">${dateTabs}</div>`;
 }
 
-function bindDateTabs() {
+function bindDateTabs(movie) {
   const dateTabs = document.getElementById('detail-date-tabs');
   if (!dateTabs) return;
 
   dateTabs.addEventListener('click', function (e) {
+    const currentButton = e.target.closest('.detail-date-current');
+    if (currentButton) {
+      const isExpanded = currentButton.getAttribute('aria-expanded') === 'true';
+      currentButton.setAttribute('aria-expanded', String(!isExpanded));
+      dateTabs.classList.toggle('is-open', !isExpanded);
+      return;
+    }
+
     const btn = e.target.closest('.sub-tab');
     if (!btn || btn.classList.contains('no-play')) return;
     dateTabs.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
+    const currentLabel = dateTabs.querySelector('.detail-date-current-label');
+    if (currentLabel) currentLabel.textContent = btn.dataset.date || '';
+    const currentButtonEl = dateTabs.querySelector('.detail-date-current');
+    if (currentButtonEl) currentButtonEl.setAttribute('aria-expanded', 'false');
+    dateTabs.classList.remove('is-open');
+
+    const theatersGrid = document.getElementById('detail-theaters-grid');
+    if (theatersGrid) theatersGrid.innerHTML = buildTheaterCols(movie);
   });
 }
 

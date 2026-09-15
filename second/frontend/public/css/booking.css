@@ -26,23 +26,28 @@
   font-family: var(--serif);
 }
 
+/* ポスターは 2:3 の枠で表示し、枠の高さがボックスの高さを決める。
+   列幅は各幅で「ポスターの高さ ≒ 本文の高さ」になるよう調整しており、
+   ポスターの上下に黒い帯が出ないようにしている。 */
 .booking-context {
+  --booking-poster-width: 128px;
   border: 1px solid var(--border);
   background:
     linear-gradient(135deg, rgba(16, 33, 58, 0.7), rgba(8, 13, 24, 0.5)),
     rgba(8, 13, 24, 0.42);
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: var(--booking-poster-width) minmax(0, 1fr);
   align-items: stretch;
-  min-height: 150px;
   margin-bottom: 18px;
   overflow: hidden;
 }
 
+/* 作品詳細へのリンクを兼ねる。 */
 .booking-context-poster {
-  display: grid;
-  place-items: center;
-  border-right: 1px solid var(--border);
+  position: relative;
+  display: block;
+  align-self: start;
+  aspect-ratio: 2 / 3;
   background: #050912;
   overflow: hidden;
 }
@@ -51,12 +56,50 @@
 .booking-context-poster-ph {
   width: 100%;
   height: 100%;
-  min-height: 150px;
   display: block;
 }
 
+/* 作品画像は 2:3 なので、枠いっぱいに縦横比を保ったまま収まる。 */
 .booking-context-poster img {
   object-fit: contain;
+  transition: filter 0.2s;
+}
+
+.booking-context-poster-label {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 6px 7px;
+  background: linear-gradient(180deg, transparent, rgba(5, 9, 18, 0.9));
+  color: var(--text2);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.booking-context-poster-label b {
+  color: var(--accent2);
+  font-family: var(--mono);
+  font-weight: 400;
+}
+
+.booking-context-poster:hover img,
+.booking-context-poster:focus-visible img {
+  filter: brightness(1.15);
+}
+
+.booking-context-poster:hover .booking-context-poster-label,
+.booking-context-poster:focus-visible .booking-context-poster-label {
+  color: var(--accent2);
+}
+
+.booking-context-poster:focus-visible {
+  outline: 2px solid var(--accent2);
+  outline-offset: -2px;
 }
 
 .booking-context-poster-ph {
@@ -73,6 +116,7 @@
   gap: 18px;
   padding: 24px 28px;
   min-width: 0;
+  border-left: 1px solid var(--border);
 }
 
 .booking-context-heading {
@@ -98,7 +142,7 @@
 
 .booking-context-meta {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(118px, auto);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   background: rgba(36, 68, 108, 0.58);
   border: 1px solid var(--border);
@@ -127,33 +171,6 @@
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
-}
-
-.booking-context-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 54px;
-  background: rgba(8, 13, 24, 0.48);
-  color: var(--text2);
-  font-size: 12px;
-  letter-spacing: 0;
-  padding: 10px 14px;
-  transition: background 0.2s, color 0.2s;
-  white-space: nowrap;
-}
-
-.booking-context-link:hover {
-  background: rgba(74, 159, 212, 0.12);
-  color: var(--accent2);
-}
-
-.booking-context-link b {
-  color: var(--accent2);
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 400;
 }
 
 .booking-stepper {
@@ -364,6 +381,8 @@
 
 .seat-map {
   --seat-aisle: 28px;
+  --seat-size: 30px;
+  --seat-gap: 6px;
   display: grid;
   gap: 8px;
   overflow-x: auto;
@@ -372,8 +391,13 @@
 }
 
 .seat-row {
+  --seat-grid-min: calc(
+    var(--seat-cols, 20) * var(--seat-size, 30px) +
+    var(--seat-col-aisles, 0) * var(--seat-aisle, 28px) +
+    (var(--seat-cols, 20) + var(--seat-col-aisles, 0) - 1) * var(--seat-gap, 6px)
+  );
   display: grid;
-  grid-template-columns: 24px minmax(var(--seat-grid-min, 520px), 1fr) 24px;
+  grid-template-columns: 24px minmax(var(--seat-grid-min), 1fr) 24px;
   gap: 10px;
   align-items: center;
 }
@@ -392,8 +416,8 @@
 
 .seat-row-grid {
   display: grid;
-  gap: 6px;
-  min-width: var(--seat-grid-min, 520px);
+  gap: var(--seat-gap, 6px);
+  min-width: var(--seat-grid-min);
 }
 
 /* 縦通路: 左右ブロックの間を空けるスペーサー（座席ではない） */
@@ -580,10 +604,6 @@
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
-.review-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .booking-confirm-strip div,
 .review-grid div {
   min-height: 78px;
@@ -610,17 +630,13 @@
   overflow-wrap: anywhere;
 }
 
-.terms-box,
-.booking-note-box {
+.terms-box {
   border: 1px solid var(--border);
   background: rgba(16, 33, 58, 0.62);
   padding: 20px;
   color: var(--text2);
   font-size: 13px;
   line-height: 1.9;
-}
-
-.terms-box {
   max-height: 190px;
   overflow: auto;
 }
@@ -850,6 +866,132 @@
   font-size: 12px;
   font-style: normal;
   line-height: 1.7;
+}
+
+.payment-detail {
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: rgba(8, 13, 24, 0.42);
+  padding: 20px;
+}
+
+.payment-detail-head {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.payment-detail-head strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.payment-detail-head span {
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.payment-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.payment-field {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payment-field-wide {
+  grid-column: 1 / -1;
+}
+
+.payment-field > span {
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.payment-field-input {
+  position: relative;
+  display: block;
+}
+
+.payment-field-input input {
+  padding-right: 92px;
+}
+
+.payment-field-brand {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.payment-field input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border2);
+  background: rgba(5, 12, 22, 0.62);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.payment-field input:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(74, 159, 212, 0.14);
+}
+
+.payment-field-error {
+  margin: 0;
+  min-height: 1.6em;
+  color: #d4a800;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.payment-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.payment-option {
+  appearance: none;
+  min-height: 52px;
+  border: 1px solid var(--border2);
+  background: rgba(16, 33, 58, 0.9);
+  color: var(--text2);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 12px;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.payment-option:hover {
+  border-color: rgba(124, 195, 255, 0.55);
+  background: var(--bg3);
+}
+
+.payment-option.active {
+  border-color: var(--accent2);
+  background: rgba(45, 106, 160, 0.44);
+  color: #fff;
 }
 
 .account-panels {
@@ -1509,7 +1651,7 @@
   gap: 14px;
   align-items: end;
   border: 1px solid var(--border);
-  padding: 16px;
+  padding: 20px;
   margin-top: 18px;
 }
 
@@ -1565,16 +1707,6 @@
 
 .payment-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.booking-note-box {
-  margin-top: 18px;
-  display: grid;
-  gap: 6px;
-}
-
-.booking-note-box strong {
-  color: var(--text);
 }
 
 .review-grid {
@@ -1678,17 +1810,26 @@
 }
 
 .complete-number-row {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
   gap: 10px;
+  width: 100%;
   max-width: 100%;
+}
+
+.complete-number-row strong {
+  grid-column: 2;
+}
+
+.complete-number-row .complete-copy-button {
+  grid-column: 3;
+  justify-self: start;
 }
 
 .complete-copy-button {
   width: 36px;
   height: 36px;
-  flex: 0 0 36px;
   display: inline-grid;
   place-items: center;
   border: 1px solid var(--border2);
@@ -1740,12 +1881,12 @@
     padding: calc(var(--nav-h) + 2.5rem) 40px 72px;
   }
 
-  .booking-context-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .booking-context {
+    --booking-poster-width: 165px;
   }
 
-  .booking-context-link {
-    grid-column: 1 / -1;
+  .booking-context-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .payment-grid {
@@ -1759,38 +1900,19 @@
   }
 
   .booking-context {
-    grid-template-columns: 82px minmax(0, 1fr);
-    min-height: 0;
+    --booking-poster-width: 142px;
   }
 
-  .booking-context-poster img,
-  .booking-context-poster-ph {
-    min-height: 136px;
-  }
-
+  /* 768px 以下でも「左にポスター / 右に作品名と上映情報」の配置を保つ。
+     余白と文字サイズだけ画面幅に合わせて詰める。 */
   .booking-context-body {
-    display: contents;
-  }
-
-  .booking-context-heading {
-    align-self: center;
-    padding: 16px;
+    gap: 14px;
+    padding: 18px;
   }
 
   .booking-context-title {
     font-size: 22px;
     margin-bottom: 12px;
-  }
-
-  .booking-context-link {
-    min-height: 44px;
-    padding: 8px 12px;
-  }
-
-  .booking-context-meta {
-    grid-template-columns: 1fr;
-    grid-column: 1 / -1;
-    margin: 0 16px 16px;
   }
 
   .booking-context-meta div {
@@ -1823,7 +1945,6 @@
   }
 
   .booking-confirm-strip,
-  .review-grid,
   .customer-grid {
     grid-template-columns: 1fr;
   }
@@ -1835,7 +1956,7 @@
   }
 
   .terms-summary-table div {
-    grid-template-columns: 1fr;
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .terms-summary-table dt {
@@ -1858,7 +1979,7 @@
   }
 
   .terms-check {
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .account-panel {
@@ -1952,6 +2073,14 @@
     justify-content: stretch;
   }
 
+  .payment-detail {
+    padding: 16px;
+  }
+
+  .payment-field-grid {
+    grid-template-columns: 1fr;
+  }
+
   .coupon-actions .btn-ghost {
     flex: 1;
   }
@@ -1982,5 +2111,217 @@
   .booking-nav-row .btn-primary,
   .booking-nav-row .btn-ghost {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .booking-page {
+    padding: calc(var(--nav-h) + 2rem) 16px 56px;
+  }
+
+  .booking-hero {
+    margin-bottom: 22px;
+  }
+
+  .booking-context {
+    --booking-poster-width: 133px;
+  }
+
+  .booking-context-body {
+    padding: 14px;
+  }
+
+  .booking-context-title {
+    font-size: 19px;
+    margin-bottom: 10px;
+  }
+
+  .booking-stepper {
+    grid-template-columns: repeat(7, 108px);
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+
+  .booking-step {
+    min-width: 108px;
+    min-height: 62px;
+    padding: 8px 10px;
+    scroll-snap-align: start;
+  }
+
+  .booking-step-en {
+    display: none;
+  }
+
+  .booking-step-panel {
+    padding: 18px 14px;
+  }
+
+  .booking-panel-head {
+    margin-bottom: 18px;
+  }
+
+  .booking-panel-head h2 {
+    font-size: 19px;
+  }
+
+  .seat-map {
+    --seat-size: 28px;
+    --seat-aisle: 16px;
+    --seat-gap: 4px;
+    overscroll-behavior-x: contain;
+  }
+
+  .seat-button {
+    height: 30px;
+  }
+
+  .seat-row {
+    gap: 8px;
+  }
+
+  .seat-stage {
+    width: min(560px, 96%);
+  }
+
+  .seat-screen-info {
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .seat-legend {
+    gap: 10px 14px;
+    font-size: 11px;
+  }
+
+  .ticket-option {
+    padding: 14px;
+  }
+
+  .ticket-pricing-notes div {
+    padding: 12px 14px;
+  }
+
+  .coupon-box {
+    padding: 14px;
+  }
+
+  .account-promo {
+    padding: 20px;
+  }
+
+  .account-promo strong {
+    font-size: 22px;
+  }
+
+  .review-tickets div {
+    font-size: 12px;
+  }
+
+  .complete {
+    min-height: 420px;
+  }
+
+  .complete h2 {
+    font-size: 24px;
+  }
+
+  .complete-number strong {
+    font-size: 19px;
+  }
+
+  .complete-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .complete-actions .btn-primary,
+  .complete-actions .btn-ghost {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .booking-page {
+    padding: calc(var(--nav-h) + 1.5rem) 12px 48px;
+  }
+
+  .booking-context {
+    --booking-poster-width: 138px;
+  }
+
+  .booking-context-body {
+    padding: 12px;
+  }
+
+  .booking-context-meta div {
+    padding: 7px 8px;
+  }
+
+  .booking-context-title {
+    font-size: 18px;
+  }
+
+  .booking-stepper {
+    grid-template-columns: repeat(7, 92px);
+  }
+
+  .booking-step {
+    min-width: 92px;
+    min-height: 56px;
+    padding: 8px;
+  }
+
+  .booking-step-label {
+    font-size: 11px;
+  }
+
+  .booking-step-panel {
+    padding: 16px 12px;
+  }
+
+  .booking-panel-head h2 {
+    font-size: 18px;
+  }
+
+  .seat-map {
+    --seat-size: 26px;
+    --seat-aisle: 12px;
+    --seat-gap: 3px;
+  }
+
+  .seat-button {
+    height: 28px;
+    font-size: 9px;
+  }
+
+  .seat-row-grid {
+    gap: var(--seat-gap);
+  }
+
+  .seat-legend {
+    gap: 8px 12px;
+    font-size: 10px;
+  }
+
+  .ticket-option-controls {
+    grid-template-columns: 32px 34px 32px;
+  }
+
+  .terms-summary-table dt,
+  .terms-summary-table dd {
+    padding: 10px;
+  }
+
+  .complete h2 {
+    font-size: 21px;
+  }
+
+  .complete-number {
+    padding: 14px;
+  }
+
+  .complete-number strong {
+    font-size: 17px;
   }
 }

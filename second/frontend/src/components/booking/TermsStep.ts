@@ -30,7 +30,7 @@ export function TermsStep({ state, stepNo, totals, canProceed, isFirstStep }) {
             </div>
             <div>
               <dt>鑑賞日時</dt>
-              <dd>${escapeHtml(state.date)} ${escapeHtml(showTime)}</dd>
+              <dd>${escapeHtml(state.dateLabel || state.date)} ${escapeHtml(showTime)}</dd>
             </div>
             <div>
               <dt>座席</dt>

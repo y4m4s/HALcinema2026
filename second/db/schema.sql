@@ -102,7 +102,9 @@ CREATE TABLE payment_methods (
 -- ============================================================
 CREATE TABLE screen_types (
     id         TEXT    PRIMARY KEY,
-    name       TEXT    NOT NULL UNIQUE
+    name       TEXT    NOT NULL UNIQUE,
+    -- 1席あたりの追加料金（3D 追加料金）。
+    surcharge  INTEGER NOT NULL DEFAULT 0 CHECK (surcharge >= 0)
 );
 
 -- ============================================================
@@ -234,6 +236,8 @@ CREATE TABLE ticket_types (
     code                 TEXT    NOT NULL UNIQUE,
     name                 TEXT    NOT NULL UNIQUE,
     price                INTEGER NOT NULL CHECK (price >= 0),
+    -- 呪いのサービスデー（毎月13日）の価格。NULL は対象外。
+    service_day_price    INTEGER CHECK (service_day_price IS NULL OR service_day_price >= 0),
     required_seat_count  INTEGER NOT NULL DEFAULT 1 CHECK (required_seat_count > 0),
     display_order        INTEGER NOT NULL DEFAULT 999,
     is_active            INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
@@ -245,6 +249,8 @@ CREATE TABLE ticket_types (
 -- id は内部参照用の整数主キー、reservation_no は画面・メール表示用の R + 数字10桁。
 -- created_at を予約日時として扱う。
 -- seat_hold_expires_at が過ぎた pending 予約は座席占有対象から外す。
+-- surcharge_unit_price / discount_amount は予約作成時点の3D追加料金（1席あたり）と割引総額。
+-- 料金マスタを変更しても、予約確認で作成時の内訳を再現できるよう保存する。
 -- ============================================================
 CREATE TABLE reservations (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -259,6 +265,8 @@ CREATE TABLE reservations (
     status              TEXT    NOT NULL DEFAULT 'pending'
                              CHECK (status IN ('pending', 'confirmed', 'cancelled', 'used', 'expired')),
     seat_hold_expires_at TEXT,
+    surcharge_unit_price INTEGER NOT NULL DEFAULT 0 CHECK (surcharge_unit_price >= 0),
+    discount_amount     INTEGER NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
     created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );

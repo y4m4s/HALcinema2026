@@ -1,7 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
-import { MOVIES, SCREENS, DATES, formatScreeningStartDate, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, formatScreeningStartDate, getMovieStatus, isMoviePlayingOn } from './data'
 import { badge } from './common'
+import { setupDatePager } from './date-pager'
 
 export function runDetail() {
 const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
@@ -134,7 +135,10 @@ function renderBooking(movie, isNow) {
     return;
   }
 
-  if (dateTabs) dateTabs.innerHTML = buildDateTabs(movie);
+  if (dateTabs) {
+    dateTabs.innerHTML = buildDateTabs(movie);
+    setupDatePager(dateTabs.closest('[data-date-pager]'));
+  }
   if (theatersGrid) theatersGrid.innerHTML = buildTheaterCols(movie);
   if (note && noteText) {
     note.hidden = !movie.note;
@@ -143,15 +147,12 @@ function renderBooking(movie, isNow) {
 }
 
 function buildDateTabs(movie) {
-  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
   const defaultDate = getDefaultBookingDate(movie);
 
-  const todayLabel = '5/15(金)';
   const dateTabs = DATES.map(d => {
-    const m = d.match(/\((.)\)/);
-    const isPlaying = m && movie.playingDays && movie.playingDays.includes(dayMap[m[1]]);
-    const todayBadge = d === todayLabel ? '<span class="today-badge">TODAY</span>' : '';
-    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}">${escapeHtml(d)}${todayBadge}</button>`;
+    const isPlaying = isMoviePlayingOn(movie, d);
+    const todayBadge = d === TODAY_DATE ? '<span class="today-badge">TODAY</span>' : '';
+    return `<button class="sub-tab${d === defaultDate ? ' active' : ''}${!isPlaying ? ' no-play' : ''}" data-date="${escapeHtml(d)}"${!isPlaying ? ' disabled' : ''}>${escapeHtml(formatDateLabel(d))}${todayBadge}</button>`;
   }).join('');
 
   return dateTabs;
@@ -211,19 +212,8 @@ function buildTheaterCols(movie) {
 }
 
 function getDefaultBookingDate(movie) {
-  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
-  const todayLabel = '5/15(金)';
-  const todayIsPlaying = movie.playingDays && DATES.find(d => {
-    const m = d.match(/\((.)\)/);
-    return d === todayLabel && m && movie.playingDays.includes(dayMap[m[1]]);
-  });
-
-  if (todayIsPlaying) return todayLabel;
-
-  return DATES.find(d => {
-    const m = d.match(/\((.)\)/);
-    return !movie.playingDays || (m && movie.playingDays.includes(dayMap[m[1]]));
-  }) || DATES[0];
+  if (DATES.includes(TODAY_DATE) && isMoviePlayingOn(movie, TODAY_DATE)) return TODAY_DATE;
+  return DATES.find(d => isMoviePlayingOn(movie, d)) || DATES[0];
 }
 
 function refreshBookingLinks(movie, date) {

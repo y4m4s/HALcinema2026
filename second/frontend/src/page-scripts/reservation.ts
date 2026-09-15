@@ -1,6 +1,6 @@
 /* eslint-disable */
 // @ts-nocheck
-import { escapeHtml, formatYen } from '../components/bokking/utils'
+import { escapeHtml, formatYen } from '../components/booking/utils'
 import { requestJSON } from './member-session'
 
 export function runReservation() {
@@ -8,6 +8,9 @@ export function runReservation() {
   const resultRoot = document.getElementById('reservation-result')
   if (!form || !resultRoot) return
   const shell = form.closest('.reservation-shell')
+  // 画面離脱後に結果を描画しないよう、取得中のリクエストを打ち切る。
+  let disposed = false
+  const lookupAbort = new AbortController()
 
   form.addEventListener('input', function (event) {
     const target = event.target instanceof HTMLInputElement ? event.target : null
@@ -47,7 +50,9 @@ export function runReservation() {
       const result = await requestJSON('/api/reservations/lookup', {
         method: 'POST',
         body: JSON.stringify({ reservationId, email, tel }),
+        signal: lookupAbort.signal,
       })
+      if (disposed) return
       renderReservation(result)
       resultRoot.querySelector('[data-reservation-back]')?.addEventListener('click', () => {
         resultRoot.innerHTML = ''
@@ -56,16 +61,18 @@ export function runReservation() {
       shell?.classList.add('has-result')
 
     } catch (error) {
+      if (disposed) return
       renderError(error instanceof Error ? error.message : '予約情報の確認に失敗しました。')
       shell?.classList.remove('has-result')
     } finally {
-      setLoading(false)
+      if (!disposed) setLoading(false)
     }
   })
 
   function renderReservation(reservation) {
     const seats = Array.isArray(reservation.seats) ? reservation.seats : []
     const tickets = Array.isArray(reservation.tickets) ? reservation.tickets : []
+    const surcharge = reservation.surcharge || {}
     const payment = reservation.payment || {}
     const customer = reservation.customer || {}
 
@@ -99,6 +106,16 @@ export function runReservation() {
               <strong>${formatYen(ticket.price)}</strong>
             </div>
           `).join('')}
+          ${surcharge.amount ? `
+            <div>
+              <span>3D追加料金 x ${escapeHtml(surcharge.units)}</span>
+              <strong>${formatYen(surcharge.amount)}</strong>
+            </div>
+          ` : ''}
+          <div>
+            <span>割引</span>
+            <strong>-${formatYen(reservation.discount)}</strong>
+          </div>
           <div class="grand">
             <span>お支払い合計</span>
             <strong>${formatYen(payment.amount)}</strong>
@@ -122,6 +139,11 @@ export function runReservation() {
     if (!button) return
     button.disabled = loading
     button.textContent = loading ? '確認中...' : '予約を確認する'
+  }
+
+  return function cleanupReservation() {
+    disposed = true
+    lookupAbort.abort()
   }
 }
 

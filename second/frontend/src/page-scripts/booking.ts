@@ -1,18 +1,19 @@
 /* eslint-disable */
 // @ts-nocheck
-import { AccountStep } from '../components/bokking/AccountStep'
-import { BookingContext } from '../components/bokking/BookingContext'
-import { BookingStepper } from '../components/bokking/BookingStepper'
-import { CompleteStep } from '../components/bokking/CompleteStep'
-import { CustomerStep } from '../components/bokking/CustomerStep'
-import { PaymentStep } from '../components/bokking/PaymentStep'
-import { ReviewStep } from '../components/bokking/ReviewStep'
-import { SeatStep } from '../components/bokking/SeatStep'
-import { TermsStep } from '../components/bokking/TermsStep'
-import { TicketsStep } from '../components/bokking/TicketsStep'
-import { escapeAttr, escapeHtml, formatYen } from '../components/bokking/utils'
+import { AccountStep } from '../components/booking/AccountStep'
+import { BookingContext } from '../components/booking/BookingContext'
+import { BookingStepper } from '../components/booking/BookingStepper'
+import { CompleteStep } from '../components/booking/CompleteStep'
+import { CustomerStep } from '../components/booking/CustomerStep'
+import { PaymentStep, renderPaymentTotals } from '../components/booking/PaymentStep'
+import { ReviewStep } from '../components/booking/ReviewStep'
+import { SeatStep } from '../components/booking/SeatStep'
+import { TermsStep } from '../components/booking/TermsStep'
+import { TicketsStep } from '../components/booking/TicketsStep'
+import { escapeAttr, escapeHtml, formatCardNumber, formatYen } from '../components/booking/utils'
+import { SERVICE_DAY_PRICE, THREE_D_EXTRA_FEE, TICKET_TYPES } from '../data/pricing'
 
-import { MOVIES, SCREENS, DATES, getMovieStatus } from './data'
+import { MOVIES, SCREENS, DATES, TODAY_DATE, formatDateLabel, getMovieStatus, isCurseServiceDay, isMoviePlayingOn } from './data'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -22,7 +23,6 @@ import {
   requestMemberJSON,
   writeMemberSession,
 } from './member-session'
-import { runCommon } from './common'
 
 const FLOW_STEPS = [
   { id: 'tickets', label: '券種選択', en: 'TICKET' },
@@ -35,16 +35,16 @@ const FLOW_STEPS = [
   { id: 'complete', label: '購入完了', en: 'DONE' },
 ]
 
-const TICKET_TYPES = [
-  { id: 'adult', label: '一般', note: '大人', price: 1800, seats: 1, serviceDayEligible: true },
-  { id: 'university', label: '大学生・専門学生', note: '学生証提示', price: 1600, seats: 1, serviceDayEligible: true },
-  { id: 'student', label: '中学・高校生', note: '学生証提示', price: 1400, seats: 1, serviceDayEligible: true },
-  { id: 'child', label: '小学生・幼児', note: '3歳以上', price: 1000, seats: 1, serviceDayEligible: false },
-]
-
 const MAX_SEATS_PER_ORDER = 6
-const SERVICE_DAY_PRICE = 1300
-const THREE_D_EXTRA_FEE = 400
+const CARD_EXPIRY_MAX_YEARS = 20
+const CARD_NUMBER_LENGTH = 16
+const CARD_CVC_LENGTH = 3
+const CARD_BRANDS = [
+  { label: 'VISA', pattern: /^4/ },
+  // Mastercard は 51〜55 と 2221〜2720、JCB は 3528〜3589 の範囲。
+  { label: 'Mastercard', pattern: /^(5[1-5]|22(?:2[1-9]|[3-9]\d)|2[3-6]\d{2}|27(?:[01]\d|20))/ },
+  { label: 'JCB', pattern: /^35(?:2[89]|[3-7]\d|8\d)/ },
+]
 const STEP_TRANSITION_OUT_MS = 220
 const STEP_TRANSITION_GAP_MS = 60
 const STEP_TRANSITION_IN_MS = 460
@@ -56,9 +56,11 @@ const INPUT_LIMITS = {
   coupon: 20,
   loginIdentifier: 254,
   password: 128,
+  cardNumber: 16,
+  cardCvc: 3,
+  cardHolder: 40,
 }
 
-const SEAT_AISLE_WIDTH = 28
 const SCREEN_SEAT_LAYOUTS = {
   // colBlocks: 縦通路で区切る左右ブロックの座席数（合計=columns）
   // rowBlocks: 横通路で区切る前後ブロックの行数（合計=rows）
@@ -68,19 +70,60 @@ const SCREEN_SEAT_LAYOUTS = {
 }
 
 const PAYMENT_METHODS = [
-  { id: 'credit', label: 'クレジットカード', note: '購入完了後、予約番号を発行します。' },
-  { id: 'qr', label: 'QR決済', note: '外部決済画面へ進む想定のデモです。' },
-  { id: 'konbini', label: 'コンビニ払い', note: '支払期限まで座席を仮押さえします。' },
+  { id: 'credit', label: 'クレジットカード', note: 'カード情報を入力してください。' },
+  { id: 'qr', label: 'QR決済', note: '利用する決済サービスを選択してください。' },
+  { id: 'konbini', label: 'コンビニ払い', note: '支払うコンビニを選択してください。' },
+]
+
+const QR_PROVIDERS = [
+  { id: 'paypay', label: 'PayPay' },
+  { id: 'dbarai', label: 'd払い' },
+  { id: 'aupay', label: 'au PAY' },
+  { id: 'rakutenpay', label: '楽天ペイ' },
+]
+
+const KONBINI_STORES = [
+  { id: 'seven', label: 'セブン-イレブン' },
+  { id: 'lawson', label: 'ローソン' },
+  { id: 'familymart', label: 'ファミリーマート' },
+  { id: 'ministop', label: 'ミニストップ' },
 ]
 
 export function runBooking() {
+  const previousScrollRestoration = 'scrollRestoration' in history ? history.scrollRestoration : null
+  const initialScrollBehavior = document.documentElement.style.scrollBehavior
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
 
   const stepRoot = document.getElementById('booking-step-root')
   const stepperRoot = document.getElementById('booking-stepper')
   const contextRoot = document.getElementById('booking-context')
 
-  if (!stepRoot || !stepperRoot || !contextRoot) return
+  if (!stepRoot || !stepperRoot || !contextRoot) {
+    if (previousScrollRestoration) history.scrollRestoration = previousScrollRestoration
+    return
+  }
+
+  let disposed = false
+  const timeoutIds = new Set()
+  const animationFrameIds = new Set()
+
+  function scheduleTimeout(callback, delay) {
+    const timeoutId = window.setTimeout(() => {
+      timeoutIds.delete(timeoutId)
+      if (!disposed) callback()
+    }, delay)
+    timeoutIds.add(timeoutId)
+    return timeoutId
+  }
+
+  function scheduleAnimationFrame(callback) {
+    const frameId = window.requestAnimationFrame(() => {
+      animationFrameIds.delete(frameId)
+      if (!disposed) callback()
+    })
+    animationFrameIds.add(frameId)
+    return frameId
+  }
 
   const params = new URLSearchParams(location.search)
   const movie = resolveMovie(params)
@@ -94,6 +137,7 @@ export function runBooking() {
     maxStep: initialStep,
     movie,
     date: initialDate,
+    dateLabel: formatDateLabel(initialDate),
     screen: initialSlot ? initialSlot.screen : null,
     slot: initialSlot ? initialSlot.slot : null,
     selectedSeats: [],
@@ -112,6 +156,8 @@ export function runBooking() {
     couponError: '',
     couponApplying: false,
     payment: 'credit',
+    paymentDetails: createPaymentDetailsState(),
+    paymentErrors: {},
     confirmationNo: '',
     confirmationCopied: false,
     confirmationCopyTimer: 0,
@@ -129,11 +175,25 @@ export function runBooking() {
   stepRoot.addEventListener('click', onClick)
   stepRoot.addEventListener('input', onInput)
   stepRoot.addEventListener('change', onChange)
+  stepRoot.addEventListener('focusout', onFocusOut)
   stepperRoot.addEventListener('click', onStepperClick)
+
+  const reachableStep = getReachableStep()
+  if (state.currentStep > reachableStep) {
+    state.currentStep = reachableStep
+    state.maxStep = reachableStep
+  }
 
   render()
   if (savedMemberSession?.token) {
     void refreshMemberSession()
+  }
+
+  function getReachableStep() {
+    const lastSelectable = getStepIndex('review')
+    let index = 0
+    while (index < lastSelectable && canProceedFrom(index)) index += 1
+    return index
   }
 
   function onClick(event) {
@@ -154,6 +214,7 @@ export function runBooking() {
       state.account = accountChoice.dataset.accountChoice
       state.login.error = ''
       state.join.error = ''
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -179,6 +240,19 @@ export function runBooking() {
     const paymentChoice = target.closest('[data-payment-choice]')
     if (paymentChoice) {
       state.payment = paymentChoice.dataset.paymentChoice
+      if (state.payment !== 'credit') clearCardSecrets()
+      state.paymentErrors = {}
+      state.maxStep = state.currentStep
+      render()
+      return
+    }
+
+    const paymentOption = target.closest('[data-payment-option]')
+    if (paymentOption) {
+      const field = paymentOption.dataset.paymentOption
+      const value = paymentOption.dataset.paymentOptionValue || ''
+      state.paymentDetails[field] = state.paymentDetails[field] === value ? '' : value
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -249,7 +323,7 @@ export function runBooking() {
     state.confirmationCopied = true
     render()
     if (state.confirmationCopyTimer) window.clearTimeout(state.confirmationCopyTimer)
-    state.confirmationCopyTimer = window.setTimeout(() => {
+    state.confirmationCopyTimer = scheduleTimeout(() => {
       state.confirmationCopied = false
       state.confirmationCopyTimer = 0
       render()
@@ -297,7 +371,9 @@ export function runBooking() {
       const nextValue = normalizeCustomerInput(fieldName, field.value)
       if (field.value !== nextValue) field.value = nextValue
       state.customer[fieldName] = nextValue
+      state.maxStep = state.currentStep
       syncCustomerDerivedValues()
+      renderStepper()
       syncCurrentStepAction()
       syncCustomerErrors()
       return
@@ -325,16 +401,38 @@ export function runBooking() {
       return
     }
 
+    const paymentField = target.closest('[data-payment-field]')
+    if (paymentField) {
+      const fieldName = paymentField.dataset.paymentField
+      const nextValue = normalizePaymentInput(fieldName, paymentField.value)
+      const displayValue = fieldName === 'cardNumber' ? formatCardNumber(nextValue) : nextValue
+      if (paymentField.value !== displayValue) paymentField.value = displayValue
+      state.paymentDetails[fieldName] = nextValue
+      state.paymentErrors[fieldName] = ''
+      if (fieldName === 'cardNumber') {
+        const brandLabel = stepRoot.querySelector('[data-payment-brand]')
+        if (brandLabel) brandLabel.textContent = getCardBrand(nextValue)
+      }
+      state.maxStep = state.currentStep
+      renderStepper()
+      syncCurrentStepAction()
+      syncPaymentErrors()
+      return
+    }
+
     const couponInput = target.closest('[data-coupon-input]')
     if (couponInput) {
       const nextValue = normalizeCouponInput(couponInput.value)
       if (couponInput.value !== nextValue) couponInput.value = nextValue
       state.couponInput = nextValue
+      const hadCoupon = Boolean(state.couponCode)
       if (state.couponCode && state.couponCode !== nextValue) {
         state.couponCode = ''
         state.coupon = null
       }
       state.couponError = ''
+      stepRoot.querySelector('.coupon-error')?.remove()
+      if (hadCoupon && !state.couponCode) syncDiscardedCoupon()
     }
   }
 
@@ -346,6 +444,7 @@ export function runBooking() {
     const terms = target.closest('[data-terms-check]')
     if (terms) {
       state.agreed = Boolean(terms.checked)
+      state.maxStep = state.currentStep
       render()
       return
     }
@@ -362,6 +461,15 @@ export function runBooking() {
     if (mail) {
       state.mailMagazine = Boolean(mail.checked)
     }
+  }
+
+  function onFocusOut(event) {
+    const target = event.target instanceof Element ? event.target : null
+    const paymentField = target?.closest('[data-payment-field]')
+    if (!paymentField) return
+    const fieldName = paymentField.dataset.paymentField
+    state.paymentErrors[fieldName] = validatePaymentField(fieldName, state.paymentDetails[fieldName])
+    syncPaymentErrors()
   }
 
   function onStepperClick(event) {
@@ -407,6 +515,7 @@ export function runBooking() {
   }
 
   function render() {
+    if (disposed) return
     const stepChanged = renderedStep !== state.currentStep
     document.title = `${FLOW_STEPS[state.currentStep].label} | 座席予約 | HAL シネマ`
     if (stepChanged && renderedStep !== null) {
@@ -424,14 +533,14 @@ export function runBooking() {
     stepRoot.classList.remove('is-entering')
     stepRoot.classList.add('is-leaving')
 
-    window.setTimeout(() => {
+    scheduleTimeout(() => {
       renderCurrentView()
       renderedStep = state.currentStep
       resetScrollTop()
       stepRoot.classList.remove('is-leaving')
       stepRoot.classList.add('is-entering')
 
-      window.setTimeout(() => {
+      scheduleTimeout(() => {
         stepRoot.classList.remove('is-entering')
         isStepTransitioning = false
       }, STEP_TRANSITION_IN_MS)
@@ -459,6 +568,11 @@ export function runBooking() {
       currentStep: state.currentStep,
       maxStep: state.maxStep,
     })
+    if (renderedStep === state.currentStep) return
+    const activeStep = stepperRoot.querySelector('.booking-step.active')
+    if (!activeStep) return
+    const offset = activeStep.getBoundingClientRect().left - stepperRoot.getBoundingClientRect().left
+    stepperRoot.scrollLeft += offset - (stepperRoot.clientWidth - activeStep.offsetWidth) / 2
   }
 
   function renderStep() {
@@ -471,6 +585,7 @@ export function runBooking() {
     }
 
     if (id === 'seat') {
+      const seatScrollLeft = stepRoot.querySelector('.seat-map')?.scrollLeft ?? 0
       stepRoot.innerHTML = SeatStep({
         ...shared,
         screens: SCREENS,
@@ -478,6 +593,10 @@ export function runBooking() {
         ticketUnits: getTicketSeatUnits(),
         seatMapHtml: renderSeatMap(),
       })
+      if (seatScrollLeft > 0) {
+        const seatMap = stepRoot.querySelector('.seat-map')
+        if (seatMap) seatMap.scrollLeft = seatScrollLeft
+      }
       return
     }
 
@@ -507,6 +626,10 @@ export function runBooking() {
       stepRoot.innerHTML = PaymentStep({
         ...shared,
         paymentMethods: PAYMENT_METHODS,
+        qrProviders: QR_PROVIDERS,
+        konbiniStores: KONBINI_STORES,
+        cardBrand: getCardBrand(state.paymentDetails.cardNumber),
+        errors: getPaymentErrors(),
         totals: getTotals(),
         coupon: getAppliedCoupon(),
       })
@@ -518,6 +641,7 @@ export function runBooking() {
         ticketTypes: getPricedTicketTypes(),
         totals: getTotals(),
         payment: getPayment(),
+        paymentSummary: getPaymentSummary(),
         customerName: getCustomerName(),
         phoneNumber: getPhoneNumber(),
       })
@@ -529,16 +653,16 @@ export function runBooking() {
   }
 
   function scrollToStepTop() {
-    requestAnimationFrame(resetScrollTop)
+    scheduleAnimationFrame(resetScrollTop)
   }
 
   function resetScrollTop() {
     const originalScrollBehavior = document.documentElement.style.scrollBehavior
     document.documentElement.style.scrollBehavior = 'auto'
     setScrollTopImmediate()
-    requestAnimationFrame(() => {
+    scheduleAnimationFrame(() => {
       setScrollTopImmediate()
-      window.setTimeout(() => {
+      scheduleTimeout(() => {
         setScrollTopImmediate()
         document.documentElement.style.scrollBehavior = originalScrollBehavior
       }, 80)
@@ -573,9 +697,9 @@ export function runBooking() {
       }).join('')).join('<i class="seat-aisle" aria-hidden="true"></i>')
       const rowClass = aisleRowIndices.has(rowIndex) ? 'seat-row seat-row--aisle-after' : 'seat-row'
       return `
-        <div class="${rowClass}" style="--seat-grid-min: ${layout.gridMinWidth}px;">
+        <div class="${rowClass}" style="--seat-cols: ${layout.columns}; --seat-col-aisles: ${layout.colAisles};">
           <span class="seat-row-label">${escapeHtml(row.label)}</span>
-          <div class="seat-row-grid" style="--seat-grid-min: ${layout.gridMinWidth}px; grid-template-columns: ${gridTemplate};">${blockHtml}</div>
+          <div class="seat-row-grid" style="grid-template-columns: ${gridTemplate};">${blockHtml}</div>
           <span class="seat-row-label">${escapeHtml(row.label)}</span>
         </div>`
     }).join('')
@@ -633,20 +757,24 @@ export function runBooking() {
   }
 
   function canProceed() {
-    const id = FLOW_STEPS[state.currentStep].id
+    return canProceedFrom(state.currentStep)
+  }
+
+  function canProceedFrom(stepIndex) {
+    const id = FLOW_STEPS[stepIndex].id
     if (id === 'tickets') return getTicketSeatUnits() > 0 && getTicketSeatUnits() <= MAX_SEATS_PER_ORDER
     if (id === 'seat') return Boolean(state.slot && state.screen && state.selectedSeats.length === getTicketSeatUnits() && getTicketSeatUnits() > 0)
     if (id === 'terms') return state.agreed
     if (id === 'account') return state.account === 'guest' || (state.account === 'member' && Boolean(state.member))
     if (id === 'customer') return isCustomerValid()
-    if (id === 'payment') return Boolean(state.payment)
+    if (id === 'payment') return isPaymentValid()
     if (id === 'review') return true
     return false
   }
 
   function isCustomerValid() {
-    const name = state.customer.name.trim() || `${state.customer.lastName} ${state.customer.firstName}`.trim()
-    const kana = state.customer.nameKana.trim() || state.customer.kana.trim()
+    const name = state.customer.name.trim()
+    const kana = state.customer.nameKana.trim()
     const phone = getPhoneNumber()
     const email = state.customer.email.trim()
     const emailConfirm = state.customer.emailConfirm.trim()
@@ -678,6 +806,64 @@ export function runBooking() {
     if (email && !isWithinMax(email, INPUT_LIMITS.email)) errors.email = '254文字以内で入力してください。'
     if (emailConfirm && email && email !== emailConfirm) errors.emailConfirm = 'メールアドレスが一致していません。'
     return errors
+  }
+
+  function getPaymentErrors() {
+    if (state.payment !== 'credit') return {}
+    return state.paymentErrors
+  }
+
+  function validatePaymentField(field, value) {
+    if (field === 'cardNumber') {
+      if (!value) return ''
+      if (value.length < CARD_NUMBER_LENGTH) return `カード番号を${CARD_NUMBER_LENGTH}桁で入力してください。`
+      if (!getCardBrand(value)) return 'VISA・Mastercard・JCB のいずれかをご利用ください。'
+      return isLuhnValid(value) ? '' : 'カード番号が正しくありません。'
+    }
+    if (field === 'cardExpiry') {
+      if (!value) return ''
+      if (value.length < 5) return '有効期限を MM/YY の形式で入力してください。'
+      return isValidCardExpiry(value) ? '' : '有効期限が正しくありません。'
+    }
+    if (field === 'cardCvc') {
+      if (!value) return ''
+      return value.length === CARD_CVC_LENGTH ? '' : `セキュリティコードを${CARD_CVC_LENGTH}桁で入力してください。`
+    }
+    if (field === 'cardHolder') {
+      if (!value.trim()) return ''
+      return isValidCardHolder(value) ? '' : 'カードに記載のとおり半角英字で入力してください。'
+    }
+    return ''
+  }
+
+  function isPaymentValid() {
+    if (!state.payment) return false
+    const d = state.paymentDetails
+    if (state.payment === 'qr') return Boolean(d.qrProvider)
+    if (state.payment === 'konbini') return Boolean(d.konbiniStore)
+    if (state.payment === 'credit') {
+      return isValidCardNumber(d.cardNumber)
+        && isValidCardExpiry(d.cardExpiry)
+        && d.cardCvc.length === CARD_CVC_LENGTH
+        && isValidCardHolder(d.cardHolder)
+    }
+    return false
+  }
+
+  // カード番号とCVCは、クレジットカード以外を選んだとき・予約完了時・画面離脱時に保持しない。
+  function clearCardSecrets() {
+    state.paymentDetails.cardNumber = ''
+    state.paymentDetails.cardCvc = ''
+  }
+
+  function getPaymentSummary() {
+    const d = state.paymentDetails
+    if (state.payment === 'credit') {
+      return d.cardNumber ? `${getCardBrand(d.cardNumber)} **** ${d.cardNumber.slice(-4)}` : ''
+    }
+    if (state.payment === 'qr') return QR_PROVIDERS.find(item => item.id === d.qrProvider)?.label || ''
+    if (state.payment === 'konbini') return KONBINI_STORES.find(item => item.id === d.konbiniStore)?.label || ''
+    return ''
   }
 
   async function applyCoupon() {
@@ -754,6 +940,7 @@ export function runBooking() {
           state.selectedSeats = nextSeats
           state.agreed = false
           state.maxStep = Math.min(state.maxStep, getStepIndex('seat'))
+          state.currentStep = Math.min(state.currentStep, state.maxStep)
         }
       }
     } catch {
@@ -784,9 +971,10 @@ export function runBooking() {
         tickets: state.tickets,
         couponCode: state.couponCode,
         paymentMethod: state.payment,
+        paymentSummary: getPaymentSummary(),
         customer: {
           name: getCustomerName(),
-          nameKana: state.customer.nameKana || state.customer.kana,
+          nameKana: state.customer.nameKana,
           email: state.customer.email,
           tel: getPhoneNumber(),
         },
@@ -807,6 +995,7 @@ export function runBooking() {
       })
 
       state.confirmationNo = result.confirmationNo || result.reservationId || createConfirmationNo()
+      clearCardSecrets()
       state.currentStep = getStepIndex('complete')
       state.maxStep = state.currentStep
       state.submittingReservation = false
@@ -883,7 +1072,7 @@ export function runBooking() {
     if (isCurseServiceDay(state.date)) {
       notices.push({
         title: '呪いのサービスデー',
-        body: '毎月13日は中高生以上の券種が1席1,300円になります。',
+        body: `毎月13日は中高生以上の券種が1席${formatYen(SERVICE_DAY_PRICE)}になります。`,
       })
     }
     if (screenFee) {
@@ -906,7 +1095,7 @@ export function runBooking() {
   }
 
   function getCustomerName() {
-    return state.customer.name.trim() || `${state.customer.lastName} ${state.customer.firstName}`.trim()
+    return state.customer.name.trim()
   }
 
   function getPhoneNumber() {
@@ -915,9 +1104,6 @@ export function runBooking() {
 
   function syncCustomerDerivedValues() {
     state.customer.tel = getPhoneNumber()
-    state.customer.lastName = state.customer.name
-    state.customer.firstName = ''
-    state.customer.kana = state.customer.nameKana
   }
 
   function syncCurrentStepAction() {
@@ -930,6 +1116,20 @@ export function runBooking() {
     stepRoot.querySelectorAll('[data-customer-error]').forEach(el => {
       const field = el.dataset.customerError
       el.textContent = errors[field] || ''
+    })
+  }
+
+  function syncDiscardedCoupon() {
+    stepRoot.querySelector('.coupon-success')?.remove()
+    stepRoot.querySelector('[data-action="remove-coupon"]')?.remove()
+    const totalLine = stepRoot.querySelector('.ticket-total-line')
+    if (totalLine) totalLine.innerHTML = renderPaymentTotals(getTotals())
+  }
+
+  function syncPaymentErrors() {
+    const errors = getPaymentErrors()
+    stepRoot.querySelectorAll('[data-payment-error]').forEach(el => {
+      el.textContent = errors[el.dataset.paymentError] || ''
     })
   }
 
@@ -1002,8 +1202,8 @@ export function runBooking() {
   async function logoutMember() {
     const token = state.memberToken
     clearMemberAuth()
+    state.maxStep = state.currentStep
     render()
-    runCommon()
 
     if (!token) return
     try {
@@ -1079,9 +1279,6 @@ export function runBooking() {
       ...state.customer,
       name: member.name || '',
       nameKana: member.nameKana || '',
-      lastName: member.name || '',
-      firstName: '',
-      kana: member.nameKana || '',
       email: member.email || '',
       emailConfirm: member.email || '',
       tel: member.tel || '',
@@ -1159,13 +1356,12 @@ export function runBooking() {
     const preset = SCREEN_SEAT_LAYOUTS[seatCount] || createSeatLayoutByCapacity(seatCount)
     const colBlocks = preset.colBlocks && preset.colBlocks.length ? preset.colBlocks : [preset.columns]
     const rowBlocks = preset.rowBlocks && preset.rowBlocks.length ? preset.rowBlocks : [preset.rows]
-    const colAisles = colBlocks.length - 1
     return {
       ...preset,
       seatCount,
       colBlocks,
       rowBlocks,
-      gridMinWidth: preset.columns * 30 + colAisles * SEAT_AISLE_WIDTH,
+      colAisles: colBlocks.length - 1,
     }
   }
 
@@ -1186,6 +1382,21 @@ export function runBooking() {
     }
     history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`)
   }
+
+  return function cleanupBooking() {
+    disposed = true
+    clearCardSecrets()
+    stepRoot.removeEventListener('click', onClick)
+    stepRoot.removeEventListener('input', onInput)
+    stepRoot.removeEventListener('change', onChange)
+    stepperRoot.removeEventListener('click', onStepperClick)
+    timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId))
+    timeoutIds.clear()
+    animationFrameIds.forEach((frameId) => window.cancelAnimationFrame(frameId))
+    animationFrameIds.clear()
+    document.documentElement.style.scrollBehavior = initialScrollBehavior
+    if (previousScrollRestoration) history.scrollRestoration = previousScrollRestoration
+  }
 }
 
 function createLoginState() {
@@ -1194,6 +1405,17 @@ function createLoginState() {
     password: '',
     loading: false,
     error: '',
+  }
+}
+
+function createPaymentDetailsState() {
+  return {
+    cardNumber: '',
+    cardExpiry: '',
+    cardCvc: '',
+    cardHolder: '',
+    qrProvider: '',
+    konbiniStore: '',
   }
 }
 
@@ -1215,9 +1437,6 @@ function createCustomerState(member = null) {
   return {
     name: member?.name || '',
     nameKana: member?.nameKana || '',
-    lastName: member?.name || '',
-    firstName: '',
-    kana: member?.nameKana || '',
     email: member?.email || '',
     emailConfirm: member?.email || '',
     tel: member?.tel || '',
@@ -1257,22 +1476,15 @@ function getAvailableSlots(movie) {
 }
 
 function getDefaultDate(movie) {
-  const todayIndex = Math.min(3, DATES.length - 1)
+  // 当日以降で最初に上映がある日を選ぶ。見つからなければ週の先頭に戻す。
+  const todayIndex = Math.max(0, DATES.indexOf(TODAY_DATE))
   const fromToday = DATES.slice(todayIndex).find(date => isPlayingDate(movie, date))
   return fromToday || DATES.find(date => isPlayingDate(movie, date)) || DATES[0]
 }
 
 function isPlayingDate(movie, date) {
-  if (!movie || !Array.isArray(movie.playingDays)) return true
-  const dayMap = { '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 }
-  const match = String(date).match(/\((.)\)/)
-  if (!match) return true
-  return movie.playingDays.includes(dayMap[match[1]])
-}
-
-function isCurseServiceDay(dateLabel) {
-  const match = String(dateLabel || '').match(/\/(\d{1,2})\(/)
-  return Number(match?.[1]) === 13
+  if (!movie) return true
+  return isMoviePlayingOn(movie, date)
 }
 
 function createEmptyTickets() {
@@ -1333,7 +1545,7 @@ function splitSeatsIntoBlocks(seats, colBlocks) {
 // 列ブロックを縦通路トラックで連結した grid-template-columns 文字列を組み立てる
 function buildSeatGridTemplate(colBlocks) {
   return colBlocks
-    .map(count => `repeat(${count}, minmax(30px, 1fr))`)
+    .map(count => `repeat(${count}, minmax(var(--seat-size, 30px), 1fr))`)
     .join(' var(--seat-aisle, 28px) ')
 }
 
@@ -1373,6 +1585,58 @@ function normalizeCustomerInput(field, value) {
   if (field === 'nameKana') return limitString(stripControlChars(value), INPUT_LIMITS.nameKana)
   if (field === 'email' || field === 'emailConfirm') return limitString(stripControlChars(value), INPUT_LIMITS.email)
   return limitString(stripControlChars(value), 100)
+}
+
+function normalizePaymentInput(field, value) {
+  if (field === 'cardNumber') return normalizeDigits(value, INPUT_LIMITS.cardNumber)
+  if (field === 'cardCvc') return normalizeDigits(value, INPUT_LIMITS.cardCvc)
+  if (field === 'cardExpiry') return normalizeCardExpiry(value)
+  if (field === 'cardHolder') return limitString(stripControlChars(value), INPUT_LIMITS.cardHolder).toUpperCase()
+  return limitString(stripControlChars(value), 40)
+}
+
+function normalizeCardExpiry(value) {
+  const digits = normalizeDigits(value, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`
+}
+
+function isValidCardNumber(digits) {
+  return digits.length === CARD_NUMBER_LENGTH && Boolean(getCardBrand(digits)) && isLuhnValid(digits)
+}
+
+function isLuhnValid(digits) {
+  let sum = 0
+  let double = false
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let value = Number(digits[index])
+    if (double) {
+      value *= 2
+      if (value > 9) value -= 9
+    }
+    sum += value
+    double = !double
+  }
+  return sum % 10 === 0
+}
+
+function isValidCardExpiry(value) {
+  const match = /^([0-9]{2})\/([0-9]{2})$/.exec(value)
+  if (!match) return false
+  const month = Number(match[1])
+  if (month < 1 || month > 12) return false
+  const now = new Date()
+  const expiresAt = new Date(2000 + Number(match[2]), month, 1)
+  if (expiresAt <= now) return false
+  return expiresAt <= new Date(now.getFullYear() + CARD_EXPIRY_MAX_YEARS, now.getMonth(), 1)
+}
+
+function isValidCardHolder(value) {
+  return /^[A-Z][A-Z' -]*[A-Z]$/.test(value.trim())
+}
+
+function getCardBrand(digits) {
+  return CARD_BRANDS.find(brand => brand.pattern.test(digits))?.label || ''
 }
 
 function normalizeLoginInput(field, value) {

@@ -9,7 +9,7 @@
   margin-bottom: 40px;
 }
 
-.ticket-table th {
+.ticket-table thead th {
   background: var(--bg3);
   padding: 14px 20px;
   font-family: var(--mono);
@@ -22,19 +22,22 @@
   border-bottom: 2px solid var(--border2);
 }
 
-.ticket-table td {
+.ticket-table td,
+.ticket-table tbody th {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
-  /* font-size: 18px; 区分 */
   color: var(--text);
+  text-align: left;
+  font-weight: 300;
 }
 
-.ticket-table td:first-child {
+.ticket-table .ticket-category {
   color: #dde4f0;
 }
 
-.ticket-table tr:hover td {
+.ticket-table tr:hover td,
+.ticket-table tr:hover th {
   background: rgba(45, 106, 160, 0.05);
 }
 
@@ -83,12 +86,11 @@
 
 .tickets-note-item {
   font-size: 13px;
-  /* font-size: 15px; NOTEの内容 */
-  /* color: var(--text2); */
   color: var(--text2);
   padding-left: 16px;
   position: relative;
-  align-items: center;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
 }
 
 .tickets-note-marker {
@@ -122,29 +124,155 @@
 }
 
 @media (max-width: 768px) {
+  .ticket-table {
+    margin-bottom: 32px;
+  }
+
   .ticket-table thead {
     display: none;
   }
 
   .ticket-table,
-  .ticket-table tbody,
-  .ticket-table tr,
-  .ticket-table td {
+  .ticket-table tbody {
     display: block;
     width: 100%;
   }
 
-  .ticket-table tr {
-    border-bottom: 1px solid var(--border);
+  .ticket-table tbody {
+    display: grid;
+    gap: 10px;
   }
 
-  .ticket-table td {
-    padding: 12px 0;
+  .ticket-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 16px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(21, 40, 64, 0.96), rgba(12, 26, 49, 0.94));
+    border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .ticket-table tr:hover {
+    background: linear-gradient(135deg, rgba(30, 57, 90, 0.98), rgba(18, 39, 70, 0.96));
+    border-color: var(--border2);
+  }
+
+  .ticket-table tr:hover td,
+  .ticket-table tr:hover th {
+    background: transparent;
+  }
+
+  .ticket-table td,
+  .ticket-table tbody th {
+    display: block;
+    width: auto;
+    padding: 0;
     border-bottom: none;
   }
 
+  .ticket-table .ticket-category {
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .ticket-price-cell {
+    text-align: right;
+  }
+
+  .ticket-price {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .ticket-table .ticket-note-cell {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ticket-note-cell::before {
+    content: attr(data-label);
+    margin-right: 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+  }
+
+  .ticket-note {
+    display: inline;
+    margin-top: 0;
+    line-height: 1.6;
+  }
+
+  .tickets-page .tickets-note-box {
+    padding: 24px;
+    margin-bottom: 36px;
+  }
+
+  .tickets-note-list {
+    padding-left: 0;
+  }
+
+  .tickets-page .coming-grid {
+    gap: 10px;
+    background: transparent;
+  }
+
+  .tickets-page .coming-card {
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+  }
 }
 
 .coming-synopsis {
   color: var(--text2);
+  line-height: 1.75;
+}
+
+@media (max-width: 520px) {
+  .tickets-page .section-header {
+    margin-bottom: 28px;
+  }
+
+  .ticket-table tr {
+    padding: 15px 16px;
+  }
+
+  .ticket-table .ticket-category {
+    font-size: 13px;
+  }
+
+  .ticket-price {
+    font-size: 15px;
+  }
+
+  .tickets-page .tickets-note-box {
+    padding: 20px 18px;
+  }
+
+  .tickets-note-title {
+    margin-bottom: 16px;
+  }
+
+  .tickets-note-item {
+    font-size: 12px;
+  }
+
+  .tickets-page .tickets-subsection-header {
+    align-items: center;
+  }
+
+  .tickets-page .coming-card {
+    padding: 20px 18px;
+  }
+
+  .tickets-promo-title {
+    font-size: 17px;
+  }
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,6 +25,16 @@ var (
 	errPaymentMethodNotFound    = errors.New("payment method not found")
 	errReservationNotFound      = errors.New("reservation not found")
 	errIdempotencyConflict      = errors.New("idempotency key already used with different request")
+)
+
+// 鑑賞日は上映回の特定に使うため YYYY-MM-DD のみ受け付ける。
+var reservationDatePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
+// サービスデー価格と 3D 追加料金は DB (ticket_types / screen_types) が正の定義。
+// 以下の定数は列を持たない古いDBを移行するときの初期値としてのみ使う。
+const (
+	legacyServiceDayPrice = 1300
+	legacyScreenSurcharge = 400
 )
 
 const (
@@ -94,6 +105,7 @@ type scheduleAvailabilityItem struct {
 	ScheduleID string `json:"scheduleId"`
 	MovieID    int    `json:"movieId"`
 	Screen     int    `json:"screen"`
+	Date       string `json:"date"`
 	Start      string `json:"start"`
 	End        string `json:"end"`
 	Capacity   int    `json:"capacity"`
@@ -118,17 +130,25 @@ type reservationLookupRequest struct {
 }
 
 type reservationLookupResponse struct {
-	ReservationID string                    `json:"reservationId"`
-	Status        string                    `json:"status"`
-	MovieTitle    string                    `json:"movieTitle"`
-	Date          string                    `json:"date"`
-	Start         string                    `json:"start"`
-	End           string                    `json:"end"`
-	Screen        string                    `json:"screen"`
-	Seats         []string                  `json:"seats"`
-	Tickets       []reservationLookupTicket `json:"tickets"`
-	Payment       reservationLookupPayment  `json:"payment"`
-	Customer      reservationLookupCustomer `json:"customer"`
+	ReservationID string                     `json:"reservationId"`
+	Status        string                     `json:"status"`
+	MovieTitle    string                     `json:"movieTitle"`
+	Date          string                     `json:"date"`
+	Start         string                     `json:"start"`
+	End           string                     `json:"end"`
+	Screen        string                     `json:"screen"`
+	Seats         []string                   `json:"seats"`
+	Tickets       []reservationLookupTicket  `json:"tickets"`
+	Surcharge     reservationLookupSurcharge `json:"surcharge"`
+	Discount      int                        `json:"discount"`
+	Payment       reservationLookupPayment   `json:"payment"`
+	Customer      reservationLookupCustomer  `json:"customer"`
+}
+
+type reservationLookupSurcharge struct {
+	UnitPrice int `json:"unitPrice"`
+	Units     int `json:"units"`
+	Amount    int `json:"amount"`
 }
 
 type reservationLookupTicket struct {
@@ -166,8 +186,18 @@ type resolvedTicket struct {
 	id                int64
 	code              string
 	price             int
+	serviceDayPrice   int
 	requiredSeatCount int
 	count             int
+}
+
+// priceOn returns the ticket price for the showtime. ticket_types に登録された
+// サービスデー価格を、13日の上映回にだけ適用する。
+func (t resolvedTicket) priceOn(startAt string) int {
+	if t.serviceDayPrice > 0 && isServiceDay(startAt) {
+		return t.serviceDayPrice
+	}
+	return t.price
 }
 
 type resolvedCoupon struct {
@@ -191,13 +221,7 @@ func newReservationStore(db *sql.DB) (*reservationStore, error) {
 }
 
 func (s *reservationStore) init(ctx context.Context) error {
-	if _, err := s.db.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
-		return err
-	}
-	if _, err := s.db.ExecContext(ctx, `PRAGMA busy_timeout = 5000`); err != nil {
-		return err
-	}
-
+	// foreign_keys / busy_timeout は sqliteDSN() で接続ごとに設定している。
 	required := []string{
 		"schedules",
 		"seats",
@@ -242,7 +266,80 @@ func (s *reservationStore) init(ctx context.Context) error {
 	if err := s.migrateReservationIdempotency(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateTicketServiceDayPrice(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateScreenTypeSurcharge(ctx); err != nil {
+		return err
+	}
+	if err := s.migrateReservationPriceSnapshot(ctx); err != nil {
+		return err
+	}
 	return s.expireStaleSeatHolds(ctx, time.Now().UTC().Format(time.RFC3339))
+}
+
+// migrateReservationPriceSnapshot adds reservations.surcharge_unit_price / discount_amount
+// so 予約確認の内訳 uses the amounts fixed at reservation time instead of the current masters.
+// 列を持たない既存の予約は、移行時点の料金マスタから予約作成時と同じ計算で値を埋める。
+func (s *reservationStore) migrateReservationPriceSnapshot(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "reservations")
+	if err != nil {
+		return err
+	}
+	statements := []string{}
+	if !columns["surcharge_unit_price"] {
+		statements = append(statements,
+			`ALTER TABLE reservations ADD COLUMN surcharge_unit_price INTEGER NOT NULL DEFAULT 0 CHECK (surcharge_unit_price >= 0)`,
+			`UPDATE reservations
+			    SET surcharge_unit_price = COALESCE((
+			            SELECT st.surcharge
+			              FROM schedules AS sch
+			              JOIN screens AS scr ON scr.id = sch.screen_id
+			              JOIN screen_types AS st ON st.id = scr.screen_type_id
+			             WHERE sch.id = reservations.schedule_id
+			        ), 0)`,
+		)
+	}
+	if !columns["discount_amount"] {
+		statements = append(statements,
+			`ALTER TABLE reservations ADD COLUMN discount_amount INTEGER NOT NULL DEFAULT 0 CHECK (discount_amount >= 0)`,
+			// couponDiscount と同じく「1席あたりの割引額 x 座席数」を券種の小計で頭打ちにする。
+			`UPDATE reservations
+			    SET discount_amount = COALESCE((
+			            SELECT MIN(
+			                       c.discount_amount * (
+			                           SELECT COALESCE(SUM(rd.quantity * tt.required_seat_count), 0)
+			                             FROM reservation_details AS rd
+			                             JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
+			                            WHERE rd.reservation_id = reservations.id
+			                       ),
+			                       (
+			                           SELECT COALESCE(SUM(rd.subtotal), 0)
+			                             FROM reservation_details AS rd
+			                            WHERE rd.reservation_id = reservations.id
+			                       )
+			                   )
+			              FROM coupons AS c
+			             WHERE c.id = reservations.coupon_id
+			        ), 0)
+			  WHERE coupon_id IS NOT NULL`,
+		)
+	}
+	if len(statements) == 0 {
+		return nil
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *reservationStore) migrateReservationIdempotency(ctx context.Context) error {
@@ -624,6 +721,48 @@ func (s *reservationStore) migratePaymentIDs(ctx context.Context) error {
 	return tx.Commit()
 }
 
+// migrateTicketServiceDayPrice adds ticket_types.service_day_price so the
+// サービスデー価格 is defined in the database instead of the Go source.
+func (s *reservationStore) migrateTicketServiceDayPrice(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "ticket_types")
+	if err != nil {
+		return err
+	}
+	if columns["service_day_price"] {
+		return nil
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE ticket_types ADD COLUMN service_day_price INTEGER`); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE ticket_types SET service_day_price = ? WHERE code IN ('adult', 'university', 'student')`,
+		legacyServiceDayPrice,
+	)
+	return err
+}
+
+// migrateScreenTypeSurcharge adds screen_types.surcharge so the 3D 追加料金 is
+// defined in the database instead of a hard-coded screen list.
+func (s *reservationStore) migrateScreenTypeSurcharge(ctx context.Context) error {
+	columns, err := s.tableColumns(ctx, "screen_types")
+	if err != nil {
+		return err
+	}
+	if columns["surcharge"] {
+		return nil
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE screen_types ADD COLUMN surcharge INTEGER NOT NULL DEFAULT 0`); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(
+		ctx,
+		`UPDATE screen_types SET surcharge = ? WHERE name = '大スクリーン'`,
+		legacyScreenSurcharge,
+	)
+	return err
+}
+
 func (s *reservationStore) tableSQL(ctx context.Context, table string) (string, error) {
 	var tableSQL string
 	err := s.db.QueryRowContext(
@@ -830,6 +969,7 @@ func (s *reservationStore) SchedulesAvailability(ctx context.Context) ([]schedul
 			ScheduleID: strconv.FormatInt(id, 10),
 			MovieID:    trailingInt(movieID),
 			Screen:     trailingInt(screenID),
+			Date:       dateFromTimestamp(startAt),
 			Start:      clockFromTimestamp(startAt),
 			End:        clockFromTimestamp(endAt),
 			Capacity:   capacity,
@@ -903,13 +1043,14 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		response              reservationLookupResponse
 		reservationID         int64
 		startAt, endAt        string
+		surchargeUnitPrice    int
 		paymentMethod, status string
 		amount                int
 	)
 	err := s.db.QueryRowContext(
 		ctx,
 		`SELECT r.id, r.reservation_no, r.status, r.customer_name, r.customer_email, r.customer_tel,
-		        sch.start_at, sch.end_at, m.title, scr.name,
+		        sch.start_at, sch.end_at, m.title, scr.name, r.surcharge_unit_price, r.discount_amount,
 		        COALESCE(pm.name, ''), COALESCE(p.status, ''), COALESCE(p.amount, 0)
 		   FROM reservations AS r
 		   JOIN schedules AS sch ON sch.id = r.schedule_id
@@ -936,6 +1077,8 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 		&endAt,
 		&response.MovieTitle,
 		&response.Screen,
+		&surchargeUnitPrice,
+		&response.Discount,
 		&paymentMethod,
 		&status,
 		&amount,
@@ -968,7 +1111,32 @@ func (s *reservationStore) Lookup(ctx context.Context, req reservationLookupRequ
 	}
 	response.Tickets = tickets
 
+	// 追加料金の単価と割引額は、料金マスタの変更に左右されないよう予約作成時に保存した値を使う。
+	// 座席数は、期限切れで予約座席が解放された予約でも変わらないよう明細の必要座席数から求める。
+	seatUnits, err := s.reservationSeatUnits(ctx, reservationID)
+	if err != nil {
+		return reservationLookupResponse{}, err
+	}
+	response.Surcharge = reservationLookupSurcharge{
+		UnitPrice: surchargeUnitPrice,
+		Units:     seatUnits,
+		Amount:    surchargeUnitPrice * seatUnits,
+	}
+
 	return response, nil
+}
+
+func (s *reservationStore) reservationSeatUnits(ctx context.Context, reservationID int64) (int, error) {
+	var units int
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT COALESCE(SUM(rd.quantity * tt.required_seat_count), 0)
+		   FROM reservation_details AS rd
+		   JOIN ticket_types AS tt ON tt.id = rd.ticket_type_id
+		  WHERE rd.reservation_id = ?`,
+		reservationID,
+	).Scan(&units)
+	return units, err
 }
 
 func (s *reservationStore) PreviewCoupon(ctx context.Context, req couponPreviewRequest) (couponPreviewResponse, error) {
@@ -1005,7 +1173,7 @@ func (s *reservationStore) PreviewCoupon(ctx context.Context, req couponPreviewR
 	ticketSubtotal := 0
 	for _, ticket := range tickets {
 		requiredSeatCount += ticket.requiredSeatCount * ticket.count
-		ticketSubtotal += effectiveTicketPrice(ticket.code, ticket.price, createReq.Date) * ticket.count
+		ticketSubtotal += ticket.priceOn(showtime.startAt) * ticket.count
 	}
 	seatCount := len(createReq.Seats)
 	if seatCount == 0 {
@@ -1124,7 +1292,7 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 	ticketSubtotal := 0
 	for _, ticket := range tickets {
 		requiredSeatCount += ticket.requiredSeatCount * ticket.count
-		ticketSubtotal += effectiveTicketPrice(ticket.code, ticket.price, req.Date) * ticket.count
+		ticketSubtotal += ticket.priceOn(showtime.startAt) * ticket.count
 	}
 	if requiredSeatCount != len(seats) {
 		return reservationCreateResponse{}, validationError("券種の必要座席数と選択座席数が一致していません。")
@@ -1140,7 +1308,12 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		return reservationCreateResponse{}, err
 	}
 
-	total := ticketSubtotal + screenSurcharge(showtime.screenID, len(seats)) - discount
+	surcharge, err := s.screenSurcharge(ctx, showtime.screenID)
+	if err != nil {
+		return reservationCreateResponse{}, err
+	}
+
+	total := ticketSubtotal + surcharge*len(seats) - discount
 	if total < 0 {
 		total = 0
 	}
@@ -1204,8 +1377,9 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		ctx,
 		`INSERT INTO reservations
 			(schedule_id, member_id, coupon_id, customer_name, customer_name_kana,
-			 customer_email, customer_tel, status, seat_hold_expires_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 customer_email, customer_tel, status, seat_hold_expires_at,
+			 surcharge_unit_price, discount_amount, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		showtime.id,
 		memberID,
 		nullableString(couponID),
@@ -1215,6 +1389,8 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 		customer.Tel,
 		status,
 		seatHoldExpiresAt,
+		surcharge,
+		discount,
 		now,
 		now,
 	)
@@ -1244,8 +1420,8 @@ func (s *reservationStore) Create(ctx context.Context, req reservationCreateRequ
 			reservationID,
 			ticket.id,
 			ticket.count,
-			effectiveTicketPrice(ticket.code, ticket.price, req.Date),
-			effectiveTicketPrice(ticket.code, ticket.price, req.Date)*ticket.count,
+			ticket.priceOn(showtime.startAt),
+			ticket.priceOn(showtime.startAt)*ticket.count,
 		)
 		if err != nil {
 			return reservationCreateResponse{}, err
@@ -1509,7 +1685,12 @@ func (s *reservationStore) resolveShowtime(ctx context.Context, req reservationC
 	if startTime == "" {
 		return resolvedShowtime{}, validationError("上映開始時刻を指定してください。")
 	}
+	date := strings.TrimSpace(req.Date)
+	if !reservationDatePattern.MatchString(date) {
+		return resolvedShowtime{}, validationError("鑑賞日を指定してください。")
+	}
 
+	// 日付まで一致させないと、同じ開始時刻の別日程を取り違えて予約してしまう。
 	var showtime resolvedShowtime
 	err = s.db.QueryRowContext(
 		ctx,
@@ -1517,11 +1698,12 @@ func (s *reservationStore) resolveShowtime(ctx context.Context, req reservationC
 		   FROM schedules
 		  WHERE movie_id = ?
 		    AND screen_id = ?
+		    AND substr(start_at, 1, 10) = ?
 		    AND substr(start_at, 12, 5) = ?
-		  ORDER BY start_at
 		  LIMIT 1`,
 		movieID,
 		screenID,
+		date,
 		startTime,
 	).Scan(&showtime.id, &showtime.movieID, &showtime.screenID, &showtime.startAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -1574,12 +1756,12 @@ func (s *reservationStore) resolveTickets(ctx context.Context, requested map[str
 		var ticket resolvedTicket
 		err := s.db.QueryRowContext(
 			ctx,
-			`SELECT id, code, price, required_seat_count
+			`SELECT id, code, price, COALESCE(service_day_price, 0), required_seat_count
 			   FROM ticket_types
 			  WHERE code = ?
 			    AND is_active = 1`,
 			code,
-		).Scan(&ticket.id, &ticket.code, &ticket.price, &ticket.requiredSeatCount)
+		).Scan(&ticket.id, &ticket.code, &ticket.price, &ticket.serviceDayPrice, &ticket.requiredSeatCount)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%w: %s", errTicketTypeNotFound, code)
 		}
@@ -1661,11 +1843,16 @@ func (s *reservationStore) resolveCouponInfo(ctx context.Context, code string, s
 		}
 	}
 
-	discount := coupon.discountAmount * seatCount
+	return coupon, couponDiscount(coupon.discountAmount, seatCount, subtotal), nil
+}
+
+// couponDiscount は1席あたりの割引額に座席数を掛け、券種の小計を上限にした割引額を返す。
+func couponDiscount(discountPerSeat int, seatCount int, subtotal int) int {
+	discount := discountPerSeat * seatCount
 	if discount > subtotal {
 		discount = subtotal
 	}
-	return coupon, discount, nil
+	return discount
 }
 
 func ensureSeatsAvailable(ctx context.Context, tx *sql.Tx, scheduleID int64, seats []resolvedSeat, now string) error {
@@ -1741,8 +1928,8 @@ func validateReservationRequest(req reservationCreateRequest) error {
 	if req.MovieID == "" || req.Screen == "" || req.Start == "" {
 		return validationError("上映回を指定してください。")
 	}
-	if exceedsRunes(req.Date, maxDateLabelRunes) || hasControlChars(req.Date) {
-		return validationError("鑑賞日を正しく指定してください。")
+	if !reservationDatePattern.MatchString(req.Date) {
+		return validationError("鑑賞日を YYYY-MM-DD 形式で指定してください。")
 	}
 	if req.Customer.Name == "" {
 		return validationError("購入者氏名を入力してください。")
@@ -1873,35 +2060,35 @@ func normalizeClock(value string) string {
 	return fmt.Sprintf("%02d:%02d", hour, minute)
 }
 
-func isServiceDay(dateLabel string) bool {
-	matchValue := strings.TrimSpace(dateLabel)
-	for _, fragment := range []string{"/13(", "-13", "/13", " 13"} {
-		if strings.Contains(matchValue, fragment) {
-			return true
-		}
+// isServiceDay reports whether the showtime is on the 13th (呪いのサービスデー).
+// 判定は解決済みの上映回の開始日時から行う。リクエストの文字列では判定しない。
+func isServiceDay(startAt string) bool {
+	date := dateFromTimestamp(startAt)
+	if len(date) != 10 {
+		return false
 	}
-	return false
+	return date[8:10] == "13"
 }
 
-func effectiveTicketPrice(code string, price int, dateLabel string) int {
-	if !isServiceDay(dateLabel) {
-		return price
+// screenSurcharge returns the per-seat surcharge of the screen (3D 追加料金).
+// 金額は screen_types.surcharge から引く。
+func (s *reservationStore) screenSurcharge(ctx context.Context, screenID string) (int, error) {
+	var surcharge int
+	err := s.db.QueryRowContext(
+		ctx,
+		`SELECT COALESCE(st.surcharge, 0)
+		   FROM screens AS scr
+		   JOIN screen_types AS st ON st.id = scr.screen_type_id
+		  WHERE scr.id = ?`,
+		screenID,
+	).Scan(&surcharge)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
 	}
-	switch code {
-	case "adult", "university", "student":
-		return 1300
-	default:
-		return price
+	if err != nil {
+		return 0, err
 	}
-}
-
-func screenSurcharge(screenID string, seatCount int) int {
-	switch screenID {
-	case "SCR001", "SCR002", "SCR003":
-		return 400 * seatCount
-	default:
-		return 0
-	}
+	return surcharge, nil
 }
 
 func showtimeHour(startAt string) int {

@@ -1,6 +1,5 @@
 /* eslint-disable */
 // @ts-nocheck
-import { runCommon } from './common'
 import {
   getAuthHeaders,
   getRequestErrorMessage,
@@ -30,12 +29,17 @@ const HISTORY_FILTER_OPTIONS = [
 export function runMember() {
   const root = document.getElementById('member-root')
   if (!root) return
+  let disposed = false
+
+  // 予約確認ページの案内リンクから ?tab=history で開かれたときは履歴タブから始める
+  const requestedTab =
+    new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'profile'
 
   const state = {
     session: readMemberSession(),
     checking: Boolean(readMemberSession()?.token),
     mode: 'login',
-    activeTab: 'profile',
+    activeTab: requestedTab,
     login: createLoginState(),
     register: createRegisterState(),
     history: createHistoryState(),
@@ -55,7 +59,8 @@ export function runMember() {
       state.session = session
       state.checking = false
       render()
-      runCommon()
+      // 履歴タブで開いた場合は、ログイン状態を確認できてから履歴を読み込む
+      if (state.activeTab === 'history' && session?.token) void loadReservationHistory()
     })
   }
 
@@ -315,7 +320,6 @@ export function runMember() {
     state.history = createHistoryState()
     render()
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    runCommon()
     await logoutPromise
   }
 
@@ -336,7 +340,6 @@ export function runMember() {
     state.history = createHistoryState()
     writeMemberSession(state.session)
     render()
-    runCommon()
   }
 
   async function loadReservationHistory() {
@@ -375,6 +378,7 @@ export function runMember() {
   }
 
   function render() {
+    if (disposed) return
     if (state.checking) {
       root.innerHTML = `<div class="member-panel"><p class="member-status">会員情報を確認しています。</p></div>`
       return
@@ -663,6 +667,17 @@ export function runMember() {
     if (password !== passwordConfirm) return '確認用パスワードが一致していません。'
 
     return ''
+  }
+
+  return function cleanupMember() {
+    disposed = true
+    root.removeEventListener('submit', onSubmit)
+    root.removeEventListener('input', onInput)
+    root.removeEventListener('change', onChange)
+    root.removeEventListener('click', onClick)
+    root.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('click', onDocumentClick)
+    document.removeEventListener('focusin', onDocumentFocusIn)
   }
 }
 
