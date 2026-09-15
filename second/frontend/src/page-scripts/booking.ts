@@ -566,6 +566,11 @@ export function runBooking() {
       currentStep: state.currentStep,
       maxStep: state.maxStep,
     })
+    if (renderedStep === state.currentStep) return
+    const activeStep = stepperRoot.querySelector('.booking-step.active')
+    if (!activeStep) return
+    const offset = activeStep.getBoundingClientRect().left - stepperRoot.getBoundingClientRect().left
+    stepperRoot.scrollLeft += offset - (stepperRoot.clientWidth - activeStep.offsetWidth) / 2
   }
 
   function renderStep() {
